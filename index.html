@@ -292,6 +292,7 @@ function montarAbas() {
   $("#abas").innerHTML = minhas.map(a => `<button data-aba="${a.id}">${a.nome}</button>`).join("");
   $("#abas").onclick = e => { const b = e.target.closest("button"); if (b) abrir(b.dataset.aba); };
   const h = location.hash.slice(1);
+  if (h === "receber" && gestor()) return abaReceber();
   abrir(minhas.find(a => a.id === h) ? h : (S.perfil.papel === "caixa" ? "hoje" : "geral"));
 }
 function abrir(id) {
@@ -1149,6 +1150,39 @@ async function enviar(tipo, r, nome) {
     const sem = $("#p-sem").value; if (!sem) throw new Error("Informe a quarta-feira que inicia a semana.");
     const { error } = await sb.rpc("importar_freelas", { p_arquivo: nome, p_semana: sem, p_linhas: r.itens }); if (error) throw error;
   }
+}
+
+// ============ RECEBER DO EPOC (ponte entre abas) ============
+// A aba do Epoc (logada) abre esta página e envia os CSVs por postMessage.
+// Só aceita mensagens vindas do Epoc e só importa depois do clique em "Importar".
+const ORIGEM_EPOC = "https://cloud.epoc.com.br";
+function abaReceber() {
+  document.querySelectorAll("#abas button").forEach(b => b.classList.remove("ativa"));
+  $("#conteudo").innerHTML = `<div class="cab-sec"><div><h2>Importar do Epoc</h2><p>Dados enviados pela aba do Epoc em que você está logada</p></div></div>
+    <div class="card"><div id="rec-status" class="sub">Aguardando os dados do Epoc…</div><div id="rec-lista"></div>
+    <button class="btn largo hidden" id="rec-ok">Importar tudo</button><div id="rec-msg"></div></div>`;
+  let pacotes = [];
+  window.addEventListener("message", e => {
+    if (e.origin !== ORIGEM_EPOC || e.data?.tipo !== "vezpa-import") return;
+    pacotes = (e.data.arquivos || []).map(a => {
+      const tipo = a.tipoRel || detectar(a.texto);
+      try { return { ...a, tipo, r: analisar(tipo, a.texto) }; } catch (err) { return { ...a, tipo, erro: err.message }; }
+    });
+    $("#rec-status").textContent = `${pacotes.length} relatório(s) recebido(s) do Epoc:`;
+    $("#rec-lista").innerHTML = pacotes.map(p => `<div class="msg ${p.erro ? "erro" : "ok"}"><b>${esc(TIPOS[p.tipo] || p.nome)}</b><br>${p.erro ? esc(p.erro) : p.r.resumo}</div>`).join("");
+    $("#rec-ok").classList.toggle("hidden", !pacotes.some(p => !p.erro));
+    e.source?.postMessage({ tipo: "vezpa-recebido", n: pacotes.length }, ORIGEM_EPOC);
+  });
+  $("#rec-ok").onclick = async () => {
+    const b = $("#rec-ok"); b.disabled = true; b.textContent = "Importando…";
+    try {
+      // produtos primeiro (grupos), depois vendas
+      for (const p of pacotes.filter(p => !p.erro).sort((a, b) => (a.tipo === "produtos" ? -1 : 0) - (b.tipo === "produtos" ? -1 : 0))) await enviar(p.tipo, p.r, p.nome);
+      $("#rec-msg").innerHTML = `<div class="msg ok">Importado ✔ <a href="#geral" onclick="location.hash='geral';location.reload();return false">Ver o painel</a></div>`;
+      b.textContent = "Importado ✔"; S.periodo = null;
+    } catch (err) { $("#rec-msg").innerHTML = `<div class="msg erro">Erro: ${esc(err.message || err)}</div>`; b.disabled = false; b.textContent = "Tentar de novo"; }
+  };
+  if (window.opener) try { window.opener.postMessage({ tipo: "vezpa-pronto" }, ORIGEM_EPOC); } catch (_) {}
 }
 
 // ============ ABA: USUÁRIOS ============
