@@ -2353,6 +2353,7 @@ async function abaAniversarios() {
   if (AN.recentes) itens = itens.filter(ativa);
   const contReg = { todos: itens.length, sp: 0, interior: 0, fora: 0, sem: 0 }; itens.forEach(c => contReg[regiaoFone(c.telefone)]++);
   if (AN.regiao !== "todos") itens = itens.filter(c => regiaoFone(c.telefone) === AN.regiao);
+  await generoPorNomes(itens.slice(0, 600).map(c => c.nome));
   const nVis = {}; for (let i = 0; i < itens.length; i += 800) { const { data } = await sb.rpc("visitas_por_cliente", { p_codigos: itens.slice(i, i + 800).map(c => c.codigo) }); Object.assign(nVis, data || {}); }
   itens.forEach(c => c.visitas = +nVis[c.codigo] || 0);
   const ehVip = c => c.visitas >= 10;
@@ -2425,7 +2426,7 @@ async function abaAniversarios() {
     const d = $("#dlg"), id = idade(c);
     d.innerHTML = `<h3>Prévia da mensagem</h3>
       <div class="sub" style="margin-bottom:10px">Para <b>${esc(c.nome)}</b> · ${fone(c.telefone)} · aniversário ${String(c.nasc_dia).padStart(2, "0")}/${String(c.nasc_mes).padStart(2, "0")}${id ? ` · faz ${id} anos` : ""}</div>
-      <div class="rot-wa">${ehHomem(c) ? "♂ No masculino (cadastro do Epoc) · " : ""}${ehVip(c) ? `👑 Mensagem especial: Vezpa de carteirinha (${c.visitas} visitas)` : ehLocal(c) ? "📍 Mensagem de São Paulo capital (convite)" : "✈️ Mensagem para interior / outros estados (parabéns caloroso)"}</div>
+      <div class="rot-wa">${ehHomem(c) ? "♂ No masculino (pelo nome) · " : ""}${ehVip(c) ? `👑 Mensagem especial: Vezpa de carteirinha (${c.visitas} visitas)` : ehLocal(c) ? "📍 Mensagem de São Paulo capital (convite)" : "✈️ Mensagem para interior / outros estados (parabéns caloroso)"}</div>
       <div class="wa-tela"><div class="wa-bolha" id="wa-bolha"></div></div>
       <label style="margin-top:12px">Ajustar só para esta pessoa</label><textarea id="wa-txt" rows="5">${esc(msg(c))}</textarea>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap"><button class="btn sec" type="button" id="wa-c">Cancelar</button><button class="btn sec" type="button" id="wa-cop">Copiar texto</button>${botoesWhats("wa-ok")}</div>`;
@@ -2492,8 +2493,30 @@ const abrirWhats = (tel, texto, destino) => { if (destino) try { localStorage.se
   const u = linkWhats(tel, texto, destino); if (u.startsWith("whatsapp:")) location.href = u; else window.open(u, "_blank", "noopener"); };
 const botoesWhats = id => ehCelular() ? `<button class="btn" type="button" id="${id}" data-dest="web">Abrir no WhatsApp</button>`
   : `<button class="btn ${destinoWhats() === "app" ? "sec" : ""}" type="button" data-dest="web" id="${id}">WhatsApp Web</button><button class="btn ${destinoWhats() === "app" ? "" : "sec"}" type="button" data-dest="app" id="${id}-app">App do WhatsApp</button>`;
-// mensagens no masculino quando o cadastro do Epoc diz (Masc.)
-const ehHomem = c => /masc/i.test(c?.sexo || "");
+// gênero pelo PRIMEIRO NOME (frequência no Censo do IBGE), não pelo cadastro do Epoc (que tem muito erro)
+const semAcento = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]/g, "");
+const primeiroNomeChave = n => semAcento(String(n || "").trim().split(/\s+/)[0]);
+const GENERO = {};
+async function generoPorNomes(nomes) {
+  const ch = [...new Set(nomes.map(primeiroNomeChave).filter(x => x.length > 1 && !(x in GENERO)))];
+  if (!ch.length) return;
+  for (let i = 0; i < ch.length; i += 500) { const { data } = await sb.from("nomes_genero").select("nome,m,f").in("nome", ch.slice(i, i + 500)); (data || []).forEach(r => GENERO[r.nome] = r); }
+  const faltam = ch.filter(x => !(x in GENERO));
+  for (let i = 0; i < faltam.length; i += 40) {
+    const lote = faltam.slice(i, i + 40), freq = {};
+    try {
+      for (const sx of ["M", "F"]) {
+        const r = await fetch(`https://servicodados.ibge.gov.br/api/v2/censos/nomes/${lote.join("|")}?sexo=${sx}`);
+        (await r.json()).forEach(x => { const k = semAcento(x.nome); (freq[k] ??= { m: 0, f: 0 })[sx.toLowerCase()] = x.res.reduce((a, b) => a + b.frequencia, 0); });
+      }
+    } catch (_) { continue; }
+    const linhas = lote.map(n => ({ nome: n, m: freq[n]?.m || 0, f: freq[n]?.f || 0 }));
+    linhas.forEach(r => GENERO[r.nome] = r);
+    sb.from("nomes_genero").upsert(linhas).then(() => {});
+  }
+}
+// masculino só quando o nome é claramente masculino (3x mais homens que mulheres no Censo); na dúvida, feminino
+const ehHomem = c => { const g = GENERO[primeiroNomeChave(c?.nome)]; return !!g && g.m > 0 && g.m >= 3 * g.f; };
 const TROCAS_MASC = [[/\buma Vezpa\b/g, "um Vezpa"], [/\bas amigas\b/g, "os amigos"], [/\bAs amigas\b/g, "Os amigos"], [/\bamigas\b/g, "amigos"],
   [/a crush \(ou as duas 👀\)/g, "o crush (ou os dois 👀)"], [/\ba crush\b/g, "o crush"], [/\bbem-vinda\b/g, "bem-vindo"], [/\bquerida\b/g, "querido"],
   [/\bsumida\b/g, "sumido"], [/\bconvidada\b/g, "convidado"], [/\blinda\b/g, "lindo"], [/\bparada\b/g, "parado"], [/\bapaixonada\b/g, "apaixonado"],
@@ -2544,6 +2567,7 @@ async function abaReconquista() {
   if (RQ.pendentes) lista = lista.filter(c => !c.enviado_em || dias(c.enviado_em.slice(0, 10)) > 30);
   const cont = { todos: lista.length, sp: 0, interior: 0, fora: 0, sem: 0 }; lista.forEach(c => cont[regiaoFone(c.telefone)]++);
   if (RQ.regiao !== "todos") lista = lista.filter(c => regiaoFone(c.telefone) === RQ.regiao);
+  await generoPorNomes(lista.slice(0, 400).map(c => c.nome));
   const porCod = Object.fromEntries(lista.map(c => [c.codigo, c]));
   $("#conteudo").innerHTML = `
   <div class="cab-sec"><div><h2>Sentimos sua falta</h2><p>Clientes que não voltam há um tempo · mande um convite carinhoso pelo WhatsApp</p></div>
@@ -2583,7 +2607,7 @@ async function abaReconquista() {
   document.querySelectorAll("[data-rqmv]").forEach(b => b.onclick = () => { RQ.minVis = +b.dataset.rqmv; ir(); });
   document.querySelectorAll("[data-rqw]").forEach(b => b.onclick = () => { const c = porCod[b.dataset.rqw];
     previaWhatsGeral({ titulo: "Prévia do convite", sub: `Para <b>${esc(c.nome)}</b> · ${fone(c.telefone)} · última visita ${br(c.ultima)} (há ${dias(c.ultima)} dias)${c.visitas ? ` · ${c.visitas} visitas` : ""}`,
-      rotulo: (ehHomem(c) ? "♂ No masculino (cadastro do Epoc) · " : "") + (local(c) ? `📍 SP capital · ${nivelRQ(c).ico} ${nivelRQ(c).nome}` : "✈️ Mensagem para interior / outros estados"), texto: msg(c), telefone: c.telefone,
+      rotulo: (ehHomem(c) ? "♂ No masculino (pelo nome) · " : "") + (local(c) ? `📍 SP capital · ${nivelRQ(c).ico} ${nivelRQ(c).nome}` : "✈️ Mensagem para interior / outros estados"), texto: msg(c), telefone: c.telefone,
       aoEnviar: async () => { await sb.from("reconquista_envios").insert({ cliente_codigo: c.codigo }); setTimeout(ir, 600); } }); });
   document.querySelectorAll("[data-rqv]").forEach(b => b.onclick = async () => { const c = porCod[b.dataset.rqv];
     const { data: ult } = await sb.from("reconquista_envios").select("id").eq("cliente_codigo", c.codigo).order("enviado_em", { ascending: false }).limit(1);
