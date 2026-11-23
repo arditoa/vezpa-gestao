@@ -465,6 +465,7 @@ const ICONE = {
   notas: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/>',
   aniversarios: '<path d="M4 21h16M5 21v-7h14v7M12 14V9M12 6.5c-1-.8-1-2.2 0-3 1 .8 1 2.2 0 3z"/><path d="M5 14c1.2 1.2 2.8 1.2 4 0 1.2 1.2 2.8 1.2 4 0 1.2 1.2 2.8 1.2 4 0 .8.8 1.4 1 2 1"/>',
   perfil: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/>',
+  ranking: '<path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/>',
   reconquista: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
   ficha: '<path d="M6 3h12v18H6z"/><path d="M9 7h6M9 11h6M9 15h3"/>',
   usuarios: '<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/>',
@@ -483,6 +484,7 @@ const ABAS = [
   { id: "notas", nome: "Notas e boletos", grupo: "Financeiro", papeis: ["dona", "gerente", "caixa"], fn: abaNotas },
   { id: "perfil", nome: "Perfil dos clientes", grupo: "Clientes", papeis: ["dona", "gerente"], fn: abaPerfil },
   { id: "aniversarios", nome: "Aniversariantes", grupo: "Clientes", papeis: ["dona", "gerente"], fn: abaAniversarios },
+  { id: "ranking", nome: "Ranking do mês", grupo: "Clientes", papeis: ["dona", "gerente"], fn: abaRanking },
   { id: "reconquista", nome: "Sentimos sua falta", grupo: "Clientes", papeis: ["dona", "gerente"], fn: abaReconquista },
   { id: "cadastros", nome: "Freelas e bandas", grupo: "Configurações", papeis: ["dona", "gerente"], fn: abaCadastros },
   { id: "importar", nome: "Importar dados", grupo: "Configurações", papeis: ["dona", "gerente"], fn: abaImportar },
@@ -2268,6 +2270,10 @@ async function rankingClientes() {
   $("#rk-ref").onchange = e => { RK.ref = e.target.value; rankingClientes(); };
 }
 
+async function abaRanking() {
+  $("#conteudo").innerHTML = `<div class="cab-sec"><div><h2>Ranking de clientes</h2><p>Quem mais veio no mês (ou trimestre, ano) · visitas registradas no Epoc</p></div></div><div id="rk-clientes"></div>`;
+  await rankingClientes();
+}
 async function abaPerfil() {
   const [{ data: P2, error }, dias] = await Promise.all([sb.rpc("perfil_clientes"), todos(() => sb.from("vw_resumo_diario").select("dia,faturamento"))]);
   if (error) throw error;
@@ -2334,7 +2340,9 @@ async function abaAniversarios() {
   if (AN.filtro === "semana") for (let i = 0; i < 7; i++) dias.push(addDias(hoje, i));
   const meses = AN.filtro === "mes" ? [AN.mes] : [...new Set(dias.map(d => +d.slice(5, 7)))];
   const [lista, { data: cfg }, { data: envios }, { count: totalCli }] = await Promise.all([
-    todos(() => sb.from("clientes").select("codigo,nome,nasc_dia,nasc_mes,nasc_ano,telefone,sexo,ultima_visita,nao_contatar").in("nasc_mes", meses).order("nasc_mes").order("nasc_dia").order("nome")),
+    AN.busca?.trim().length >= 2
+      ? sb.from("clientes").select("codigo,nome,nasc_dia,nasc_mes,nasc_ano,telefone,sexo,ultima_visita,nao_contatar").ilike("nome", `%${AN.busca.trim()}%`).not("nasc_mes", "is", null).order("nome").limit(300).then(r => r.data || [])
+      : todos(() => sb.from("clientes").select("codigo,nome,nasc_dia,nasc_mes,nasc_ano,telefone,sexo,ultima_visita,nao_contatar").in("nasc_mes", meses).order("nasc_mes").order("nasc_dia").order("nome")),
     sb.from("config").select("valor").eq("chave", "aniversario").maybeSingle(),
     sb.from("aniversario_envios").select("cliente_codigo,enviado_em,veio").eq("ano", ay),
     sb.from("clientes").select("codigo", { count: "exact", head: true }),
@@ -2344,8 +2352,8 @@ async function abaAniversarios() {
   const env = Object.fromEntries((envios || []).map(e => [e.cliente_codigo, e]));
   const chave = d => +d.slice(5, 7) * 100 + +d.slice(8, 10);
   const alvo = new Set(dias.map(chave));
-  let itens = lista.filter(c => c.nasc_dia && (AN.filtro === "mes" || alvo.has(c.nasc_mes * 100 + c.nasc_dia)));
-  if (AN.busca) itens = itens.filter(c => c.nome.toLowerCase().includes(AN.busca.toLowerCase()));
+  const buscando = AN.busca?.trim().length >= 2;
+  let itens = lista.filter(c => c.nasc_dia && (buscando || AN.filtro === "mes" || alvo.has(c.nasc_mes * 100 + c.nasc_dia)));
   if (AN.soFone) itens = itens.filter(c => c.telefone && !c.nao_contatar);
   if (AN.pendentes) itens = itens.filter(c => !env[c.codigo]);
   const limite3m = addDias(hoje, -90), ativa = c => c.ultima_visita && c.ultima_visita >= limite3m;
@@ -2394,7 +2402,7 @@ async function abaAniversarios() {
       <div class="segmentos" style="margin:0">${[["hoje", "Hoje"], ["semana", "Próximos 7 dias"], ["mes", "Mês"]].map(([k, n]) => `<button class="${AN.filtro === k ? "sel" : ""}" data-anf="${k}">${n}</button>`).join("")}</div>
       ${AN.filtro === "mes" ? `<select id="an-mes" style="width:auto">${MESES.map((m, i) => `<option value="${i + 1}" ${i + 1 === AN.mes ? "selected" : ""}>${m}</option>`).join("")}</select>` : ""}
       <div class="segmentos" style="margin:0">${[["todos", "Todos"], ["sp", "SP capital"], ["interior", "Interior SP"], ["fora", "Outros estados"]].map(([k, n]) => `<button class="${AN.regiao === k ? "sel" : ""}" data-anr="${k}">${n} <small>${contReg[k]}</small></button>`).join("")}</div>
-      <input id="an-busca" placeholder="Buscar nome…" value="${esc(AN.busca || "")}" style="max-width:220px">
+      <input id="an-busca" placeholder="🔎 Buscar cliente (qualquer mês)…" value="${esc(AN.busca || "")}" style="max-width:220px">
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-fone" style="width:auto" ${AN.soFone ? "checked" : ""}> Só com telefone</label>
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-pend" style="width:auto" ${AN.pendentes ? "checked" : ""}> Só quem falta mandar</label>
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-vip" style="width:auto" ${AN.soVip ? "checked" : ""}> 👑 Só Vezpa de carteirinha <small style="color:var(--mute)">(${nVip})</small></label>
@@ -2416,7 +2424,7 @@ async function abaAniversarios() {
   document.querySelectorAll("[data-anf]").forEach(b => b.onclick = () => { AN.filtro = b.dataset.anf; ir(); });
   document.querySelectorAll("[data-anr]").forEach(b => b.onclick = () => { AN.regiao = b.dataset.anr; ir(); });
   if ($("#an-mes")) $("#an-mes").onchange = e => { AN.mes = +e.target.value; ir(); };
-  let tb; $("#an-busca").oninput = e => { clearTimeout(tb); tb = setTimeout(() => { AN.busca = e.target.value; ir(); }, 350); };
+  let tb; $("#an-busca").oninput = e => { clearTimeout(tb); tb = setTimeout(async () => { AN.busca = e.target.value; await ir(); const i = $("#an-busca"); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 400); };
   $("#an-fone").onchange = e => { AN.soFone = e.target.checked; ir(); };
   $("#an-pend").onchange = e => { AN.pendentes = e.target.checked; ir(); };
   $("#an-rec").onchange = e => { AN.recentes = e.target.checked; ir(); };
@@ -2538,7 +2546,7 @@ function previaWhatsGeral({ titulo, sub, rotulo, texto, telefone, aoEnviar }) {
 }
 
 // ============ ABA: SENTIMOS SUA FALTA (reconquista) ============
-const RQ = { faixa: "2a3", regiao: "todos", soFone: true, pendentes: true, minVis: 0 };
+const RQ = { faixa: "2a3", regiao: "todos", soFone: true, pendentes: true, minVis: 0, busca: "" };
 const RQ_FAIXAS = { "2mais": [60, 730, "2 meses ou mais"], "2a3": [60, 90, "2 a 3 meses"], "3a6": [90, 180, "3 a 6 meses"], "6a12": [180, 365, "6 meses a 1 ano"] };
 const RQ_PADRAO = "Oi {nome}! Aqui é o Vezpa 🐝🧡 Faz um tempinho que você não aparece e a colmeia tá sentindo sua falta! Essa semana tem programação nova, samba, sofrência e aquela energia boa que você conhece. Vem matar a saudade com a gente, chama as amigas e cola! Te esperamos de braços abertos. 🏳️‍🌈";
 const RQ_NIVEIS = [
@@ -2551,7 +2559,7 @@ const RQ_FORA = "Oi {nome}! Aqui é o Vezpa 🐝🧡 Passando só pra dizer que 
 async function abaReconquista() {
   const F = RQ_FAIXAS[RQ.faixa];
   const [{ data: R, error }, { data: cfg }] = await Promise.all([
-    sb.rpc("reconquista_lista", { p_min_dias: F[0], p_max_dias: F[1], p_lim: 600, p_min_vis: RQ.minVis }),
+    sb.rpc("reconquista_lista", { p_min_dias: F[0], p_max_dias: F[1], p_lim: RQ.busca ? 20000 : 600, p_min_vis: RQ.minVis }),
     sb.from("config").select("valor").eq("chave", "reconquista").maybeSingle()]);
   if (error) throw error;
   const C = { mensagem: RQ_PADRAO, mensagem_fora: RQ_FORA, ...(cfg?.valor || {}) };
@@ -2563,6 +2571,7 @@ async function abaReconquista() {
   const fone = t => t ? `(${t.slice(0, 2)}) ${t.slice(2, -4)}-${t.slice(-4)}` : "";
   const hoje = diaOperacionalHoje(), dias = d => Math.round((new Date(hoje) - new Date(d)) / 864e5);
   let lista = R.lista || [];
+  if (RQ.busca) { const b = semAcento(RQ.busca); lista = lista.filter(c => semAcento(c.nome).includes(b)); }
   if (RQ.soFone) lista = lista.filter(c => c.telefone && !c.nao_contatar);
   if (RQ.pendentes) lista = lista.filter(c => !c.enviado_em || dias(c.enviado_em.slice(0, 10)) > 30);
   const cont = { todos: lista.length, sp: 0, interior: 0, fora: 0, sem: 0 }; lista.forEach(c => cont[regiaoFone(c.telefone)]++);
@@ -2588,6 +2597,7 @@ async function abaReconquista() {
       <div class="segmentos" style="margin:0">${Object.entries(RQ_FAIXAS).map(([k, f]) => `<button class="${RQ.faixa === k ? "sel" : ""}" data-rqf="${k}">${f[2]}</button>`).join("")}</div>
       <div class="segmentos" style="margin:0">${[["todos", "Todos"], ["sp", "SP capital"], ["interior", "Interior SP"], ["fora", "Outros estados"]].map(([k, n]) => `<button class="${RQ.regiao === k ? "sel" : ""}" data-rqr="${k}">${n} <small>${cont[k]}</small></button>`).join("")}</div>
       <div class="segmentos" style="margin:0">${[[0, "Qualquer frequência"], [3, "Vieram 3+ vezes"], [5, "5+ vezes"], [10, "10+ vezes"]].map(([k, n]) => `<button class="${RQ.minVis === k ? "sel" : ""}" data-rqmv="${k}">${n}</button>`).join("")}</div>
+      <input id="rq-busca" placeholder="🔎 Buscar cliente…" value="${esc(RQ.busca)}" style="max-width:220px">
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="rq-pend" style="width:auto" ${RQ.pendentes ? "checked" : ""}> Esconder quem já recebeu nos últimos 30 dias</label>
     </div>
     <div class="rolagem" style="max-height:640px"><table class="pag"><thead><tr><th>Cliente</th><th>Telefone</th><th>Última visita</th><th class="n">Visitas</th><th>Convite</th><th>Voltou?</th></tr></thead><tbody>
@@ -2604,6 +2614,7 @@ async function abaReconquista() {
   document.querySelectorAll("[data-rqf]").forEach(b => b.onclick = () => { RQ.faixa = b.dataset.rqf; ir(); });
   document.querySelectorAll("[data-rqr]").forEach(b => b.onclick = () => { RQ.regiao = b.dataset.rqr; ir(); });
   $("#rq-pend").onchange = e => { RQ.pendentes = e.target.checked; ir(); };
+  let tbr; $("#rq-busca").oninput = e => { clearTimeout(tbr); tbr = setTimeout(async () => { RQ.busca = e.target.value.trim(); await ir(); const i = $("#rq-busca"); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 400); };
   document.querySelectorAll("[data-rqmv]").forEach(b => b.onclick = () => { RQ.minVis = +b.dataset.rqmv; ir(); });
   document.querySelectorAll("[data-rqw]").forEach(b => b.onclick = () => { const c = porCod[b.dataset.rqw];
     previaWhatsGeral({ titulo: "Prévia do convite", sub: `Para <b>${esc(c.nome)}</b> · ${fone(c.telefone)} · última visita ${br(c.ultima)} (há ${dias(c.ultima)} dias)${c.visitas ? ` · ${c.visitas} visitas` : ""}`,
