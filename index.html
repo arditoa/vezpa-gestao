@@ -2322,6 +2322,7 @@ async function abaPerfil() {
 const AN = { filtro: "semana", regiao: "todos" };
 const UF_DDD = { 11:"SP",12:"SP",13:"SP",14:"SP",15:"SP",16:"SP",17:"SP",18:"SP",19:"SP",21:"RJ",22:"RJ",24:"RJ",27:"ES",28:"ES",31:"MG",32:"MG",33:"MG",34:"MG",35:"MG",37:"MG",38:"MG",41:"PR",42:"PR",43:"PR",44:"PR",45:"PR",46:"PR",47:"SC",48:"SC",49:"SC",51:"RS",53:"RS",54:"RS",55:"RS",61:"DF",62:"GO",64:"GO",63:"TO",65:"MT",66:"MT",67:"MS",68:"AC",69:"RO",71:"BA",73:"BA",74:"BA",75:"BA",77:"BA",79:"SE",81:"PE",87:"PE",82:"AL",83:"PB",84:"RN",85:"CE",88:"CE",86:"PI",89:"PI",91:"PA",93:"PA",94:"PA",92:"AM",97:"AM",95:"RR",96:"AP",98:"MA",99:"MA" };
 const regiaoFone = t => { if (!t) return "sem"; const d = +String(t).slice(0, 2); return d === 11 ? "sp" : UF_DDD[d] === "SP" ? "interior" : UF_DDD[d] ? "fora" : "sem"; };
+const MSG_VIP_PADRAO = "Oi {nome}! 🎂👑 Hoje é aniversário de uma Vezpa de carteirinha e a colmeia inteira tá em festa! Foram {visitas} noites com a gente, e cada uma ficou mais gostosa com você por perto. 🐝🧡 Que seu novo ciclo venha cheio de amor, saúde, risada e muita energia boa. E pra comemorar, no mês do seu aniversário você ganha {presente} aqui no Vezpa, com um carinho especial da casa. Chama quem você ama e vem celebrar com a gente! 🏳️‍🌈";
 const MSG_FORA_PADRAO = "Oi {nome}! 🎂 Hoje o dia é todo seu e o Vezpa não podia deixar passar: feliz aniversário! 🐝🧡 Que esse novo ciclo venha cheio de amor, saúde, gente boa por perto e muita energia bonita. Você merece tudo de melhor! E quando passar por São Paulo, a casa é sua: vem comemorar com a gente. 🏳️‍🌈";
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 async function abaAniversarios() {
@@ -2339,7 +2340,7 @@ async function abaAniversarios() {
     sb.from("clientes").select("codigo", { count: "exact", head: true }),
   ]);
   const C2 = { mensagem: "Oi {nome}! 🎂 Hoje o dia é todo seu e a gente do Vezpa não podia deixar passar: feliz aniversário! 🐝🧡 Que esse novo ciclo venha cheio de amor, saúde, risada e gente boa por perto. E pra celebrar do jeito que você merece, no mês do seu aniversário você ganha {presente} aqui no Vezpa. Chama as amigas, a crush (ou as duas 👀) e vem colar velcro com a gente! É só mostrar esta mensagem. 🏳️‍🌈", presente: "um drink de cortesia", mensagem_fora: MSG_FORA_PADRAO, ...(cfg?.valor || {}) };
-  C2.mensagem_fora ||= MSG_FORA_PADRAO;
+  C2.mensagem_fora ||= MSG_FORA_PADRAO; C2.mensagem_vip ||= MSG_VIP_PADRAO;
   const env = Object.fromEntries((envios || []).map(e => [e.cliente_codigo, e]));
   const chave = d => +d.slice(5, 7) * 100 + +d.slice(8, 10);
   const alvo = new Set(dias.map(chave));
@@ -2352,12 +2353,17 @@ async function abaAniversarios() {
   if (AN.recentes) itens = itens.filter(ativa);
   const contReg = { todos: itens.length, sp: 0, interior: 0, fora: 0, sem: 0 }; itens.forEach(c => contReg[regiaoFone(c.telefone)]++);
   if (AN.regiao !== "todos") itens = itens.filter(c => regiaoFone(c.telefone) === AN.regiao);
+  const nVis = {}; for (let i = 0; i < itens.length; i += 800) { const { data } = await sb.rpc("visitas_por_cliente", { p_codigos: itens.slice(i, i + 800).map(c => c.codigo) }); Object.assign(nVis, data || {}); }
+  itens.forEach(c => c.visitas = +nVis[c.codigo] || 0);
+  const ehVip = c => c.visitas >= 10;
+  const nVip = itens.filter(ehVip).length;
+  if (AN.soVip) itens = itens.filter(ehVip);
   // ordena pela proximidade do aniversário a partir de hoje
   const hojeK = am * 100 + +hoje.slice(8, 10);
   itens.sort((a, b) => ((a.nasc_mes * 100 + a.nasc_dia - hojeK + 1300) % 1300) - ((b.nasc_mes * 100 + b.nasc_dia - hojeK + 1300) % 1300));
   const primeiroNome = n => { const p = n.trim().split(/\s+/)[0]; return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase(); };
   const ehLocal = c => ["sp", "sem"].includes(regiaoFone(c.telefone));
-  const msg = c => (ehLocal(c) ? C2.mensagem : C2.mensagem_fora).replaceAll("{nome}", primeiroNome(c.nome)).replaceAll("{presente}", C2.presente);
+  const msg = c => (ehVip(c) ? C2.mensagem_vip : ehLocal(c) ? C2.mensagem : C2.mensagem_fora).replaceAll("{nome}", primeiroNome(c.nome)).replaceAll("{presente}", ehVip(c) && C2.presente_vip ? C2.presente_vip : C2.presente).replaceAll("{visitas}", c.visitas);
   const tagReg = c => { const r = regiaoFone(c.telefone), uf = UF_DDD[+String(c.telefone || "").slice(0, 2)]; return r === "sp" ? `<span class="tag ok">SP capital</span>` : r === "interior" ? `<span class="tag">Interior SP</span>` : r === "fora" ? `<span class="tag bom">${uf}</span>` : ""; };
   const fone = t => t ? (t.length === 11 ? `(${t.slice(0, 2)}) ${t.slice(2, 7)}-${t.slice(7)}` : t.length === 10 ? `(${t.slice(0, 2)}) ${t.slice(2, 6)}-${t.slice(6)}` : t) : "";
   const idade = c => c.nasc_ano && c.nasc_ano > 1900 ? (ay + (c.nasc_mes * 100 + c.nasc_dia < hojeK && AN.filtro === "semana" ? 1 : 0)) - c.nasc_ano : null;
@@ -2378,6 +2384,7 @@ async function abaAniversarios() {
   <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><h3>Mensagens atuais</h3><div class="sub">Assim elas chegam no WhatsApp (exemplo com o nome Juliana). O painel escolhe pelo DDD do telefone.</div></div><button class="btn sec peq" id="an-msg2">✎ Trocar mensagens</button></div>
     <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:12px">
       <div><div class="rot-wa">📍 São Paulo capital (DDD 11): convite com ${esc(C2.presente)}</div><div class="wa-tela"><div class="wa-bolha">${esc(C2.mensagem.replaceAll("{nome}", "Juliana").replaceAll("{presente}", C2.presente)).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
+      <div><div class="rot-wa">👑 Vezpa de carteirinha (10+ visitas, qualquer DDD)${C2.presente_vip ? `: ${esc(C2.presente_vip)}` : ""}</div><div class="wa-tela"><div class="wa-bolha">${esc(C2.mensagem_vip.replaceAll("{nome}", "Juliana").replaceAll("{presente}", C2.presente_vip || C2.presente).replaceAll("{visitas}", 12)).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
       <div><div class="rot-wa">✈️ Interior e outros estados: parabéns caloroso</div><div class="wa-tela"><div class="wa-bolha">${esc(C2.mensagem_fora.replaceAll("{nome}", "Juliana").replaceAll("{presente}", C2.presente)).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
     </div></div>
   <div class="card" style="margin-top:14px">
@@ -2388,12 +2395,13 @@ async function abaAniversarios() {
       <input id="an-busca" placeholder="Buscar nome…" value="${esc(AN.busca || "")}" style="max-width:220px">
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-fone" style="width:auto" ${AN.soFone ? "checked" : ""}> Só com telefone</label>
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-pend" style="width:auto" ${AN.pendentes ? "checked" : ""}> Só quem falta mandar</label>
+      <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-vip" style="width:auto" ${AN.soVip ? "checked" : ""}> 👑 Só Vezpa de carteirinha <small style="color:var(--mute)">(${nVip})</small></label>
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-rec" style="width:auto" ${AN.recentes ? "checked" : ""}> Só quem veio nos últimos 3 meses <small style="color:var(--mute)">(${nAtivas})</small></label>
     </div>
     <div class="rolagem" style="max-height:640px"><table class="pag"><thead><tr><th>Aniversário</th><th>Cliente</th><th>Telefone</th><th>Última visita</th><th>Mensagem</th><th>Veio?</th></tr></thead><tbody>
     ${itens.slice(0, 600).map(c => { const e = env[c.codigo], id = idade(c);
       return `<tr><td><b>${String(c.nasc_dia).padStart(2, "0")}/${String(c.nasc_mes).padStart(2, "0")}</b> ${quando(c)}${id ? `<small class="sub2">faz ${id} anos</small>` : ""}</td>
-      <td><b>${esc(c.nome)}</b> <button class="x" style="font-size:13px" data-nc="${c.codigo}" title="${c.nao_contatar ? "Liberar contato" : "Marcar: não quer receber mensagens"}">${c.nao_contatar ? "↺" : "🚫"}</button>${c.nao_contatar ? `<small class="sub2">não quer contato</small>` : ""}</td><td>${fone(c.telefone) || "<span class='tag'>sem telefone</span>"} ${tagReg(c)}</td>
+      <td><b>${esc(c.nome)}</b>${ehVip(c) ? ` <span class="tag ok" title="${c.visitas} visitas">👑 Vezpa de carteirinha</span>` : ""} <button class="x" style="font-size:13px" data-nc="${c.codigo}" title="${c.nao_contatar ? "Liberar contato" : "Marcar: não quer receber mensagens"}">${c.nao_contatar ? "↺" : "🚫"}</button>${c.nao_contatar ? `<small class="sub2">não quer contato</small>` : ""}</td><td>${fone(c.telefone) || "<span class='tag'>sem telefone</span>"} ${tagReg(c)}</td>
       <td>${c.ultima_visita ? br(c.ultima_visita) : "—"}${ativa(c) ? ` <span class="tag ok">veio nos últimos 3 meses</span>` : ""}</td>
       <td style="white-space:nowrap">${c.telefone && !c.nao_contatar ? `<button class="btn ${e ? "sec" : ""} peq" data-wa="${c.codigo}">${e ? "Enviar de novo" : "WhatsApp"}</button>` : ""} <button class="btn sec peq" data-copmsg="${c.codigo}">Copiar texto</button>${e ? `<small class="sub2">enviado ${new Date(e.enviado_em).toLocaleDateString("pt-BR")}</small>` : ""}</td>
       <td>${e ? `<button class="status ${e.veio ? "pago" : ""}" data-veio="${c.codigo}">${e.veio ? "Veio ✓" : "Ainda não"}</button>` : ""}</td></tr>`; }).join("") || `<tr><td colspan="6" class="vazio">Ninguém nesse filtro</td></tr>`}
@@ -2410,12 +2418,13 @@ async function abaAniversarios() {
   $("#an-fone").onchange = e => { AN.soFone = e.target.checked; ir(); };
   $("#an-pend").onchange = e => { AN.pendentes = e.target.checked; ir(); };
   $("#an-rec").onchange = e => { AN.recentes = e.target.checked; ir(); };
+  $("#an-vip").onchange = e => { AN.soVip = e.target.checked; ir(); };
   document.querySelectorAll("[data-wa]").forEach(b => b.onclick = () => previaWhats(porCod[b.dataset.wa]));
   function previaWhats(c) {
     const d = $("#dlg"), id = idade(c);
     d.innerHTML = `<h3>Prévia da mensagem</h3>
       <div class="sub" style="margin-bottom:10px">Para <b>${esc(c.nome)}</b> · ${fone(c.telefone)} · aniversário ${String(c.nasc_dia).padStart(2, "0")}/${String(c.nasc_mes).padStart(2, "0")}${id ? ` · faz ${id} anos` : ""}</div>
-      <div class="rot-wa">${ehLocal(c) ? "📍 Mensagem de São Paulo capital (convite)" : "✈️ Mensagem para interior / outros estados (parabéns caloroso)"}</div>
+      <div class="rot-wa">${ehVip(c) ? `👑 Mensagem especial: Vezpa de carteirinha (${c.visitas} visitas)` : ehLocal(c) ? "📍 Mensagem de São Paulo capital (convite)" : "✈️ Mensagem para interior / outros estados (parabéns caloroso)"}</div>
       <div class="wa-tela"><div class="wa-bolha" id="wa-bolha"></div></div>
       <label style="margin-top:12px">Ajustar só para esta pessoa</label><textarea id="wa-txt" rows="5">${esc(msg(c))}</textarea>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap"><button class="btn sec" type="button" id="wa-c">Cancelar</button><button class="btn sec" type="button" id="wa-cop">Copiar texto</button><button class="btn" type="button" id="wa-ok">Abrir no WhatsApp</button></div>`;
@@ -2447,24 +2456,28 @@ async function abaAniversarios() {
       ["Carinho", "{nome}, hoje é dia de celebrar você! 🎂 O Vezpa deseja um aniversário lindo, cercado de quem você ama, e um ano inteiro de felicidade, saúde e muitos motivos pra sorrir. Um beijo enorme da nossa colmeia! 🐝🧡"],
       ["Curta", "Feliz aniversário, {nome}! 🎂 Muita felicidade, amor e energia boa no seu novo ciclo. Um abraço de todas nós do Vezpa! 🐝🏳️‍🌈"]];
     d.innerHTML = `<h3>Mensagens de aniversário</h3><form id="f-an">
-      <div class="segmentos" id="an-tipo" style="margin:0 0 12px"><button type="button" class="sel" data-t="local">📍 SP capital (DDD 11)</button><button type="button" data-t="fora">✈️ Interior e outros estados</button></div>
+      <div class="segmentos" id="an-tipo" style="margin:0 0 12px;flex-wrap:wrap"><button type="button" class="sel" data-t="local">📍 SP capital (DDD 11)</button><button type="button" data-t="vip">👑 Vezpa de carteirinha</button><button type="button" data-t="fora">✈️ Interior e outros estados</button></div>
       <div data-bloco="local"><label>Modelos prontos</label><div class="chips" id="an-mod">${MODELOS.map((m, i) => `<button type="button" data-mod="${i}">${m[0]}</button>`).join("")}</div>
       <label>Presente / convite</label><input name="presente" value="${esc(C2.presente)}" placeholder="ex.: um drink de cortesia">
       <label>Mensagem para SP capital</label><textarea name="mensagem" rows="6">${esc(C2.mensagem)}</textarea></div>
+      <div data-bloco="vip" class="hidden"><label>Presente especial (opcional)</label><input name="presente_vip" value="${esc(C2.presente_vip || "")}" placeholder="vazio = mesmo presente das outras; ex.: uma garrafa de espumante">
+      <label>Mensagem para quem veio 10 vezes ou mais</label><textarea name="mensagem_vip" rows="7">${esc(C2.mensagem_vip)}</textarea>
+      <button type="button" class="btn sec peq" id="an-vip-pad" style="margin-top:6px">Voltar ao texto sugerido</button></div>
       <div data-bloco="fora" class="hidden"><label>Modelos prontos</label><div class="chips" id="an-mod2">${MODELOS_FORA.map((m, i) => `<button type="button" data-mod="${i}">${m[0]}</button>`).join("")}</div>
       <label>Mensagem para interior e outros estados</label><textarea name="mensagem_fora" rows="7">${esc(C2.mensagem_fora)}</textarea></div>
-      <p class="dica">Use {nome} para o primeiro nome e {presente} para o presente.</p>
+      <p class="dica">Use {nome} para o primeiro nome, {presente} para o presente e {visitas} para o número de visitas.</p>
       <label>Prévia (como chega no WhatsApp)</label><div class="wa-tela"><div class="wa-bolha" id="an-prev"></div></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn sec" type="button" id="an-c">Cancelar</button><button class="btn">Salvar</button></div></form>`;
     d.showModal();
     let tipo = "local";
     $("#an-tipo").onclick = e => { const b = e.target.closest("button"); if (!b) return; tipo = b.dataset.t; $("#an-tipo").querySelectorAll("button").forEach(x => x.classList.toggle("sel", x === b)); d.querySelectorAll("[data-bloco]").forEach(x => x.classList.toggle("hidden", x.dataset.bloco !== tipo)); prev(); };
+    $("#an-vip-pad").onclick = () => { $("#f-an").mensagem_vip.value = MSG_VIP_PADRAO; prev(); };
     $("#an-mod2").onclick = e => { const b = e.target.closest("button"); if (!b) return; $("#f-an").mensagem_fora.value = MODELOS_FORA[b.dataset.mod][1]; prev(); };
-    const prev = () => { const f = new FormData($("#f-an")); $("#an-prev").innerHTML = esc(f.get(tipo === "local" ? "mensagem" : "mensagem_fora").replaceAll("{nome}", "Juliana").replaceAll("{presente}", f.get("presente"))).replace(/\n/g, "<br>") + `<span class="wa-hora">12:00 ✓✓</span>`; };
+    const prev = () => { const f = new FormData($("#f-an")); $("#an-prev").innerHTML = esc(f.get(tipo === "local" ? "mensagem" : tipo === "vip" ? "mensagem_vip" : "mensagem_fora").replaceAll("{nome}", "Juliana").replaceAll("{presente}", tipo === "vip" && f.get("presente_vip") ? f.get("presente_vip") : f.get("presente")).replaceAll("{visitas}", 12)).replace(/\n/g, "<br>") + `<span class="wa-hora">12:00 ✓✓</span>`; };
     $("#f-an").oninput = prev; prev(); $("#an-c").onclick = () => d.close();
     $("#an-mod").onclick = e => { const b = e.target.closest("button"); if (!b) return; $("#f-an").mensagem.value = MODELOS[b.dataset.mod][1]; prev(); };
     $("#f-an").onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target);
-      await sb.from("config").upsert({ chave: "aniversario", valor: { mensagem: f.get("mensagem"), presente: f.get("presente"), mensagem_fora: f.get("mensagem_fora") } }); d.close(); ir(); };
+      await sb.from("config").upsert({ chave: "aniversario", valor: { mensagem: f.get("mensagem"), presente: f.get("presente"), mensagem_fora: f.get("mensagem_fora"), mensagem_vip: f.get("mensagem_vip"), presente_vip: f.get("presente_vip") } }); d.close(); ir(); };
   };
 }
 
