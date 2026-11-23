@@ -235,6 +235,7 @@ code{background:var(--panel2);padding:1px 5px;border-radius:5px}
 dialog{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:22px;width:min(480px,92vw)}
 dialog::backdrop{background:rgba(0,0,0,.6)}
 
+.juntar{margin-top:18px;padding:12px;border:1px dashed var(--line);border-radius:12px}.juntar b{display:block;font-size:13px}.juntar small{display:block;color:var(--mute);font-size:12px;margin-top:2px}
 /* 23/11 — Pagamentos da semana mais claro no celular */
 .passo{font-size:13px;font-weight:700;color:var(--ink);margin:14px 0 8px}.passo small{display:block;font-weight:400;color:var(--mute);font-size:12px;margin-top:2px}
 .chips.faixa{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}.chips.faixa::-webkit-scrollbar{display:none}
@@ -242,7 +243,8 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
 .chips.faixa button.fechado{opacity:.55}
 .bolinha{font-style:normal;display:inline-block;min-width:18px;height:18px;line-height:18px;border-radius:9px;background:var(--amber);color:#1a1208;font-size:11px;font-weight:800;text-align:center;margin-left:6px;padding:0 4px}
 .chips.faixa button.sel .bolinha{background:#1a1208;color:var(--amber)}
-.lista-bandas{display:grid;gap:6px}
+.lista-bandas{display:grid;grid-template-columns:1fr auto;gap:6px}.lista-bandas .linha-banda.nova{grid-column:1 / -1}
+.editar-banda{background:var(--panel2);border:1px solid var(--line);color:var(--mute);border-radius:12px;width:40px;cursor:pointer;font-size:15px}
 .linha-banda{display:grid;grid-template-columns:30px 1fr auto;grid-template-areas:"m n c" "m e c";align-items:center;column-gap:10px;text-align:left;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:10px 12px;cursor:pointer;font-size:14px;transition:background .15s,border-color .15s}
 .linha-banda .marca{grid-area:m;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#ffffff10;font-weight:800;color:var(--mute)}
 .linha-banda .nome{grid-area:n;font-weight:600}
@@ -1273,9 +1275,38 @@ function editarPessoa(p, tipo, aoSalvar) {
       <div><label>Situação</label><select name="ativo"><option value="1" ${p.ativo !== false ? "selected" : ""}>Ativo</option><option value="0" ${p.ativo === false ? "selected" : ""}>Inativo</option></select></div></div>
     <label>Observação</label><input name="observacao" value="${esc(p.observacao || "")}" placeholder="ex.: depositar junto com…">
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn sec" type="button" id="pes-cancel">Cancelar</button><button class="btn" id="pes-ok">Salvar</button></div>
+    ${p.id && gestor() ? `<div class="juntar"><b>Cadastro repetido?</b><small>Junte com outro cadastro da mesma pessoa: os lançamentos dele passam para este e ele fica inativo.</small>
+      <div style="display:flex;gap:8px;margin-top:8px"><select id="jun-outro" style="flex:1"><option value="">Escolha o cadastro repetido…</option></select><button class="btn sec" type="button" id="jun-ok">Juntar</button></div></div>` : ""}
     <div id="pes-msg"></div></form>`;
   d.showModal();
   $("#pes-cancel").onclick = () => d.close();
+  // 23/11 — "Juntar cadastros": passa freelas e cachês do repetido para este cadastro, completa Pix/telefone que faltarem
+  // e deixa o repetido inativo (fica no histórico).
+  if ($("#jun-outro")) {
+    sb.from("pessoas").select("id,nome,tipo,valor_padrao,ativo").eq("tipo", p.tipo).neq("id", p.id).order("nome").then(({ data }) => {
+      $("#jun-outro").innerHTML += (data || []).map(o => `<option value="${o.id}">${esc(o.nome)}${o.valor_padrao ? " · " + brl0(+o.valor_padrao) : ""}${o.ativo === false ? " (inativo)" : ""}</option>`).join("");
+    });
+    $("#jun-ok").onclick = async () => {
+      const dupId = $("#jun-outro").value; if (!dupId) return;
+      const nomeDup = $("#jun-outro").selectedOptions[0].textContent.split(" · ")[0];
+      if (!confirm(`Juntar "${nomeDup}" em "${p.nome}"?\n\nOs lançamentos de "${nomeDup}" passam para "${p.nome}" e "${nomeDup}" fica inativo.`)) return;
+      $("#jun-ok").disabled = true; $("#jun-ok").textContent = "Juntando…";
+      try {
+        const { data: dup, error: e0 } = await sb.from("pessoas").select("*").eq("id", dupId).single(); if (e0) throw e0;
+        const r1 = await sb.from("freelas").update({ pessoa_id: p.id }).eq("pessoa_id", dupId); if (r1.error) throw r1.error;
+        const r2 = await sb.from("pagamentos_bandas").update({ pessoa_id: p.id }).eq("pessoa_id", dupId); if (r2.error) throw r2.error;
+        const completa = {};
+        if (!p.pix_chave && dup.pix_chave) Object.assign(completa, { pix_tipo: dup.pix_tipo, pix_chave: dup.pix_chave, pix_nome: dup.pix_nome });
+        if (!p.telefone && dup.telefone) completa.telefone = dup.telefone;
+        if (Object.keys(completa).length) { const r3 = await sb.from("pessoas").update(completa).eq("id", p.id); if (r3.error) throw r3.error; }
+        const r4 = await sb.from("pessoas").update({ ativo: false, observacao: `Juntado em ${p.nome} (${br(iso(new Date()))})` }).eq("id", dupId); if (r4.error) throw r4.error;
+        d.close(); alert(`Pronto: "${nomeDup}" foi juntado em "${p.nome}".`); aoSalvar && aoSalvar({ ...p, ...completa });
+      } catch (err) {
+        $("#jun-ok").disabled = false; $("#jun-ok").textContent = "Juntar";
+        $("#pes-msg").innerHTML = `<div class="msg erro">Não deu para juntar: ${esc(err.message || String(err))}</div>`;
+      }
+    };
+  }
   $("#f-pes").onsubmit = async e => {
     e.preventDefault();
     const f = new FormData(e.target);
@@ -1393,7 +1424,7 @@ async function abaPagamentos() {
     corpo = `<div class="add-banda">
       <div><div class="passo">Escolha a noite</div><div class="chips faixa" id="noites">${dias.map(d => { const n = bd.filter(b => b.data === d).length; return `<button class="${d === W.noite ? "sel" : ""} ${abreDow.has(dow(d)) ? "" : "fechado"}" data-noite="${d}">${DIAS[dow(d)]} <b>${br(d).slice(0, 5)}</b>${n ? `<i class="bolinha">${n}</i>` : ""}</button>`; }).join("")}</div></div>
       <div><div class="passo">Quem tocou em ${DIAS[dow(W.noite)]} ${br(W.noite).slice(0, 5)}? <small>Toque para lançar · o Pix vem do cadastro</small></div>
-      <div class="lista-bandas">${bandas.map(p => { const l = lancada(p.id); return `<button class="linha-banda ${l ? "on" : ""}" data-banda="${p.id}" ${l ? `data-ja="${l.id}"` : ""}><span class="marca">${l ? "✓" : "+"}</span><span class="nome">${esc(nomeBonitoPessoa(p.nome))}</span><span class="cache">${l ? brl0(+l.valor) : p.valor_padrao ? brl0(+p.valor_padrao) : "—"}</span><span class="estado">${l ? "lançada" : ""}</span></button>`; }).join("")}
+      <div class="lista-bandas">${bandas.map(p => { const l = lancada(p.id); return `<button class="linha-banda ${l ? "on" : ""}" data-banda="${p.id}" ${l ? `data-ja="${l.id}"` : ""}><span class="marca">${l ? "✓" : "+"}</span><span class="nome">${esc(nomeBonitoPessoa(p.nome))}</span><span class="cache">${l ? brl0(+l.valor) : p.valor_padrao ? brl0(+p.valor_padrao) : "—"}</span><span class="estado">${l ? "lançada" : ""}</span></button>${EQ ? "" : `<button class="editar-banda" data-ed-banda="${p.id}" title="Editar ${esc(p.nome)}">✎</button>`}`; }).join("")}
         <button class="linha-banda nova" data-banda="novo"><span class="marca">＋</span><span class="nome">Cadastrar nova banda</span></button></div>
       ${daNoite.length ? `<div class="resumo-noite">${daNoite.length} ${daNoite.length === 1 ? "atração lançada" : "atrações lançadas"} nesta noite · <b>${brl0(daNoite.reduce((s, b) => s + +b.valor, 0))}</b></div>` : ""}</div></div>
       <div class="passo" style="margin-top:18px">Cachês da semana</div><div class="rolagem" style="max-height:none;margin-top:6px"><table class="pag cartoes"><thead><tr><th>Noite</th><th>Atração</th><th class="n">Cachê</th><th>Pix</th><th>Obs.</th><th>Situação</th><th></th></tr></thead><tbody>
@@ -1504,6 +1535,7 @@ async function abaPagamentos() {
   };
   // bandas
   document.querySelectorAll("[data-noite]").forEach(b => b.onclick = () => { W.noite = b.dataset.noite; recarregar(); });
+  document.querySelectorAll("[data-ed-banda]").forEach(b => b.onclick = () => editarPessoa(P[b.dataset.edBanda], "banda", recarregar));
   document.querySelectorAll("[data-banda]").forEach(b => b.onclick = async () => {
     if (b.dataset.ja) { const tr = $(`#bd-${b.dataset.ja}`); if (tr) { tr.scrollIntoView({ behavior: "smooth", block: "center" }); tr.classList.add("piscar"); setTimeout(() => tr.classList.remove("piscar"), 1400); const inp = tr.querySelector("[data-vb]"); if (inp) setTimeout(() => { inp.focus(); inp.select(); }, 400); } return; }
     if (b.dataset.banda !== "novo") { b.classList.add("carregando"); b.querySelector(".marca").textContent = "…"; b.querySelector(".estado").textContent = "lançando"; }
