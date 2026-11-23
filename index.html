@@ -1718,6 +1718,9 @@ async function abaAtracoes() {
   // vendas de entrada com valor (para R$) vêm de vendas_itens agregadas por dia
   const entValor = codEntrada.length ? await todos(() => sb.from("vw_vendas_produto_dia").select("dia,produto,qtd,faturamento").in("produto", (prods || []).filter(x => codEntrada.includes(x.codigo)).map(x => x.nome))) : [];
   const entDia = {}; entValor.forEach(r => { const e = entDia[r.dia] ??= { q: 0, v: 0 }; e.q += +r.qtd; e.v += +r.faturamento; });
+  // entrada cobrada como SERVIÇO no Epoc (ENTRADA, ENTRADA 15,00…), que não aparece na venda de produtos
+  const { data: entServ } = await sb.from("servicos_noite").select("dia,qtd,total").ilike("servico", "entrada%");
+  (entServ || []).forEach(r => { const e = entDia[r.dia] ??= { q: 0, v: 0 }; e.q += +r.qtd; e.v += +r.total; });
   if (!entValor.length) ent.forEach(r => { const e = entDia[r.dia] ??= { q: 0, v: 0 }; e.q += +r.qtd; });
   const fat = Object.fromEntries(dias.map(d => [d.dia, +d.faturamento]));
   const porDow = {}; dias.forEach(d => (porDow[dow(d.dia)] ??= []).push(+d.faturamento));
@@ -1767,7 +1770,7 @@ async function abaAtracoes() {
     <div class="card kpi destaque"><div class="rot">Faturamento − cachês</div><div class="val">${brl0(tot.fat - tot.cache)}</div><div class="det">antes de CMV e equipe</div></div>
   </div>
   <div class="card" style="margin-top:14px"><h3>${AT.modo === "semana" ? "Semana a semana" : "Noite a noite"}</h3><div class="sub">Barras: faturamento, cachê e entrada</div><div class="graf alto"><canvas id="g-at"></canvas></div></div>
-  <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><h3>Detalhe</h3><div class="sub">Entrada = produtos marcados como entrada no Epoc · “Se pagou” = a noite faturou acima de ${AT.modo === "noite" ? "um dia igual normal" : "o normal"} o suficiente para cobrir o cachê</div></div><button class="btn sec peq" id="cfg-ent">Quais produtos são entrada?</button></div>
+  <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><h3>Detalhe</h3><div class="sub">Entrada = serviço “Entrada” cobrado na porta + produtos marcados como entrada no Epoc · “Se pagou” = a noite faturou acima de ${AT.modo === "noite" ? "um dia igual normal" : "o normal"} o suficiente para cobrir o cachê</div></div><button class="btn sec peq" id="cfg-ent">Quais produtos são entrada?</button></div>
     <div class="rolagem" style="max-height:560px"><table><thead><tr><th>${AT.modo === "semana" ? "Semana" : "Noite"}</th><th>Atração</th><th>Choveu?</th><th class="n">Cachê</th><th class="n">Faturamento</th><th class="n">Cachê % fat.</th><th class="n">Entrada</th><th class="n">Entrada cobre</th><th class="n">Fat. − cachê</th>${AT.modo === "noite" ? `<th>A atração se pagou?</th>` : ""}</tr></thead><tbody>
     ${linhas.map(l => `<tr><td>${nomeLinha(l)}</td><td>${atrs(l)}</td><td style="white-space:nowrap">${AT.modo === "semana" ? (l.comClima ? (l.chuvosas ? `🌧️ ${l.chuvosas} de ${l.noites} noites` : "☀️ nenhuma") : "—") : celChuva(l.d)}</td><td class="n">${l.cache ? brl0(l.cache) : "—"}</td><td class="n">${brl0(l.fat)}</td><td class="n">${l.cache && l.fat ? `<span class="tag ${l.cache / l.fat > .2 ? "ruim" : l.cache / l.fat < .1 ? "bom" : "ok"}">${pct(l.cache / l.fat)}</span>` : "—"}</td>
       <td class="n">${l.entV ? brl0(l.entV) + `<small class="sub2">${nfmt(l.entQ)} pag.</small>` : "—"}</td><td class="n">${l.cache ? pct(l.entV / l.cache) : "—"}</td><td class="n"><b>${brl0(l.res)}</b></td>
@@ -2710,7 +2713,7 @@ function detectar(texto) {
   if (/dias?\s*,/.test(h)) return "freelas";
   return "";
 }
-const TIPOS = { visitas: "Visitas de clientes por noite — relatório Fidelidade (Epoc)", fechamento: "Descontos e fechamento por noite (Epoc)", func_noites: "Vendas por funcionário, noite a noite (Epoc)", clientes: "Cadastro de clientes (Epoc)", hora: "Venda de produtos por hora (Epoc)", produtos: "Relatório de venda de produtos — atualiza os grupos (Epoc)", funcionario: "Vendas por funcionário (Epoc)", freelas: "Pagamento de freelancers da semana" };
+const TIPOS = { servicos: "Venda de serviços por noite — entrada, taxa de serviço, cliente gold (Epoc)", visitas: "Visitas de clientes por noite — relatório Fidelidade (Epoc)", fechamento: "Descontos e fechamento por noite (Epoc)", func_noites: "Vendas por funcionário, noite a noite (Epoc)", clientes: "Cadastro de clientes (Epoc)", hora: "Venda de produtos por hora (Epoc)", produtos: "Relatório de venda de produtos — atualiza os grupos (Epoc)", funcionario: "Vendas por funcionário (Epoc)", freelas: "Pagamento de freelancers da semana" };
 
 async function abaImportar() {
   const { data: log } = await sb.from("importacoes").select("*").order("feito_em", { ascending: false }).limit(30);
@@ -2770,6 +2773,11 @@ function analisar(tipo, texto) {
     const datas = [...new Set(itens.map(i => i.data))].sort();
     const total = itens.reduce((s, i) => s + i.valor, 0);
     return { itens, resumo: `${nfmt(itens.length)} lançamentos de ${br(datas[0])} a ${br(datas[datas.length - 1])} · total ${brl(total)}` };
+  }
+  if (tipo === "servicos") {
+    const itens = JSON.parse(texto); if (!itens.length) throw new Error("Nada recebido.");
+    const ds = [...new Set(itens.map(i => i.dia))].sort(), ent = itens.filter(i => /^entrada/i.test(i.servico));
+    return { itens, resumo: `${ds.length} noites (${br(ds[0])} a ${br(ds[ds.length - 1])}) · entradas: ${nfmt(ent.reduce((a, i) => a + i.qtd, 0))} pagantes, ${brl(ent.reduce((a, i) => a + i.total, 0))}` };
   }
   if (tipo === "visitas") {
     const j = JSON.parse(texto), pares = j.pares || []; if (!pares.length) throw new Error("Nenhuma visita recebida.");
@@ -2838,6 +2846,8 @@ async function enviar(tipo, r, nome) {
         if (error) throw error; lote = [];
       }
     }
+  } else if (tipo === "servicos") {
+    const { error } = await sb.rpc("importar_servicos", { p_linhas: r.itens }); if (error) throw error;
   } else if (tipo === "visitas") {
     for (let i = 0; i < r.itens.length; i += 5000) { const { error } = await sb.rpc("importar_visitas", { p_pares: r.itens.slice(i, i + 5000), p_maior: i === 0 ? r.maior : {} }); if (error) throw error; }
   } else if (tipo === "fechamento") {
