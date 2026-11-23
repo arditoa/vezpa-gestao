@@ -234,6 +234,48 @@ tfoot td{border-top:1px solid var(--line);border-bottom:0}
 code{background:var(--panel2);padding:1px 5px;border-radius:5px}
 dialog{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:22px;width:min(480px,92vw)}
 dialog::backdrop{background:rgba(0,0,0,.6)}
+
+/* 23/11 — Pagamentos da semana mais claro no celular */
+.passo{font-size:13px;font-weight:700;color:var(--ink);margin:14px 0 8px}.passo small{display:block;font-weight:400;color:var(--mute);font-size:12px;margin-top:2px}
+.chips.faixa{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}.chips.faixa::-webkit-scrollbar{display:none}
+.chips.faixa button{flex:0 0 auto;padding:8px 12px;font-size:13px;position:relative}.chips.faixa button b{font-weight:700;margin-left:2px}
+.chips.faixa button.fechado{opacity:.55}
+.bolinha{font-style:normal;display:inline-block;min-width:18px;height:18px;line-height:18px;border-radius:9px;background:var(--amber);color:#1a1208;font-size:11px;font-weight:800;text-align:center;margin-left:6px;padding:0 4px}
+.chips.faixa button.sel .bolinha{background:#1a1208;color:var(--amber)}
+.lista-bandas{display:grid;gap:6px}
+.linha-banda{display:grid;grid-template-columns:30px 1fr auto;grid-template-areas:"m n c" "m e c";align-items:center;column-gap:10px;text-align:left;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:10px 12px;cursor:pointer;font-size:14px;transition:background .15s,border-color .15s}
+.linha-banda .marca{grid-area:m;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#ffffff10;font-weight:800;color:var(--mute)}
+.linha-banda .nome{grid-area:n;font-weight:600}
+.linha-banda .cache{grid-area:c;font-variant-numeric:tabular-nums;color:var(--mute);font-size:13px}
+.linha-banda .estado{grid-area:e;font-size:11px;color:var(--amber2);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.linha-banda .estado:empty{display:none}
+.linha-banda.on{background:#3a2612;border-color:var(--amber)}.linha-banda.on .marca{background:var(--amber);color:#1a1208}.linha-banda.on .cache{color:var(--ink);font-weight:700}
+.linha-banda.carregando{opacity:.7;border-color:var(--amber)}
+.linha-banda.nova{border-style:dashed;color:var(--mute)}.linha-banda.nova .marca{color:var(--amber)}
+.linha-banda:active{transform:scale(.99)}
+.resumo-noite{margin-top:10px;font-size:13px;color:var(--mute);background:#ffffff08;border-radius:10px;padding:8px 12px}.resumo-noite b{color:var(--amber2)}
+tr.piscar td{background:#3a2612 !important;transition:background .3s}
+.acoes-pag .link-btn{margin:0;text-decoration:none;background:none;border:0;color:var(--amber2);font-weight:600;font-size:13px;padding:6px 2px;cursor:pointer}
+.acoes-pag.freelas{align-items:center}.acoes-pag.freelas select{flex:1 1 260px}
+.vazio-txt{display:block;text-align:left;white-space:normal}
+@media(max-width:700px){
+  .cab-sec h2{font-size:21px}.cab-sec p{font-size:13px}
+  .semana-nav{gap:6px;flex-wrap:wrap}.semana-nav b{min-width:0;font-size:14px}
+  .grade.kpis{grid-template-columns:1fr 1fr;gap:8px}
+  .kpi{padding:12px}.kpi .rot{font-size:10.5px}.kpi .val{font-size:20px;margin-top:4px}.kpi .det{font-size:11.5px}
+  .segmentos{display:flex;width:100%}.segmentos button{flex:1;padding:9px 6px}
+  .servico{padding:12px}
+  table.pag th:first-child,table.pag td:first-child{position:sticky;left:0;background:var(--panel);z-index:1}
+  table.pag input.dia{width:44px;padding:6px 2px}
+  table.pag.cartoes thead{display:none}
+  table.pag.cartoes,table.pag.cartoes tbody,table.pag.cartoes tr,table.pag.cartoes td{display:block;width:100%}
+  table.pag.cartoes tr{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-bottom:8px;position:relative}
+  table.pag.cartoes td{border:0;padding:4px 0;position:static !important;background:none !important;text-align:left}
+  table.pag.cartoes td[data-rot]::before{content:attr(data-rot);display:inline-block;min-width:64px;color:var(--mute);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  table.pag.cartoes td .x{position:absolute;top:8px;right:8px}
+  table.pag.cartoes tfoot tr{background:none;border:0}
+  .acoes-pag select{max-width:none;width:100%}
+}
 </style>
 </head>
 <body>
@@ -1267,6 +1309,9 @@ function editarPix(p, aoSalvar) {
 }
 
 // ============ ABA: PAGAMENTOS DA SEMANA ============
+
+// 23/11 — nomes de banda/pessoa em CAIXA ALTA aparecem só com a 1ª letra maiúscula ("BARBARA DUMON" → "Barbara Dumon").
+const nomeBonitoPessoa = n => { const t = String(n || "").trim(); if (!t || t !== t.toUpperCase()) return t; return t.toLowerCase().split(" ").map((w, i) => (i && ["de", "da", "do", "das", "dos", "e"].includes(w)) ? w : (/^dj$/.test(w) ? "DJ" : w.charAt(0).toUpperCase() + w.slice(1))).join(" "); };
 const fatSemanaCalc = res => res.reduce((s, r) => s + +r.faturamento, 0);
 const semanaDe = d => addDias(d, -((dow(d) - 3 + 7) % 7)); // semana começa na quarta
 const W = { sub: "freelas", timers: {} };
@@ -1330,24 +1375,32 @@ async function abaPagamentos() {
         ${diasVis.map(d => `<td class="c ${abreDow.has(dow(d)) ? "" : "fechado"}"><input class="dia ${l.dias_valores?.[d] ? "on" : ""}" inputmode="decimal" data-l="${l.id}" data-d="${d}" data-diaria="${diaria || ""}" value="${l.dias_valores?.[d] != null ? nfmt(+l.dias_valores[d]) : ""}" placeholder="·"></td>`).join("")}
         <td class="n"><input class="aj" inputmode="decimal" data-aj="${l.id}" value="${+l.ajuste ? nfmt(+l.ajuste, 2) : ""}" placeholder="0"><input class="aj-obs" data-ajobs="${l.id}" value="${esc(l.ajuste_obs || "")}" placeholder="motivo"></td>
         <td class="n" data-total="${l.id}">${brl(l._total)}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(l._serv)}</td>` : ""}${EQ ? "" : `<td class="n"><b data-pagar="${l.id}">${brl(l._pagar)}</b></td>`}<td>${pixCel(p, l.nome)}</td><td>${status("freelas", l.id, l.status)}</td>
-        <td>${l.status === "pago" && EQ ? "" : `<button class="x" data-del-fr="${l.id}" title="Tirar da semana">×</button>`}</td></tr>`; }).join("") || `<tr><td colspan="15" class="vazio">Nenhum freela nesta semana ainda.</td></tr>`}
+        <td>${l.status === "pago" && EQ ? "" : `<button class="x" data-del-fr="${l.id}" title="Tirar da semana">×</button>`}</td></tr>`; }).join("") || `<tr><td colspan="15" class="vazio"><span class="vazio-txt">Nenhum freela nesta semana ainda. Adicione abaixo ou repita a escala da semana anterior.</span></td></tr>`}
       </tbody><tfoot><tr><td><b>Total</b></td>${diasVis.map(d => `<td class="c n"><small>${brl0(fr.reduce((s, l) => s + (+l.dias_valores?.[d] || 0), 0)) }</small></td>`).join("")}<td></td><td class="n">${brl(tFre)}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(tServ)}</td>` : ""}${EQ ? "" : `<td class="n"><b>${brl(tFre + tServ)}</b></td>`}<td colspan="3"></td></tr></tfoot></table></div>
-      <div class="acoes-pag"><select id="add-fr"><option value="">+ Adicionar freela à semana…</option>${disponiveis.map(p => `<option value="${p.id}">${esc(p.nome)}${p.funcao ? " — " + esc(p.funcao) : ""}</option>`).join("")}<option value="novo">＋ Cadastrar nova pessoa…</option></select>
-        ${diasVis.length < 7 ? `<button class="btn sec" id="todos-dias">Mostrar seg e ter (feriado)</button>` : W.todosDias ? `<button class="btn sec" id="todos-dias">Esconder dias fechados</button>` : ""}
-        ${!fr.length ? `<button class="btn sec" id="repetir">Repetir a escala da semana anterior</button>` : ""}</div>
-      <p class="dica">Toque no dia para lançar a diária padrão; toque de novo para mudar o valor ou apague para tirar o dia. Dias em cinza são dias em que o bar normalmente fecha. Tudo é salvo na hora.</p>`;
+      <div class="acoes-pag freelas"><select id="add-fr"><option value="">+ Adicionar freela à semana…</option>${disponiveis.map(p => `<option value="${p.id}">${esc(p.nome)}${p.funcao ? " — " + esc(p.funcao) : ""}</option>`).join("")}<option value="novo">＋ Cadastrar nova pessoa…</option></select>
+        ${diasVis.length < 7 ? `<button class="link-btn" id="todos-dias">Mostrar seg e ter (feriado)</button>` : W.todosDias ? `<button class="link-btn" id="todos-dias">Esconder dias fechados</button>` : ""}
+        ${!fr.length ? `<button class="link-btn" id="repetir">↻ Repetir a escala da semana anterior</button>` : ""}</div>
+      <p class="dica">Toque no dia para lançar a diária; toque de novo para mudar o valor. Dias em cinza: o bar costuma fechar. Tudo salva na hora.</p>`;
   }
   if (W.sub === "bandas") {
     const bandas = pessoas.filter(p => p.tipo === "banda" && p.ativo);
     const noites = dias.filter(d => abreDow.has(dow(d)));
     W.noite = noites.includes(W.noite) ? W.noite : noites[0] || ini;
-    corpo = `<div class="add-banda"><div><label style="margin-top:0">1. Noite</label><div class="chips" id="noites">${dias.map(d => `<button class="${d === W.noite ? "sel" : ""}" data-noite="${d}">${DIAS[dow(d)]} ${br(d).slice(0, 5)}</button>`).join("")}</div></div>
-      <div><label>2. Toque na banda (o Pix vem do cadastro)</label><div class="chips">${bandas.map(p => `<button data-banda="${p.id}">${esc(p.nome)}${p.valor_padrao ? ` <small>${brl0(+p.valor_padrao)}</small>` : ""}</button>`).join("")}<button data-banda="novo">＋ Nova banda</button></div></div></div>
-      <div class="rolagem" style="max-height:none;margin-top:14px"><table class="pag"><thead><tr><th>Noite</th><th>Atração</th><th class="n">Cachê</th><th>Pix</th><th>Obs.</th><th>Situação</th><th></th></tr></thead><tbody>
+    // 23/11 — mais claro no celular: noites numa faixa que desliza; bandas em lista com o estado da noite
+    // (✓ lançada) e um resumo da noite. Tocar numa banda já lançada leva até a linha dela para ajustar o cachê.
+    const daNoite = bd.filter(b => b.data === W.noite);
+    const lancada = id => daNoite.find(b => String(b.pessoa_id) === String(id));
+    corpo = `<div class="add-banda">
+      <div><div class="passo">Escolha a noite</div><div class="chips faixa" id="noites">${dias.map(d => { const n = bd.filter(b => b.data === d).length; return `<button class="${d === W.noite ? "sel" : ""} ${abreDow.has(dow(d)) ? "" : "fechado"}" data-noite="${d}">${DIAS[dow(d)]} <b>${br(d).slice(0, 5)}</b>${n ? `<i class="bolinha">${n}</i>` : ""}</button>`; }).join("")}</div></div>
+      <div><div class="passo">Quem tocou em ${DIAS[dow(W.noite)]} ${br(W.noite).slice(0, 5)}? <small>Toque para lançar · o Pix vem do cadastro</small></div>
+      <div class="lista-bandas">${bandas.map(p => { const l = lancada(p.id); return `<button class="linha-banda ${l ? "on" : ""}" data-banda="${p.id}" ${l ? `data-ja="${l.id}"` : ""}><span class="marca">${l ? "✓" : "+"}</span><span class="nome">${esc(nomeBonitoPessoa(p.nome))}</span><span class="cache">${l ? brl0(+l.valor) : p.valor_padrao ? brl0(+p.valor_padrao) : "—"}</span><span class="estado">${l ? "lançada" : ""}</span></button>`; }).join("")}
+        <button class="linha-banda nova" data-banda="novo"><span class="marca">＋</span><span class="nome">Cadastrar nova banda</span></button></div>
+      ${daNoite.length ? `<div class="resumo-noite">${daNoite.length} ${daNoite.length === 1 ? "atração lançada" : "atrações lançadas"} nesta noite · <b>${brl0(daNoite.reduce((s, b) => s + +b.valor, 0))}</b></div>` : ""}</div></div>
+      <div class="passo" style="margin-top:18px">Cachês da semana</div><div class="rolagem" style="max-height:none;margin-top:6px"><table class="pag cartoes"><thead><tr><th>Noite</th><th>Atração</th><th class="n">Cachê</th><th>Pix</th><th>Obs.</th><th>Situação</th><th></th></tr></thead><tbody>
       ${bd.map(b => { const p = pesDe(b.pessoa_id, b.atracao, "banda");
-        return `<tr><td>${DIAS[dow(b.data)]} ${br(b.data).slice(0, 5)}</td><td><b>${esc(b.atracao)}</b></td>
-        <td class="n"><input class="val-banda" inputmode="decimal" data-vb="${b.id}" value="${nfmt(+b.valor, 2)}"></td><td>${pixCel(p, b.atracao)}</td>
-        <td><input class="aj-obs" style="width:150px" data-obsb="${b.id}" value="${esc(b.observacao || "")}" placeholder="—"></td><td>${status("pagamentos_bandas", b.id, b.status)}</td>
+        return `<tr id="bd-${b.id}"><td data-rot="Noite">${DIAS[dow(b.data)]} ${br(b.data).slice(0, 5)}</td><td data-rot="Atração"><b>${esc(nomeBonitoPessoa(b.atracao))}</b></td>
+        <td class="n" data-rot="Cachê"><input class="val-banda" inputmode="decimal" data-vb="${b.id}" value="${nfmt(+b.valor, 2)}"></td><td data-rot="Pix">${pixCel(p, b.atracao)}</td>
+        <td data-rot="Obs."><input class="aj-obs" style="width:150px" data-obsb="${b.id}" value="${esc(b.observacao || "")}" placeholder="—"></td><td>${status("pagamentos_bandas", b.id, b.status)}</td>
         <td>${b.status === "pago" && EQ ? "" : `<button class="x" data-del-bd="${b.id}" title="Apagar">×</button>`}</td></tr>`; }).join("") || `<tr><td colspan="7" class="vazio">Nenhuma banda lançada nesta semana.</td></tr>`}
       </tbody><tfoot><tr><td colspan="2"><b>Total</b></td><td class="n"><b>${brl(tBan)}</b></td><td colspan="4"></td></tr></tfoot></table></div>`;
   }
@@ -1372,7 +1425,7 @@ async function abaPagamentos() {
   }
 
   $("#conteudo").innerHTML = `
-  <div class="cab-sec"><div><h2>Pagamentos da semana</h2><p>${EQ ? "Lance quem trabalhou e as bandas de cada noite" : "Freelas e bandas num lugar só, com Pix salvo — substitui a planilha"}</p></div>
+  <div class="cab-sec"><div><h2>Pagamentos da semana</h2><p>${EQ ? "Lance quem trabalhou e as bandas de cada noite" : "Freelas e bandas da semana, com o Pix de cada um"}</p></div>
     <div class="filtros semana-nav"><button class="btn sec peq" id="sem-ant">‹</button><b>${semanaTxt}</b><button class="btn sec peq" id="sem-prox">›</button>
       <label class="cal-btn" title="Escolher a semana no calendário">📅<input type="date" id="sem-cal" value="${ini}"></label><button class="btn sec peq" id="sem-hoje">Semana atual</button></div></div>
   <div class="grade kpis ${EQ ? "hidden" : ""}">
@@ -1450,8 +1503,10 @@ async function abaPagamentos() {
     recarregar();
   };
   // bandas
-  document.querySelectorAll("[data-noite]").forEach(b => b.onclick = () => { W.noite = b.dataset.noite; document.querySelectorAll("[data-noite]").forEach(x => x.classList.toggle("sel", x === b)); });
+  document.querySelectorAll("[data-noite]").forEach(b => b.onclick = () => { W.noite = b.dataset.noite; recarregar(); });
   document.querySelectorAll("[data-banda]").forEach(b => b.onclick = async () => {
+    if (b.dataset.ja) { const tr = $(`#bd-${b.dataset.ja}`); if (tr) { tr.scrollIntoView({ behavior: "smooth", block: "center" }); tr.classList.add("piscar"); setTimeout(() => tr.classList.remove("piscar"), 1400); const inp = tr.querySelector("[data-vb]"); if (inp) setTimeout(() => { inp.focus(); inp.select(); }, 400); } return; }
+    if (b.dataset.banda !== "novo") { b.classList.add("carregando"); b.querySelector(".marca").textContent = "…"; b.querySelector(".estado").textContent = "lançando"; }
     const inserir = async p => {
       const { data } = await sb.from("pagamentos_bandas").insert({ data: W.noite, atracao: p.nome, pessoa_id: p.id, valor: +(p.valor_padrao || 0), status: "a pagar", observacao: p.observacao || null }).select().single();
       await recarregar(); const inp = $(`[data-vb="${data?.id}"]`); if (inp) { inp.focus(); inp.select(); }
