@@ -465,6 +465,7 @@ const ICONE = {
   notas: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/>',
   aniversarios: '<path d="M4 21h16M5 21v-7h14v7M12 14V9M12 6.5c-1-.8-1-2.2 0-3 1 .8 1 2.2 0 3z"/><path d="M5 14c1.2 1.2 2.8 1.2 4 0 1.2 1.2 2.8 1.2 4 0 1.2 1.2 2.8 1.2 4 0 .8.8 1.4 1 2 1"/>',
   perfil: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/>',
+  reconquista: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
   ficha: '<path d="M6 3h12v18H6z"/><path d="M9 7h6M9 11h6M9 15h3"/>',
   usuarios: '<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/>',
 };
@@ -482,6 +483,7 @@ const ABAS = [
   { id: "notas", nome: "Notas e boletos", grupo: "Financeiro", papeis: ["dona", "gerente", "caixa"], fn: abaNotas },
   { id: "perfil", nome: "Perfil dos clientes", grupo: "Clientes", papeis: ["dona", "gerente"], fn: abaPerfil },
   { id: "aniversarios", nome: "Aniversariantes", grupo: "Clientes", papeis: ["dona", "gerente"], fn: abaAniversarios },
+  { id: "reconquista", nome: "Sentimos sua falta", grupo: "Clientes", papeis: ["dona", "gerente"], fn: abaReconquista },
   { id: "cadastros", nome: "Freelas e bandas", grupo: "Configurações", papeis: ["dona", "gerente"], fn: abaCadastros },
   { id: "importar", nome: "Importar dados", grupo: "Configurações", papeis: ["dona", "gerente"], fn: abaImportar },
   { id: "usuarios", nome: "Usuários", grupo: "Configurações", papeis: ["dona"], fn: abaUsuarios },
@@ -2345,6 +2347,9 @@ async function abaAniversarios() {
   if (AN.busca) itens = itens.filter(c => c.nome.toLowerCase().includes(AN.busca.toLowerCase()));
   if (AN.soFone) itens = itens.filter(c => c.telefone && !c.nao_contatar);
   if (AN.pendentes) itens = itens.filter(c => !env[c.codigo]);
+  const limite3m = addDias(hoje, -90), ativa = c => c.ultima_visita && c.ultima_visita >= limite3m;
+  const nAtivas = itens.filter(ativa).length;
+  if (AN.recentes) itens = itens.filter(ativa);
   const contReg = { todos: itens.length, sp: 0, interior: 0, fora: 0, sem: 0 }; itens.forEach(c => contReg[regiaoFone(c.telefone)]++);
   if (AN.regiao !== "todos") itens = itens.filter(c => regiaoFone(c.telefone) === AN.regiao);
   // ordena pela proximidade do aniversário a partir de hoje
@@ -2383,12 +2388,13 @@ async function abaAniversarios() {
       <input id="an-busca" placeholder="Buscar nome…" value="${esc(AN.busca || "")}" style="max-width:220px">
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-fone" style="width:auto" ${AN.soFone ? "checked" : ""}> Só com telefone</label>
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-pend" style="width:auto" ${AN.pendentes ? "checked" : ""}> Só quem falta mandar</label>
+      <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-rec" style="width:auto" ${AN.recentes ? "checked" : ""}> Só quem veio nos últimos 3 meses <small style="color:var(--mute)">(${nAtivas})</small></label>
     </div>
     <div class="rolagem" style="max-height:640px"><table class="pag"><thead><tr><th>Aniversário</th><th>Cliente</th><th>Telefone</th><th>Última visita</th><th>Mensagem</th><th>Veio?</th></tr></thead><tbody>
     ${itens.slice(0, 600).map(c => { const e = env[c.codigo], id = idade(c);
       return `<tr><td><b>${String(c.nasc_dia).padStart(2, "0")}/${String(c.nasc_mes).padStart(2, "0")}</b> ${quando(c)}${id ? `<small class="sub2">faz ${id} anos</small>` : ""}</td>
       <td><b>${esc(c.nome)}</b> <button class="x" style="font-size:13px" data-nc="${c.codigo}" title="${c.nao_contatar ? "Liberar contato" : "Marcar: não quer receber mensagens"}">${c.nao_contatar ? "↺" : "🚫"}</button>${c.nao_contatar ? `<small class="sub2">não quer contato</small>` : ""}</td><td>${fone(c.telefone) || "<span class='tag'>sem telefone</span>"} ${tagReg(c)}</td>
-      <td>${c.ultima_visita ? br(c.ultima_visita) : "—"}</td>
+      <td>${c.ultima_visita ? br(c.ultima_visita) : "—"}${ativa(c) ? ` <span class="tag ok">veio nos últimos 3 meses</span>` : ""}</td>
       <td style="white-space:nowrap">${c.telefone && !c.nao_contatar ? `<button class="btn ${e ? "sec" : ""} peq" data-wa="${c.codigo}">${e ? "Enviar de novo" : "WhatsApp"}</button>` : ""} <button class="btn sec peq" data-copmsg="${c.codigo}">Copiar texto</button>${e ? `<small class="sub2">enviado ${new Date(e.enviado_em).toLocaleDateString("pt-BR")}</small>` : ""}</td>
       <td>${e ? `<button class="status ${e.veio ? "pago" : ""}" data-veio="${c.codigo}">${e.veio ? "Veio ✓" : "Ainda não"}</button>` : ""}</td></tr>`; }).join("") || `<tr><td colspan="6" class="vazio">Ninguém nesse filtro</td></tr>`}
     </tbody></table></div>
@@ -2403,6 +2409,7 @@ async function abaAniversarios() {
   let tb; $("#an-busca").oninput = e => { clearTimeout(tb); tb = setTimeout(() => { AN.busca = e.target.value; ir(); }, 350); };
   $("#an-fone").onchange = e => { AN.soFone = e.target.checked; ir(); };
   $("#an-pend").onchange = e => { AN.pendentes = e.target.checked; ir(); };
+  $("#an-rec").onchange = e => { AN.recentes = e.target.checked; ir(); };
   document.querySelectorAll("[data-wa]").forEach(b => b.onclick = () => previaWhats(porCod[b.dataset.wa]));
   function previaWhats(c) {
     const d = $("#dlg"), id = idade(c);
@@ -2458,6 +2465,103 @@ async function abaAniversarios() {
     $("#an-mod").onclick = e => { const b = e.target.closest("button"); if (!b) return; $("#f-an").mensagem.value = MODELOS[b.dataset.mod][1]; prev(); };
     $("#f-an").onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target);
       await sb.from("config").upsert({ chave: "aniversario", valor: { mensagem: f.get("mensagem"), presente: f.get("presente"), mensagem_fora: f.get("mensagem_fora") } }); d.close(); ir(); };
+  };
+}
+
+// ============ Prévia de WhatsApp reutilizável ============
+function previaWhatsGeral({ titulo, sub, rotulo, texto, telefone, aoEnviar }) {
+  const d = $("#dlg");
+  d.innerHTML = `<h3>${titulo}</h3><div class="sub" style="margin-bottom:10px">${sub}</div>
+    ${rotulo ? `<div class="rot-wa">${rotulo}</div>` : ""}<div class="wa-tela"><div class="wa-bolha" id="wg-bolha"></div></div>
+    <label style="margin-top:12px">Ajustar só para esta pessoa</label><textarea id="wg-txt" rows="5">${esc(texto)}</textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap"><button class="btn sec" type="button" id="wg-c">Cancelar</button><button class="btn sec" type="button" id="wg-cop">Copiar texto</button><button class="btn" type="button" id="wg-ok">Abrir no WhatsApp</button></div>`;
+  d.showModal();
+  const t = $("#wg-txt"), at = () => { $("#wg-bolha").innerHTML = esc(t.value).replace(/\n/g, "<br>") + `<span class="wa-hora">${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} ✓✓</span>`; };
+  t.oninput = at; at();
+  $("#wg-c").onclick = () => d.close();
+  $("#wg-cop").onclick = () => copiar(t.value, $("#wg-cop"));
+  $("#wg-ok").onclick = async () => { window.open(`https://wa.me/55${telefone}?text=${encodeURIComponent(t.value)}`, "_blank", "noopener"); await aoEnviar?.(); d.close(); };
+}
+
+// ============ ABA: SENTIMOS SUA FALTA (reconquista) ============
+const RQ = { faixa: "2a3", regiao: "todos", soFone: true, pendentes: true };
+const RQ_FAIXAS = { "2a3": [60, 90, "2 a 3 meses"], "3a6": [90, 180, "3 a 6 meses"], "6a12": [180, 365, "6 meses a 1 ano"] };
+const RQ_PADRAO = "Oi {nome}! Aqui é o Vezpa 🐝🧡 Faz um tempinho que você não aparece e a colmeia tá sentindo sua falta! Essa semana tem programação nova, samba, sofrência e aquela energia boa que você conhece. Vem matar a saudade com a gente, chama as amigas e cola! Te esperamos de braços abertos. 🏳️‍🌈";
+const RQ_FORA = "Oi {nome}! Aqui é o Vezpa 🐝🧡 Passando só pra dizer que a gente sente sua falta por aqui! Quando vier pra São Paulo, já sabe: a casa é sua. Um abraço apertado e muita energia boa pra você! 🏳️‍🌈";
+async function abaReconquista() {
+  const F = RQ_FAIXAS[RQ.faixa];
+  const [{ data: R, error }, { data: cfg }] = await Promise.all([
+    sb.rpc("reconquista_lista", { p_min_dias: F[0], p_max_dias: F[1], p_lim: 600 }),
+    sb.from("config").select("valor").eq("chave", "reconquista").maybeSingle()]);
+  if (error) throw error;
+  const C = { mensagem: RQ_PADRAO, mensagem_fora: RQ_FORA, ...(cfg?.valor || {}) };
+  const primeiroNome = n => { const p = (n || "").trim().split(/\s+/)[0]; return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase(); };
+  const local = c => ["sp", "sem"].includes(regiaoFone(c.telefone));
+  const msg = c => (local(c) ? C.mensagem : C.mensagem_fora).replaceAll("{nome}", primeiroNome(c.nome));
+  const fone = t => t ? `(${t.slice(0, 2)}) ${t.slice(2, -4)}-${t.slice(-4)}` : "";
+  const hoje = diaOperacionalHoje(), dias = d => Math.round((new Date(hoje) - new Date(d)) / 864e5);
+  let lista = R.lista || [];
+  if (RQ.soFone) lista = lista.filter(c => c.telefone && !c.nao_contatar);
+  if (RQ.pendentes) lista = lista.filter(c => !c.enviado_em || dias(c.enviado_em.slice(0, 10)) > 30);
+  const cont = { todos: lista.length, sp: 0, interior: 0, fora: 0, sem: 0 }; lista.forEach(c => cont[regiaoFone(c.telefone)]++);
+  if (RQ.regiao !== "todos") lista = lista.filter(c => regiaoFone(c.telefone) === RQ.regiao);
+  const porCod = Object.fromEntries(lista.map(c => [c.codigo, c]));
+  $("#conteudo").innerHTML = `
+  <div class="cab-sec"><div><h2>Sentimos sua falta</h2><p>Clientes que não voltam há um tempo · mande um convite carinhoso pelo WhatsApp</p></div>
+    <div class="filtros"><button class="btn sec" id="rq-msg">✎ Mensagens</button></div></div>
+  <div class="grade kpis">
+    <div class="card kpi destaque"><div class="rot">Sem vir há ${F[2]}</div><div class="val">${nfmt(R.total)}</div><div class="det">${nfmt(R.com_fone)} com telefone</div></div>
+    <div class="card kpi"><div class="rot">Na lista agora</div><div class="val">${nfmt(lista.length)}</div><div class="det">ordenadas por quem mais vinha</div></div>
+    <div class="card kpi"><div class="rot">Convites enviados</div><div class="val">${nfmt(R.enviados)}</div><div class="det">nessa faixa</div></div>
+    <div class="card kpi"><div class="rot">Voltaram</div><div class="val">${nfmt(R.voltaram)}</div><div class="det">marque na lista quando vierem</div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><h3>Mensagens atuais</h3><div class="sub">O painel escolhe pelo DDD (exemplo com o nome Juliana)</div></div></div>
+    <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:12px">
+      <div><div class="rot-wa">📍 São Paulo capital (DDD 11)</div><div class="wa-tela"><div class="wa-bolha">${esc(C.mensagem.replaceAll("{nome}", "Juliana")).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
+      <div><div class="rot-wa">✈️ Interior e outros estados</div><div class="wa-tela"><div class="wa-bolha">${esc(C.mensagem_fora.replaceAll("{nome}", "Juliana")).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
+    </div></div>
+  <div class="card" style="margin-top:14px">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+      <div class="segmentos" style="margin:0">${Object.entries(RQ_FAIXAS).map(([k, f]) => `<button class="${RQ.faixa === k ? "sel" : ""}" data-rqf="${k}">${f[2]}</button>`).join("")}</div>
+      <div class="segmentos" style="margin:0">${[["todos", "Todos"], ["sp", "SP capital"], ["interior", "Interior SP"], ["fora", "Outros estados"]].map(([k, n]) => `<button class="${RQ.regiao === k ? "sel" : ""}" data-rqr="${k}">${n} <small>${cont[k]}</small></button>`).join("")}</div>
+      <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="rq-pend" style="width:auto" ${RQ.pendentes ? "checked" : ""}> Esconder quem já recebeu nos últimos 30 dias</label>
+    </div>
+    <div class="rolagem" style="max-height:640px"><table class="pag"><thead><tr><th>Cliente</th><th>Telefone</th><th>Última visita</th><th class="n">Visitas</th><th>Convite</th><th>Voltou?</th></tr></thead><tbody>
+    ${lista.slice(0, 400).map(c => `<tr><td><b>${esc(c.nome || c.codigo)}</b></td><td>${fone(c.telefone)} ${regiaoFone(c.telefone) === "fora" ? `<span class="tag bom">${UF_DDD[+c.telefone.slice(0, 2)]}</span>` : regiaoFone(c.telefone) === "interior" ? `<span class="tag">Interior SP</span>` : ""}</td>
+      <td>${br(c.ultima)}<small class="sub2">há ${dias(c.ultima)} dias</small></td><td class="n">${c.visitas || "—"}</td>
+      <td style="white-space:nowrap">${c.telefone && !c.nao_contatar ? `<button class="btn ${c.enviado_em ? "sec" : ""} peq" data-rqw="${c.codigo}">${c.enviado_em ? "Enviar de novo" : "WhatsApp"}</button>` : ""}${c.enviado_em ? `<small class="sub2">enviado ${new Date(c.enviado_em).toLocaleDateString("pt-BR")}</small>` : ""}</td>
+      <td>${c.enviado_em ? `<button class="status ${c.veio ? "pago" : ""}" data-rqv="${c.codigo}">${c.veio ? "Voltou ✓" : "Ainda não"}</button>` : ""}</td></tr>`).join("") || `<tr><td colspan="6" class="vazio">Ninguém nessa faixa</td></tr>`}
+    </tbody></table></div>
+    ${lista.length > 400 ? `<p class="dica">Mostrando as 400 que mais vinham, de ${nfmt(lista.length)}.</p>` : ""}
+    <p class="dica">A última visita usa o cadastro do Epoc e as visitas importadas do relatório Fidelidade. Quem pediu para não receber mensagens (🚫 em Aniversariantes) não aparece aqui.</p>
+  </div>`;
+  const ir = () => abaReconquista();
+  document.querySelectorAll("[data-rqf]").forEach(b => b.onclick = () => { RQ.faixa = b.dataset.rqf; ir(); });
+  document.querySelectorAll("[data-rqr]").forEach(b => b.onclick = () => { RQ.regiao = b.dataset.rqr; ir(); });
+  $("#rq-pend").onchange = e => { RQ.pendentes = e.target.checked; ir(); };
+  document.querySelectorAll("[data-rqw]").forEach(b => b.onclick = () => { const c = porCod[b.dataset.rqw];
+    previaWhatsGeral({ titulo: "Prévia do convite", sub: `Para <b>${esc(c.nome)}</b> · ${fone(c.telefone)} · última visita ${br(c.ultima)} (há ${dias(c.ultima)} dias)${c.visitas ? ` · ${c.visitas} visitas` : ""}`,
+      rotulo: local(c) ? "📍 Mensagem de São Paulo capital" : "✈️ Mensagem para interior / outros estados", texto: msg(c), telefone: c.telefone,
+      aoEnviar: async () => { await sb.from("reconquista_envios").insert({ cliente_codigo: c.codigo }); setTimeout(ir, 600); } }); });
+  document.querySelectorAll("[data-rqv]").forEach(b => b.onclick = async () => { const c = porCod[b.dataset.rqv];
+    const { data: ult } = await sb.from("reconquista_envios").select("id").eq("cliente_codigo", c.codigo).order("enviado_em", { ascending: false }).limit(1);
+    if (ult?.[0]) await sb.from("reconquista_envios").update({ veio: !c.veio }).eq("id", ult[0].id); ir(); });
+  $("#rq-msg").onclick = () => {
+    const d = $("#dlg"); let tipo = "local";
+    d.innerHTML = `<h3>Mensagens de “sentimos sua falta”</h3><form id="f-rq">
+      <div class="segmentos" id="rq-tipo" style="margin:0 0 12px"><button type="button" class="sel" data-t="local">📍 SP capital (DDD 11)</button><button type="button" data-t="fora">✈️ Interior e outros estados</button></div>
+      <div data-bloco="local"><label>Mensagem para SP capital</label><textarea name="mensagem" rows="6">${esc(C.mensagem)}</textarea></div>
+      <div data-bloco="fora" class="hidden"><label>Mensagem para interior e outros estados</label><textarea name="mensagem_fora" rows="6">${esc(C.mensagem_fora)}</textarea></div>
+      <p class="dica">Use {nome} para o primeiro nome. Dica: cite a programação da semana para dar um motivo concreto para voltar.</p>
+      <label>Prévia</label><div class="wa-tela"><div class="wa-bolha" id="rq-prev"></div></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn sec" type="button" id="rq-pad">Voltar ao padrão</button><button class="btn sec" type="button" id="rq-c">Cancelar</button><button class="btn">Salvar</button></div></form>`;
+    d.showModal();
+    const prev = () => { const f = new FormData($("#f-rq")); $("#rq-prev").innerHTML = esc(f.get(tipo === "local" ? "mensagem" : "mensagem_fora").replaceAll("{nome}", "Juliana")).replace(/\n/g, "<br>") + `<span class="wa-hora">12:00 ✓✓</span>`; };
+    $("#rq-tipo").onclick = e => { const b = e.target.closest("button"); if (!b) return; tipo = b.dataset.t; $("#rq-tipo").querySelectorAll("button").forEach(x => x.classList.toggle("sel", x === b)); d.querySelectorAll("[data-bloco]").forEach(x => x.classList.toggle("hidden", x.dataset.bloco !== tipo)); prev(); };
+    $("#f-rq").oninput = prev; prev(); $("#rq-c").onclick = () => d.close();
+    $("#rq-pad").onclick = () => { $("#f-rq").mensagem.value = RQ_PADRAO; $("#f-rq").mensagem_fora.value = RQ_FORA; prev(); };
+    $("#f-rq").onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target);
+      await sb.from("config").upsert({ chave: "reconquista", valor: { mensagem: f.get("mensagem"), mensagem_fora: f.get("mensagem_fora") } }); d.close(); ir(); };
   };
 }
 
