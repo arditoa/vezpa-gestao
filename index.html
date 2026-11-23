@@ -192,6 +192,9 @@ input.val-banda{width:110px;text-align:right;font-weight:700;padding:8px}
 .foto-btn.ok{border-style:solid;border-color:var(--green)}
 tfoot td{border-top:1px solid var(--line);border-bottom:0}
 .quiz h3{font-size:22px;margin:6px 0 12px}
+.chip-ins,.chip-add{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:99px;padding:6px 11px;font-size:12.5px;cursor:pointer}
+.chip-ins b{color:var(--amber2);font-weight:600}.chip-ins:hover{border-color:var(--amber)}
+.chip-add{border-style:dashed;color:var(--mute)}
 .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:14px}
 .cal-h{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);text-align:center;padding:4px 0}
 .cal-dia{min-height:104px;border:1px solid var(--line);border-radius:10px;padding:7px;background:var(--panel2);cursor:pointer;display:flex;flex-direction:column;gap:3px;overflow:hidden}
@@ -392,6 +395,7 @@ const ICONE = {
   notas: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/>',
   aniversarios: '<path d="M4 21h16M5 21v-7h14v7M12 14V9M12 6.5c-1-.8-1-2.2 0-3 1 .8 1 2.2 0 3z"/><path d="M5 14c1.2 1.2 2.8 1.2 4 0 1.2 1.2 2.8 1.2 4 0 1.2 1.2 2.8 1.2 4 0 .8.8 1.4 1 2 1"/>',
   perfil: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/>',
+  ficha: '<path d="M6 3h12v18H6z"/><path d="M9 7h6M9 11h6M9 15h3"/>',
   usuarios: '<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/>',
 };
 const ABAS = [
@@ -402,6 +406,7 @@ const ABAS = [
   { id: "cruzamentos", nome: "Cruzamentos", grupo: "Análises", papeis: ["dona", "gerente"], fn: abaCruzamentos },
   { id: "equipe", nome: "Equipe", grupo: "Análises", papeis: ["dona", "gerente"], fn: abaEquipe },
   { id: "contagem", nome: "Contagem", grupo: "Operação", papeis: ["dona", "gerente", "caixa"], fn: abaContagem },
+  { id: "ficha", nome: "Ficha técnica", grupo: "Operação", papeis: ["dona", "gerente"], fn: abaFicha },
   { id: "pedido", nome: "Pedido sugerido", grupo: "Operação", papeis: ["dona", "gerente"], fn: abaPedido },
   { id: "pagamentos", nome: "Pagamentos da semana", grupo: "Financeiro", papeis: ["dona", "gerente", "caixa"], fn: abaPagamentos },
   { id: "notas", nome: "Notas e boletos", grupo: "Financeiro", papeis: ["dona", "gerente", "caixa"], fn: abaNotas },
@@ -1743,6 +1748,86 @@ async function abaNotas() {
     $("#c-s").onclick = async () => { const n = notas.find(x => x.id == b.dataset.del); const arqs = [n.foto_nota, n.foto_boleto].filter(Boolean);
       if (arqs.length) await sb.storage.from("notas").remove(arqs); await sb.from("notas").delete().eq("id", n.id); d.close(); ir(); };
   });
+}
+
+// ============ ABA: FICHA TÉCNICA (quanto de cada insumo vai em cada prato) ============
+// Sugestões de partida, por porção — a cozinha confere e corrige (valores em kg, L ou un)
+const FICHA_SUGERIDA = {
+  "91": { "Batata palito congelada": .4, "Óleo de fritura": .03 },
+  "93": { "Batata palito congelada": .4, "Queijo cheddar": .08, "Bacon": .06, "Óleo de fritura": .03 },
+  "1143": { "Batata palito congelada": .4, "Costela desfiada": .15, "Sour cream": .05, "Óleo de fritura": .03 },
+  "92": { "Batata palito congelada": .4, "Óleo de fritura": .03 },
+  "107": { "Batata palito congelada": .15 },
+  "1000": { "Filé mignon": .25, "Batata palito congelada": .25, "Óleo de fritura": .02 },
+  "82": { "Filé mignon": .3, "Gorgonzola": .08 },
+  "90": { "Filé mignon": .12, "Tortilha (wrap)": 1 },
+  "88": { "Frango (tiras)": .12, "Tortilha (wrap)": 1 },
+  "89": { "Cogumelo": .12, "Tortilha (wrap)": 1 },
+  "83": { "Picanha": .4, "Batata palito congelada": .3, "Óleo de fritura": .03 },
+  "1022": { "Picanha": .25 },
+  "84": { "Frango (tiras)": .4, "Óleo de fritura": .03 },
+  "86": { "Calabresa": .4, "Cebola": .15 },
+  "85": { "Calabresa": .2, "Frango (tiras)": .2, "Batata palito congelada": .3, "Óleo de fritura": .03 },
+  "96": { "Torresmo": .3, "Óleo de fritura": .02 },
+  "97": { "Provolone": .25 },
+  "95": { "Dadinho de tapioca": .3, "Óleo de fritura": .02 },
+  "103": { "Bacon": .03, "Queijo cheddar": .03 },
+  "102": { "Queijo cheddar": .03, "Alface": .05, "Tomate": .04 },
+  "98": { "Queijo cheddar": .03 },
+  "104": { "Gorgonzola": .04, "Bacon": .03 },
+  "106": { "Queijo cheddar": .05, "Bacon": .05, "Cebola": .05 },
+};
+async function abaFicha() {
+  const hoje = diaOperacionalHoje();
+  const [{ data: itens }, prods, vendas] = await Promise.all([
+    sb.from("itens_estoque").select("*").eq("ativo", true).order("ordem"),
+    todos(() => sb.from("produtos").select("codigo,nome,grupo")),
+    todos(() => sb.from("vw_vendas_codigo_dia").select("codigo,qtd,dia").gte("dia", addDias(hoje, -56))),
+  ]);
+  const insumos = itens.filter(i => /^cozinha/i.test(i.categoria || ""));
+  const porNome = Object.fromEntries(insumos.map(i => [i.nome, i]));
+  const semanas = 8, vend = {}; vendas.forEach(v => vend[v.codigo] = (vend[v.codigo] || 0) + +v.qtd);
+  const pratos = prods.filter(x => CATEG(x.grupo) === "Comida" && (vend[x.codigo] || 0) > 0 && !/teste|embalagem|adicional de|molho|maionese|pao$/i.test(x.nome))
+    .map(x => ({ ...x, semana: (vend[x.codigo] || 0) / semanas })).sort((a, b) => b.semana - a.semana);
+  const fichaDe = cod => insumos.filter(i => i.consumo && i.consumo[cod] != null).map(i => ({ i, q: +i.consumo[cod] }));
+  const fmtQ = (i, q) => i.unidade === "kg" ? nfmt(q * 1000) + " g" : i.unidade === "L" ? nfmt(q * 1000) + " ml" : nfmt(q, q % 1 ? 1 : 0) + " " + i.unidade;
+  const semFicha = pratos.filter(p => !fichaDe(p.codigo).length);
+  const sugeriveis = semFicha.filter(p => FICHA_SUGERIDA[p.codigo]);
+  $("#conteudo").innerHTML = `
+  <div class="cab-sec"><div><h2>Ficha técnica</h2><p>Quanto de cada insumo vai em cada prato — com isso o Pedido sugerido calcula carne, batata, queijo… em kg</p></div>
+    <div class="filtros">${sugeriveis.length ? `<button class="btn sec" id="fi-sug">Preencher ${sugeriveis.length} pratos com sugestões</button>` : ""}<button class="btn" onclick="PQ.passo=1;PQ.aba='comida';abrir('pedido')">Ver pedido de comida →</button></div></div>
+  ${semFicha.length ? `<div class="aviso">${semFicha.length} prato(s) ainda sem ficha. As sugestões são um ponto de partida (porções típicas de bar) — <b>confira com a cozinha e ajuste as gramas</b>.</div>` : `<div class="msg ok">Todos os pratos vendidos têm ficha ✔</div>`}
+  <div class="card" style="margin-top:14px"><div class="rolagem" style="max-height:none"><table class="pag"><thead><tr><th>Prato</th><th class="n">Sai por semana</th><th>Insumos por porção</th><th>Por semana</th></tr></thead><tbody>
+  ${pratos.slice(0, 40).map(p => { const f = fichaDe(p.codigo);
+    return `<tr><td><b>${esc(p.nome)}</b><small class="sub2">${esc(p.grupo || "")} · cód. ${p.codigo}</small></td><td class="n">${nfmt(p.semana, 1)}</td>
+      <td><div class="chips">${f.map(({ i, q }) => `<button class="chip-ins" data-ed-ins="${i.id}" data-cod="${p.codigo}" title="Toque para alterar">${esc(i.nome)} · <b>${fmtQ(i, q)}</b></button>`).join("")}
+        <button class="chip-add" data-add="${p.codigo}">+ insumo</button></div></td>
+      <td style="font-size:12.5px;color:var(--mute)">${f.map(({ i, q }) => `${esc(i.nome)}: ${i.unidade === "un" ? nfmt(q * p.semana) + " un" : nfmt(q * p.semana, 1) + " " + i.unidade}`).join("<br>") || "—"}</td></tr>`; }).join("")}
+  </tbody></table></div>
+  <p class="dica">Toque num insumo para mudar a quantidade (0 remove). Insumos em kg/L são informados em gramas/ml. Para cadastrar um insumo novo, use Contagem → Editar itens (categoria começando com “Cozinha”).</p></div>`;
+  const salvar = async (it, cod, q) => { const c = { ...(it.consumo || {}) }; if (q > 0) c[cod] = q; else delete c[cod];
+    await sb.from("itens_estoque").update({ consumo: c, codigos: Object.keys(c) }).eq("id", it.id); };
+  const pedirQtd = (it, cod, atual, prato) => {
+    const d = $("#dlg"), emG = it.unidade === "kg" || it.unidade === "L";
+    d.innerHTML = `<h3>${esc(prato)}</h3><form id="f-fi">${it.id ? "" : ""}<label>Insumo</label>
+      ${it.id ? `<input value="${esc(it.nome)}" disabled>` : `<select name="ins">${insumos.map(i => `<option value="${i.id}">${esc(i.nome)} (${i.unidade})</option>`).join("")}</select>`}
+      <label>Quantidade por porção <span id="fi-un">${it.id ? (emG ? (it.unidade === "L" ? "(ml)" : "(gramas)") : "(" + it.unidade + ")") : ""}</span></label><input name="q" inputmode="decimal" value="${atual != null ? (emG ? nfmt(atual * 1000) : nfmt(atual, 1)) : ""}" required>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn sec" type="button" id="fi-c">Cancelar</button><button class="btn">Salvar</button></div></form>`;
+    d.showModal(); $("#fi-c").onclick = () => d.close();
+    const sel = d.querySelector("[name=ins]"); if (sel) { const upd = () => { const i = insumos.find(x => x.id == sel.value); $("#fi-un").textContent = i.unidade === "kg" ? "(gramas)" : i.unidade === "L" ? "(ml)" : "(" + i.unidade + ")"; }; sel.onchange = upd; upd(); }
+    $("#f-fi").onsubmit = async e => { e.preventDefault(); const i = it.id ? it : insumos.find(x => x.id == sel.value);
+      const v = numQtd(new FormData(e.target).get("q")) || 0; const q = i.unidade === "kg" || i.unidade === "L" ? v / 1000 : v;
+      await salvar(i, cod, q); d.close(); abaFicha(); };
+  };
+  document.querySelectorAll("[data-ed-ins]").forEach(b => b.onclick = () => { const it = insumos.find(x => x.id == b.dataset.edIns); pedirQtd(it, b.dataset.cod, +it.consumo[b.dataset.cod], pratos.find(p => p.codigo === b.dataset.cod)?.nome); });
+  document.querySelectorAll("[data-add]").forEach(b => b.onclick = () => pedirQtd({}, b.dataset.add, null, pratos.find(p => p.codigo === b.dataset.add)?.nome));
+  if ($("#fi-sug")) $("#fi-sug").onclick = async () => {
+    $("#fi-sug").disabled = true; $("#fi-sug").textContent = "Preenchendo…";
+    const novo = Object.fromEntries(insumos.map(i => [i.id, { ...(i.consumo || {}) }]));
+    sugeriveis.forEach(p => Object.entries(FICHA_SUGERIDA[p.codigo]).forEach(([nome, q]) => { const i = porNome[nome]; if (i && novo[i.id][p.codigo] == null) novo[i.id][p.codigo] = q; }));
+    for (const i of insumos) { const c = novo[i.id]; if (JSON.stringify(c) !== JSON.stringify(i.consumo || {})) await sb.from("itens_estoque").update({ consumo: c, codigos: Object.keys(c) }).eq("id", i.id); }
+    abaFicha();
+  };
 }
 
 // ============ ABA: PEDIDO SUGERIDO ============
