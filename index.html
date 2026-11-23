@@ -220,7 +220,9 @@ $("#form-login").addEventListener("submit", async e => {
   const b = e.submitter; b.disabled = true;
   const { error } = await sb.auth.signInWithPassword({ email: $("#email").value.trim(), password: $("#senha").value });
   b.disabled = false;
-  if (error) mostrarMsg(error.message.includes("Invalid") ? "E-mail ou senha incorretos." : error.message);
+  if (error) return mostrarMsg(error.message.includes("Invalid") ? "E-mail ou senha incorretos." : error.message);
+  $("#msg-login").className = "msg hidden";
+  iniciar();
 });
 
 $("#btn-esqueci").addEventListener("click", async () => {
