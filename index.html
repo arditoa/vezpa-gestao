@@ -1274,15 +1274,21 @@ async function abaPagamentos() {
   W.ini ??= semanaDe(addDias(diaOperacionalHoje(), -1));
   const ini = W.ini, fim = addDias(ini, 6);
   const dias = Array.from({ length: 7 }, (_, i) => addDias(ini, i));
-  const [{ data: pessoas }, { data: fr }, { data: bd }, res, hist, { data: cfgServ }] = await Promise.all([
+  const [{ data: pessoas }, { data: fr }, { data: bd }, res, hist, { data: cfgServ }, { data: fechSem }] = await Promise.all([
     gestor() ? sb.from("pessoas").select("*").order("nome") : sb.rpc("pessoas_lista"),
     sb.from("freelas").select("*").eq("semana_inicio", ini).order("id"),
     sb.from("pagamentos_bandas").select("*").gte("data", ini).lte("data", fim).order("data").order("id"),
     todos(() => sb.from("vw_resumo_diario").select("dia,faturamento").gte("dia", ini).lte("dia", fim)),
     todos(() => sb.from("vw_resumo_diario").select("dia").gte("dia", addDias(ini, -56)).lt("dia", ini)),
     gestor() ? sb.from("config").select("valor").eq("chave", "servico").maybeSingle() : Promise.resolve({ data: null }),
+    gestor() ? sb.from("fechamento_noite").select("data,liquido").gte("data", ini).lte("data", fim) : Promise.resolve({ data: [] }),
   ]);
   const EQ = !gestor();
+  // 23/11 — taxa de serviço pelo CAIXA FECHADO (líquido de cada noite, depois de descontos e rateios).
+  // Noite ainda sem fechamento importado: usa o bruto do Epoc e avisa.
+  const fechLiq = Object.fromEntries((fechSem || []).filter(f => f.liquido != null).map(f => [f.data, +f.liquido]));
+  const baseServ = res.reduce((s, r) => s + (fechLiq[r.dia] != null ? fechLiq[r.dia] : +r.faturamento), 0);
+  const noitesSemFech = res.filter(r => fechLiq[r.dia] == null).length;
   if (EQ && W.sub === "pagar") W.sub = "freelas";
   const SV = { percentual: 10, casa: 20, incluir: !EQ, fixas: 0, ...(cfgServ?.valor || {}), ...(EQ ? { incluir: false } : {}) };
   const P = Object.fromEntries(pessoas.map(p => [p.id, p]));
@@ -1292,7 +1298,7 @@ async function abaPagamentos() {
   const totFr = l => Object.values(l.dias_valores || {}).reduce((s, v) => s + +v, 0) + +(l.ajuste || 0);
   fr.forEach(l => { l._total = totFr(l); });
   const nDiarias = fr.reduce((s, l) => s + Object.keys(l.dias_valores || {}).length, 0);
-  const servBruto = fatSemanaCalc(res) * SV.percentual / 100, servCasa = servBruto * SV.casa / 100, servEquipe = servBruto - servCasa;
+  const servBruto = baseServ * SV.percentual / 100, servCasa = servBruto * SV.casa / 100, servEquipe = servBruto - servCasa;
   const cotas = nDiarias + (+SV.fixas || 0);
   const porDiaria = cotas ? servEquipe / cotas : 0;
   fr.forEach(l => { l._serv = SV.incluir ? Object.keys(l.dias_valores || {}).length * porDiaria : 0; l._pagar = l._total + l._serv; });
@@ -1312,7 +1318,7 @@ async function abaPagamentos() {
   if (W.sub === "freelas") {
     const usados = new Set(fr.map(l => l.pessoa_id));
     const disponiveis = pessoas.filter(p => p.tipo === "freela" && p.ativo && !usados.has(p.id));
-    corpo = `${EQ ? `<div class="aviso">Lance quem trabalhou e os dias. A gerência confere e faz os pagamentos.</div>` : ""}<div class="servico ${EQ ? "hidden" : ""}"><div><b>Taxa de serviço da semana</b><small class="sub2">Faturamento ${brl0(fatSemanaCalc(res))} × ${SV.percentual}% = ${brl0(servBruto)} · casa fica com ${SV.casa}% (${brl0(servCasa)})</small></div>
+    corpo = `${EQ ? `<div class="aviso">Lance quem trabalhou e os dias. A gerência confere e faz os pagamentos.</div>` : ""}<div class="servico ${EQ ? "hidden" : ""}"><div><b>Taxa de serviço da semana</b><small class="sub2">Caixa fechado ${brl0(baseServ)} × ${SV.percentual}% = ${brl0(servBruto)} · casa fica com ${SV.casa}% (${brl0(servCasa)})${noitesSemFech ? ` · ${noitesSemFech} ${noitesSemFech === 1 ? "noite ainda sem fechamento (usei o bruto)" : "noites ainda sem fechamento (usei o bruto)"}` : ""}</small></div>
       <div class="n"><b style="font-size:18px;color:var(--teal)">${brl0(servEquipe)}</b><small class="sub2">para a equipe · ${cotas ? brl(porDiaria) + " por diária (" + nDiarias + " de freelas" + (+SV.fixas ? " + " + SV.fixas + " da equipe fixa = " + brl0(porDiaria * SV.fixas) : "") + ")" : "lance as diárias para dividir"}</small></div>
       <button class="btn sec peq" id="cfg-serv">Ajustar</button></div>
       <div class="rolagem tabela-pag" style="max-height:none"><table class="pag"><thead><tr><th>Freela</th>
