@@ -2219,7 +2219,7 @@ async function resultadoPedido({ hoje, baseIni, baseFim, diasFat, cfg, cq, noite
 
 // ============ ABA: PERFIL DOS CLIENTES ============
 // ============ Ranking de clientes (visitas do relatório Fidelidade do Epoc) ============
-const RK = { modo: "mes", ref: null };
+const RK = { modo: "mes", ref: null, busca: "", ordem: "visitas" };
 function periodoRK() {
   const hoje = diaOperacionalHoje(), [a, m] = hoje.split("-").map(Number);
   if (RK.modo === "mes") { const r = RK.ref || hoje.slice(0, 7); const [y, mm] = r.split("-").map(Number); const fim = new Date(y, mm, 0).getDate(); return { ini: `${r}-01`, fim: `${r}-${String(fim).padStart(2, "0")}`, nome: MESES[mm - 1] + " " + y }; }
@@ -2232,7 +2232,7 @@ async function rankingClientes() {
   if (!lim?.length) { el.innerHTML = `<div class="card"><h3>Quem mais vem</h3><div class="sub">Ainda sem visitas importadas. Elas vêm do relatório <b>Fidelidade</b> do Epoc, pela ponte de importação.</div></div>`; return; }
   const primeiro = lim[0].dia, hoje = diaOperacionalHoje();
   const P = periodoRK();
-  const { data: R, error } = await sb.rpc("ranking_clientes", { p_ini: P.ini, p_fim: P.fim < hoje ? P.fim : hoje, p_lim: 60 });
+  const { data: R, error } = await sb.rpc("ranking_clientes", { p_ini: P.ini, p_fim: P.fim < hoje ? P.fim : hoje, p_lim: RK.busca ? 25000 : 300 });
   if (error) { el.innerHTML = `<div class="aviso">${esc(error.message)}</div>`; return; }
   // opções de período
   const meses = []; for (let d = primeiro.slice(0, 7); d <= hoje.slice(0, 7); d = addDias(d + "-01", 32).slice(0, 7)) meses.push(d);
@@ -2242,6 +2242,10 @@ async function rankingClientes() {
   const fone = t => t ? `(${t.slice(0, 2)}) ${t.slice(2, -4)}-${t.slice(-4)}` : "";
   const wa = (c, txt) => c.telefone ? `<a class="btn sec peq" target="_blank" rel="noopener" href="${esc(linkWhats(c.telefone, txt.replace("{nome}", (c.nome || "").split(" ")[0])))}">WhatsApp</a>` : "";
   const fr = R.freq || {};
+  let top = R.top || [];
+  if (RK.busca) { const b = semAcento(RK.busca); top = top.filter(c => semAcento(c.nome).includes(b)); }
+  const ORD = { visitas: (a, b) => b.visitas - a.visitas || (+b.maior_conta || 0) - (+a.maior_conta || 0), total: (a, b) => b.visitas_total - a.visitas_total || b.visitas - a.visitas, conta: (a, b) => (+b.maior_conta || 0) - (+a.maior_conta || 0) };
+  top = [...top].sort(ORD[RK.ordem]).slice(0, RK.busca ? 200 : 100);
   const linhaTop = (c, i) => `<tr><td class="n" style="color:var(--mute)">${i + 1}</td><td><b>${esc(c.nome || "cliente " + c.codigo)}</b><small class="sub2">${fone(c.telefone)}</small></td><td class="n"><b>${c.visitas}</b></td><td class="n">${c.visitas_total}</td><td>${br(c.ultima)}</td><td class="n">${c.maior_conta ? brl0(+c.maior_conta) : "—"}</td></tr>`;
   el.innerHTML = `
   <div class="card"><div style="display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap">
@@ -2256,9 +2260,12 @@ async function rankingClientes() {
     </div>
   </div>
   <div class="grade dois" style="margin-top:14px">
-    <div class="card"><h3>Ranking de visitas</h3><div class="sub">Quem mais veio no período · desempate pela maior conta</div>
+    <div class="card"><h3>Ranking de visitas</h3><div class="sub">Quem veio no período</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0">
+        <input id="rk-busca" placeholder="🔎 Buscar cliente…" value="${esc(RK.busca)}" style="max-width:220px">
+        <div class="segmentos" style="margin:0">${[["visitas", "Visitas no período"], ["total", "Total histórico"], ["conta", "Maior conta"]].map(([k, n]) => `<button class="${RK.ordem === k ? "sel" : ""}" data-rko="${k}">${n}</button>`).join("")}</div></div>
       <div class="rolagem" style="max-height:520px"><table><thead><tr><th class="n">#</th><th>Cliente</th><th class="n">Visitas</th><th class="n">Total histórico</th><th>Última</th><th class="n">Maior conta</th></tr></thead><tbody>
-      ${(R.top || []).map(linhaTop).join("") || `<tr><td colspan="6" class="vazio">Ninguém no período</td></tr>`}</tbody></table></div></div>
+      ${top.map(linhaTop).join("") || `<tr><td colspan="6" class="vazio">${RK.busca ? "Ninguém com esse nome no período" : "Ninguém no período"}</td></tr>`}</tbody></table></div></div>
     <div class="card"><h3>Maiores contas</h3><div class="sub">Entre quem veio no período · maior valor já gasto numa visita (o Epoc não separa o gasto por período)</div>
       <div class="rolagem" style="max-height:520px"><table><thead><tr><th class="n">#</th><th>Cliente</th><th class="n">Maior conta</th><th class="n">Visitas no período</th></tr></thead><tbody>
       ${(R.maiores_contas || []).map((c, i) => `<tr><td class="n" style="color:var(--mute)">${i + 1}</td><td><b>${esc(c.nome || c.codigo)}</b><small class="sub2">${fone(c.telefone)}</small></td><td class="n"><b>${brl0(+c.maior_conta)}</b></td><td class="n">${c.visitas}</td></tr>`).join("") || `<tr><td colspan="4" class="vazio">—</td></tr>`}</tbody></table></div></div>
@@ -2268,6 +2275,8 @@ async function rankingClientes() {
     ${(R.sumidas || []).map(c => `<tr><td><b>${esc(c.nome || c.codigo)}</b><small class="sub2">${fone(c.telefone)}</small></td><td class="n">${c.visitas}</td><td>${br(c.ultima)}</td><td>${wa(c, "Oi {nome}! Aqui é o Vezpa 🐝 Tá fazendo falta por aqui! Essa semana tem programação nova, vem matar a saudade com a gente? 🧡")}</td></tr>`).join("") || `<tr><td colspan="4" class="vazio">Ninguém nessa situação 🎉</td></tr>`}</tbody></table></div></div>`;
   el.querySelectorAll("[data-rkm]").forEach(b => b.onclick = () => { RK.modo = b.dataset.rkm; RK.ref = null; rankingClientes(); });
   $("#rk-ref").onchange = e => { RK.ref = e.target.value; rankingClientes(); };
+  el.querySelectorAll("[data-rko]").forEach(b => b.onclick = () => { RK.ordem = b.dataset.rko; rankingClientes(); });
+  let tbk; $("#rk-busca").oninput = e => { clearTimeout(tbk); tbk = setTimeout(async () => { RK.busca = e.target.value.trim(); await rankingClientes(); const i = $("#rk-busca"); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 400); };
 }
 
 async function abaRanking() {
