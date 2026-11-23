@@ -391,6 +391,7 @@ const ICONE = {
   importar: '<path d="M12 3v12M7 10l5 5 5-5M4 21h16"/>',
   notas: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/>',
   aniversarios: '<path d="M4 21h16M5 21v-7h14v7M12 14V9M12 6.5c-1-.8-1-2.2 0-3 1 .8 1 2.2 0 3z"/><path d="M5 14c1.2 1.2 2.8 1.2 4 0 1.2 1.2 2.8 1.2 4 0 1.2 1.2 2.8 1.2 4 0 .8.8 1.4 1 2 1"/>',
+  perfil: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/>',
   usuarios: '<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/>',
 };
 const ABAS = [
@@ -404,6 +405,7 @@ const ABAS = [
   { id: "pedido", nome: "Pedido sugerido", grupo: "Operação", papeis: ["dona", "gerente"], fn: abaPedido },
   { id: "pagamentos", nome: "Pagamentos da semana", grupo: "Financeiro", papeis: ["dona", "gerente", "caixa"], fn: abaPagamentos },
   { id: "notas", nome: "Notas e boletos", grupo: "Financeiro", papeis: ["dona", "gerente", "caixa"], fn: abaNotas },
+  { id: "perfil", nome: "Perfil dos clientes", grupo: "Clientes", papeis: ["dona", "gerente"], fn: abaPerfil },
   { id: "aniversarios", nome: "Aniversariantes", grupo: "Clientes", papeis: ["dona", "gerente"], fn: abaAniversarios },
   { id: "cadastros", nome: "Freelas e bandas", grupo: "Configurações", papeis: ["dona", "gerente"], fn: abaCadastros },
   { id: "importar", nome: "Importar dados", grupo: "Configurações", papeis: ["dona", "gerente"], fn: abaImportar },
@@ -595,6 +597,7 @@ async function abaHoje() {
     const ehHoje = dia === hojeSP, ehUltimo = dia === max;
     const atracoes = [...new Set([...(bandasDia || []).map(b => b.atracao), ...(info?.atracao && !(bandasDia || []).length ? [info.atracao] : [])])];
     const cl = climaD[dia];
+    const { data: fech } = S.perfil.papel === "caixa" ? { data: null } : await sb.from("fechamento_noite").select("*").eq("data", dia).maybeSingle();
     const ordenaH = h => (h < 6 ? h + 24 : h);
     const hs = (horas || []).sort((a, b) => ordenaH(a.hora) - ordenaH(b.hora));
     const top = prods.slice(0, 10);
@@ -612,7 +615,7 @@ async function abaHoje() {
     ${ehUltimo && !ehHoje ? `<div class="aviso">Os dados vêm da última importação do Epoc. Quando a integração automática com a API do Epoc for liberada, esta tela vai mostrar o movimento da noite em tempo real.</div>` : ""}
     <div class="grade kpis">
       <div class="card kpi destaque"><div class="rot">Faturamento</div><div class="val">${brl(res.faturamento)}</div>
-        <div class="det">${varia !== null ? `${varia >= 0 ? "▲" : "▼"} ${pct(Math.abs(varia))} vs ${DIAS[dow(dia)]} anterior (${brl0(comp.faturamento)})` : ""}</div></div>
+        <div class="det">${varia !== null ? `${varia >= 0 ? "▲" : "▼"} ${pct(Math.abs(varia))} vs ${DIAS[dow(dia)]} anterior (${brl0(comp.faturamento)})` : ""}${fech ? `<br>descontos ${brl0(+fech.desconto + +(fech.rateio || 0))} · líquido <b>${brl0(+fech.liquido)}</b>` : ""}</div></div>
       <div class="card kpi"><div class="rot">Itens vendidos</div><div class="val">${nfmt(res.itens)}</div><div class="det">${nfmt(res.lancamentos)} lançamentos</div></div>
       <div class="card kpi"><div class="rot">Valor médio por item</div><div class="val">${brl(res.faturamento / res.itens)}</div></div>
       <div class="card kpi"><div class="rot">Hora mais forte</div><div class="val">${hs.length ? String([...hs].sort((a, b) => b.faturamento - a.faturamento)[0].hora).padStart(2, "0") + "h" : "—"}</div>
@@ -691,6 +694,7 @@ async function abaGeral() {
     <div class="card kpi"><div class="rot">Melhor noite</div><div class="val">${brl0(melhor.faturamento)}</div><div class="det">${DIAS[dow(melhor.dia)]} ${br(melhor.dia)}</div></div>
   </div>
   <div class="card" style="margin-top:14px"><h3>O que os números dizem</h3><div class="sub">Gerado automaticamente a partir do período escolhido</div><ul class="insights">${ins.map(i => `<li>${i}</li>`).join("")}</ul></div>
+  <div class="card" style="margin-top:14px" id="caixa-fat"></div>
   <div class="card" style="margin-top:14px" id="cal-fat"><div class="vazio">Carregando calendário…</div></div>
   <div class="card" style="margin-top:14px"><h3>Faturamento por noite</h3><div class="sub">Cor da barra = dia da semana</div><div class="graf alto"><canvas id="g-dias"></canvas></div></div>
   <div class="grade dois" style="margin-top:14px">
@@ -709,9 +713,33 @@ async function abaGeral() {
   grafico($("#g-dow"), { type: "bar", data: { labels: ordemDow.map(w => DIAS[w] + ` (${porDow[w].n})`), datasets: [{ data: ordemDow.map(w => porDow[w].soma / porDow[w].n), backgroundColor: ordemDow.map(w => coresDow[w]), borderRadius: 6 }] },
     options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => brl0(v) } } } } });
   const cats = Object.entries(porCat).sort((a, b) => b[1] - a[1]);
+  conferenciaCaixa($("#caixa-fat"), p, dias).catch(() => $("#caixa-fat").remove());
   calendarioFaturamento($("#cal-fat"), p.fim.slice(0, 7)).catch(e => $("#cal-fat").innerHTML = `<div class="msg erro">${esc(e.message)}</div>`);
   grafico($("#g-cat"), { type: "bar", data: { labels: cats.map(c => c[0]), datasets: [{ data: cats.map(c => c[1]), backgroundColor: cats.map(c => COR_CAT[c[0]]), borderRadius: 6 }] },
     options: { indexAxis: "y", maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${brl0(ctx.parsed.x)} (${pct(ctx.parsed.x / total)})` } } }, scales: { x: { ticks: { callback: v => brl0(v) } } } } });
+}
+
+// ============ CONFERÊNCIA DE CAIXA (bruto × descontos × líquido × recebido) ============
+async function conferenciaCaixa(el, p, dias) {
+  const { data: fc } = await sb.from("fechamento_noite").select("*").gte("data", p.ini).lte("data", p.fim).order("data");
+  if (!fc?.length) { el.innerHTML = `<h3>Conferência de caixa</h3><div class="sub">Bruto × descontos × líquido</div>
+    <p class="dica" style="margin-top:6px">O faturamento deste painel é o <b>bruto</b> do Epoc (antes de descontos e rateios) — por isso pode não bater com o caixa fechado. Os descontos de cada noite ainda não foram importados do Epoc.</p>`; return; }
+  const bruto = Object.fromEntries(dias.map(d => [d.dia, +d.faturamento]));
+  const T = fc.reduce((a, r) => ({ b: a.b + (bruto[r.data] || 0), d: a.d + +(r.desconto || 0), r: a.r + +(r.rateio || 0), l: a.l + +(r.liquido || 0), pg: a.pg + +(r.pagamentos || 0), temPg: a.temPg || r.pagamentos != null }), { b: 0, d: 0, r: 0, l: 0, pg: 0, temPg: false });
+  const maiores = {}; fc.forEach(r => (r.descontos_itens || []).forEach(x => { maiores[x.produto] = (maiores[x.produto] || 0) + +x.desconto; }));
+  const top = Object.entries(maiores).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  el.innerHTML = `<h3>Conferência de caixa</h3><div class="sub">O que foi vendido (bruto) − descontos − rateios = líquido; e o que entrou nas maquininhas/caixa</div>
+    <div class="grade kpis" style="margin-top:10px">
+      <div class="card kpi"><div class="rot">Vendido (bruto)</div><div class="val">${brl0(T.b)}</div><div class="det">${fc.length} noites com fechamento</div></div>
+      <div class="card kpi destaque"><div class="rot">Descontos + rateios</div><div class="val">${brl0(T.d + T.r)}</div><div class="det">${pct((T.d + T.r) / (T.b || 1))} do bruto · descontos ${brl0(T.d)} · rateios ${brl0(T.r)}</div></div>
+      <div class="card kpi"><div class="rot">Líquido (Epoc)</div><div class="val">${brl0(T.l)}</div></div>
+      <div class="card kpi"><div class="rot">Recebido nas máquinas</div><div class="val">${T.temPg ? brl0(T.pg) : "—"}</div><div class="det">${T.temPg ? "diferença " + brl0(T.pg - T.l) : "não importado"}</div></div></div>
+    ${top.length ? `<p class="dica"><b>Onde mais teve desconto:</b> ${top.map(([n, v]) => `${esc(n)} ${brl0(v)}`).join(" · ")}</p>` : ""}
+    <div class="rolagem" style="margin-top:10px;max-height:380px"><table><thead><tr><th>Noite</th><th class="n">Vendido</th><th class="n">Descontos</th><th class="n">Rateio</th><th class="n">Líquido</th><th class="n">% desc.</th>${T.temPg ? `<th class="n">Recebido</th><th class="n">Diferença</th>` : ""}</tr></thead><tbody>
+    ${fc.map(r => { const b = bruto[r.data] || 0, dd = +(r.desconto || 0) + +(r.rateio || 0), dif = r.pagamentos != null ? +r.pagamentos - +r.liquido : null;
+      return `<tr><td>${DIAS[dow(r.data)]} ${br(r.data)}</td><td class="n">${brl0(b)}</td><td class="n">${brl0(+r.desconto || 0)}</td><td class="n">${brl0(+r.rateio || 0)}</td><td class="n"><b>${brl0(+r.liquido || 0)}</b></td>
+        <td class="n"><span class="tag ${dd / (b || 1) > .1 ? "ruim" : dd / (b || 1) > .05 ? "ok" : ""}">${pct(dd / (b || 1))}</span></td>${T.temPg ? `<td class="n">${r.pagamentos != null ? brl0(+r.pagamentos) : "—"}</td><td class="n">${dif != null ? `<span class="${Math.abs(dif) > 50 ? "dif-pos" : ""}">${brl0(dif)}</span>` : "—"}</td>` : ""}</tr>`; }).join("")}
+    </tbody></table></div>`;
 }
 
 // ============ CALENDÁRIO DE FATURAMENTO (banda + clima + programação) ============
@@ -1952,6 +1980,55 @@ async function resultadoPedido({ hoje, baseIni, baseFim, diasFat, cfg, cq, noite
   };
 }
 
+// ============ ABA: PERFIL DOS CLIENTES ============
+async function abaPerfil() {
+  const [{ data: P2, error }, dias] = await Promise.all([sb.rpc("perfil_clientes"), todos(() => sb.from("vw_resumo_diario").select("dia,faturamento"))]);
+  if (error) throw error;
+  if (!P2?.total) { $("#conteudo").innerHTML = `<div class="card vazio">Nenhum cliente importado ainda. Use Importar dados → cadastro de clientes do Epoc.</div>`; return; }
+  const sx = P2.sexo || {}, mulheres = sx["Mulheres"] || 0, homens = sx["Homens"] || 0;
+  const faixas = ["< 18", "18–24", "25–29", "30–34", "35–39", "40–49", "50+"].filter(f => f !== "< 18" || (P2.faixas || []).some(x => x.faixa === f));
+  const fx = (f, s) => (P2.faixas || []).filter(x => x.faixa === f && (!s || x.sx === s)).reduce((a, x) => a + x.n, 0);
+  const comIdade = faixas.reduce((a, f) => a + fx(f), 0);
+  const top = [...faixas].sort((a, b) => fx(b) - fx(a))[0];
+  const R = P2.recencia || {};
+  const ultMes = (P2.ultima_mes || []).slice(-6), novos = (P2.novos_mes || []);
+  const fatMes = {}; dias.forEach(d => { const m = d.dia.slice(0, 7); fatMes[m] = (fatMes[m] || 0) + +d.faturamento; });
+  const mesAtual = diaOperacionalHoje().slice(0, 7);
+  const ultimoMesCompleto = [...ultMes].reverse().find(x => x.mes < mesAtual && fatMes[x.mes] > 0) || null;
+  const gastoEst = ultimoMesCompleto && fatMes[ultimoMesCompleto.mes] ? fatMes[ultimoMesCompleto.mes] / ultimoMesCompleto.n : null;
+  const nomeMes = m => ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][+m.slice(5, 7) - 1] + "/" + m.slice(2, 4);
+  $("#conteudo").innerHTML = `
+  <div class="cab-sec"><div><h2>Perfil dos clientes</h2><p>${nfmt(P2.total)} clientes cadastrados no Epoc · desde ${nomeMes(novos[0]?.mes || "2026-02")}</p></div></div>
+  <div class="grade kpis">
+    <div class="card kpi destaque"><div class="rot">Mulheres</div><div class="val">${pct(mulheres / P2.total)}</div><div class="det">${nfmt(mulheres)} · homens ${nfmt(homens)} (${pct(homens / P2.total)})</div></div>
+    <div class="card kpi"><div class="rot">Idade média</div><div class="val">${nfmt(P2.idade_media, 0)} anos</div><div class="det">faixa mais comum: ${top} (${pct(fx(top) / comIdade)})</div></div>
+    <div class="card kpi"><div class="rot">Vieram nos últimos 30 dias</div><div class="val">${nfmt(R.ate30)}</div><div class="det">${nfmt(R.d31a90)} entre 31 e 90 dias</div></div>
+    <div class="card kpi"><div class="rot">Voltaram depois da 1ª visita</div><div class="val">${pct(P2.voltaram / P2.total)}</div><div class="det">${nfmt(P2.voltaram)} clientes</div></div>
+  </div>
+  <div class="grade dois" style="margin-top:14px">
+    <div class="card"><h3>Faixa etária</h3><div class="sub">${nfmt(comIdade)} clientes com data de nascimento</div><div class="graf"><canvas id="g-faixa"></canvas></div></div>
+    <div class="card"><h3>Há quanto tempo não vêm</h3><div class="sub">Pela data da última visita no Epoc</div><div class="graf"><canvas id="g-rec"></canvas></div>
+      <p class="dica">${nfmt(R.d91a180 + R.mais180)} clientes sumidos há mais de 90 dias — bom público para uma campanha de “volta”.</p></div>
+  </div>
+  <div class="grade dois" style="margin-top:14px">
+    <div class="card"><h3>Novos clientes por mês</h3><div class="sub">Primeira visita registrada</div><div class="graf"><canvas id="g-novos"></canvas></div></div>
+    <div class="card"><h3>Gasto médio por cliente</h3><div class="sub">Estimativa</div>
+      <div class="val" style="font:650 32px Inter;margin:10px 0">${gastoEst ? brl0(gastoEst) : "—"}</div>
+      <p class="dica" style="margin-top:0">${ultimoMesCompleto ? `Faturamento de ${nomeMes(ultimoMesCompleto.mes)} (${brl0(fatMes[ultimoMesCompleto.mes] || 0)}) ÷ ${nfmt(ultimoMesCompleto.n)} clientes cuja última visita foi nesse mês.` : ""} É uma conta aproximada: quem voltou depois conta só no último mês, e nem todo mundo se cadastra na entrada. Para o gasto exato por pessoa, o Epoc precisa ligar a comanda ao cliente — dá para ver com o suporte se essa informação sai no relatório.</p>
+      <h3 style="margin-top:14px">Aniversários por mês</h3><div class="graf" style="height:170px"><canvas id="g-aniv"></canvas></div></div>
+  </div>`;
+  const cores = { Mulheres: "#e8607a", Homens: "#4fc3b0", "Não informado": "#9b8cf2" };
+  grafico($("#g-faixa"), { type: "bar", data: { labels: faixas, datasets: ["Mulheres", "Homens"].map(s => ({ label: s, data: faixas.map(f => fx(f, s)), backgroundColor: cores[s], borderRadius: 4, _fmt: "n" })) },
+    options: { maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } } });
+  grafico($("#g-rec"), { type: "bar", data: { labels: ["até 30 dias", "31–90", "91–180", "mais de 180"], datasets: [{ data: [R.ate30, R.d31a90, R.d91a180, R.mais180], backgroundColor: ["#7cc46a", "#f2a63b", "#e8607a", "#6b5a60"], borderRadius: 6, _fmt: "n" }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+  grafico($("#g-novos"), { type: "bar", data: { labels: novos.map(x => nomeMes(x.mes)), datasets: [{ data: novos.map(x => x.n), backgroundColor: "#f2a63b", borderRadius: 5, _fmt: "n" }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+  const av = P2.aniv_mes || {};
+  grafico($("#g-aniv"), { type: "bar", data: { labels: MESES.map(m => m.slice(0, 3)), datasets: [{ data: MESES.map((_, i) => av[i + 1] || 0), backgroundColor: "#9b8cf2", borderRadius: 4, _fmt: "n" }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+}
+
 // ============ ABA: ANIVERSARIANTES ============
 const AN = { filtro: "semana" };
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -2030,7 +2107,13 @@ async function abaAniversarios() {
   document.querySelectorAll("[data-veio]").forEach(b => b.onclick = async () => { const e = env[b.dataset.veio]; await sb.from("aniversario_envios").update({ veio: !e.veio }).eq("cliente_codigo", b.dataset.veio).eq("ano", ay); ir(); });
   $("#an-msg").onclick = () => {
     const d = $("#dlg");
-    d.innerHTML = `<h3>Mensagem de aniversário</h3><form id="f-an"><label>Presente / convite</label><input name="presente" value="${esc(C2.presente)}" placeholder="ex.: um drink de cortesia">
+    const MODELOS = [
+      ["Colar velcro", "Oi {nome}! 🎂 Feliz aniversário! Aqui é o Vezpa 🐝 Tá na hora de colar velcro com a gente pra comemorar: no mês do seu aniversário você ganha {presente}. Chama as amigas, a crush (ou as duas 👀) e vem! É só mostrar esta mensagem. 🏳️‍🌈"],
+      ["Pesado", "Parabéns, {nome}! 🎉 Aniversário de respeito pede comemoração pesada no Vezpa 🐝 No mês do seu aniversário, {presente} é por nossa conta. Traz o bonde e vem colar! Mostra esta mensagem na entrada. 💛"],
+      ["Curta", "{nome}, feliz aniversário! 🐝 Vem colar velcro no Vezpa esse mês: {presente} é presente nosso. Te esperamos! 🏳️‍🌈"],
+      ["Clássica", "Oi {nome}! O Vezpa deseja um feliz aniversário 🎂 Venha comemorar com a gente: no mês do seu aniversário você ganha {presente}. Te esperamos!"]];
+    d.innerHTML = `<h3>Mensagem de aniversário</h3><form id="f-an"><label>Modelos prontos</label><div class="chips" id="an-mod">${MODELOS.map((m, i) => `<button type="button" data-mod="${i}">${m[0]}</button>`).join("")}</div>
+      <label>Presente / convite</label><input name="presente" value="${esc(C2.presente)}" placeholder="ex.: um drink de cortesia">
       <label>Mensagem</label><textarea name="mensagem" rows="6">${esc(C2.mensagem)}</textarea>
       <p class="dica">Use {nome} para o primeiro nome e {presente} para o presente.</p>
       <div class="msg" id="an-prev" style="white-space:pre-wrap"></div>
@@ -2038,6 +2121,7 @@ async function abaAniversarios() {
     d.showModal();
     const prev = () => { const f = new FormData($("#f-an")); $("#an-prev").textContent = "Prévia: " + f.get("mensagem").replaceAll("{nome}", "Juliana").replaceAll("{presente}", f.get("presente")); };
     $("#f-an").oninput = prev; prev(); $("#an-c").onclick = () => d.close();
+    $("#an-mod").onclick = e => { const b = e.target.closest("button"); if (!b) return; $("#f-an").mensagem.value = MODELOS[b.dataset.mod][1]; prev(); };
     $("#f-an").onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target);
       await sb.from("config").upsert({ chave: "aniversario", valor: { mensagem: f.get("mensagem"), presente: f.get("presente") } }); d.close(); ir(); };
   };
@@ -2076,7 +2160,7 @@ function detectar(texto) {
   if (/dias?\s*,/.test(h)) return "freelas";
   return "";
 }
-const TIPOS = { func_noites: "Vendas por funcionário, noite a noite (Epoc)", clientes: "Cadastro de clientes (Epoc)", hora: "Venda de produtos por hora (Epoc)", produtos: "Relatório de venda de produtos — atualiza os grupos (Epoc)", funcionario: "Vendas por funcionário (Epoc)", freelas: "Pagamento de freelancers da semana" };
+const TIPOS = { fechamento: "Descontos e fechamento por noite (Epoc)", func_noites: "Vendas por funcionário, noite a noite (Epoc)", clientes: "Cadastro de clientes (Epoc)", hora: "Venda de produtos por hora (Epoc)", produtos: "Relatório de venda de produtos — atualiza os grupos (Epoc)", funcionario: "Vendas por funcionário (Epoc)", freelas: "Pagamento de freelancers da semana" };
 
 async function abaImportar() {
   const { data: log } = await sb.from("importacoes").select("*").order("feito_em", { ascending: false }).limit(30);
@@ -2137,6 +2221,10 @@ function analisar(tipo, texto) {
     const total = itens.reduce((s, i) => s + i.valor, 0);
     return { itens, resumo: `${nfmt(itens.length)} lançamentos de ${br(datas[0])} a ${br(datas[datas.length - 1])} · total ${brl(total)}` };
   }
+  if (tipo === "fechamento") {
+    const itens = JSON.parse(texto); if (!itens.length) throw new Error("Nada recebido.");
+    return { itens, resumo: `${itens.length} noites · descontos ${brl(itens.reduce((a, i) => a + (+i.desconto || 0) + (+i.rateio || 0), 0))} · líquido ${brl(itens.reduce((a, i) => a + (+i.liquido || 0), 0))}` };
+  }
   if (tipo === "func_noites") {
     const itens = lerCSV(texto, ";").slice(1).filter(l => l[0] && l[1]).map(l => ({ data: dataBR(l[0]) || l[0], funcionario: l[1].trim(), qtd: parseFloat(l[2]) || 0, valor: numBR(l[3]) || 0 }));
     if (!itens.length) throw new Error("Não encontrei vendas por funcionário.");
@@ -2195,6 +2283,8 @@ async function enviar(tipo, r, nome) {
         if (error) throw error; lote = [];
       }
     }
+  } else if (tipo === "fechamento") {
+    const { error } = await sb.rpc("importar_fechamento", { p_linhas: r.itens }); if (error) throw error;
   } else if (tipo === "func_noites") {
     for (let i = 0; i < r.itens.length; i += 2000) { const { error } = await sb.rpc("importar_vendas_func_noites", { p_linhas: r.itens.slice(i, i + 2000) }); if (error) throw error; }
   } else if (tipo === "clientes") {
