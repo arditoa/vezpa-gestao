@@ -192,6 +192,12 @@ input.val-banda{width:110px;text-align:right;font-weight:700;padding:8px}
 .foto-btn.ok{border-style:solid;border-color:var(--green)}
 tfoot td{border-top:1px solid var(--line);border-bottom:0}
 .quiz h3{font-size:22px;margin:6px 0 12px}
+.rank-cat{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}
+.rank-tit{background:none;border:0;color:var(--ink);font-weight:650;font-size:14px;cursor:pointer;padding:0;display:flex;align-items:center;gap:7px;flex-wrap:wrap;text-align:left}
+.rank-tit span{width:10px;height:10px;border-radius:3px;display:inline-block}.rank-tit small{color:var(--mute);font-weight:400}
+.rank-cat ol{margin:10px 0 0;padding-left:18px;font-size:13px}
+.rank-cat li{margin:5px 0}.rank-cat li span{display:inline-block;max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.rank-cat li b{float:right;font-weight:600}.rank-cat li small{display:block;color:var(--mute);font-size:11.5px}
 .chip-ins,.chip-add{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:99px;padding:6px 11px;font-size:12.5px;cursor:pointer}
 .chip-ins b{color:var(--amber2);font-weight:600}.chip-ins:hover{border-color:var(--amber)}
 .chip-add{border-style:dashed;color:var(--mute)}
@@ -297,6 +303,20 @@ const CATEG = g => {
   if (/DRINK|MOCKTAIL|PROMO|DOSE|VINHO|BEBIDA|SOFT/.test(g)) return "Drinks e outras bebidas";
   return "Entradas, cortesias e outros";
 };
+const CAT2 = g => {
+  g = (g || "").toUpperCase();
+  if (/CERVEJA|LONG NECK|600|CHOPP/.test(g)) return "Cervejas";
+  if (/SOFT/.test(g)) return "Sem álcool e outras bebidas";
+  if (/DRINK|MOCKTAIL|PROMO|FRUTAS/.test(g)) return "Drinks";
+  if (/DOSE/.test(g)) return "Doses";
+  if (/VINHO|ESPUMANTE/.test(g)) return "Vinhos";
+  if (/SOFT|BEBIDA/.test(g)) return "Sem álcool e outras bebidas";
+  if (/COMIDA|PRATO|ENTRADA|COMPARTILHAR|WRAP|BURGER|LANCHE|SOBREMESA|PORC/.test(g)) return "Comida";
+  return "Entradas e outros";
+};
+const FILTROS_CAT = [["tudo", "Tudo", () => true], ["bebidas", "Todas as bebidas", c => !["Comida", "Entradas e outros"].includes(c)], ["Cervejas", "Cervejas"], ["Drinks", "Drinks"], ["Doses", "Doses"], ["Vinhos", "Vinhos"], ["Sem álcool e outras bebidas", "Sem álcool"], ["Comida", "Comida"], ["Entradas e outros", "Entradas e outros"]]
+  .map(([k, n, f]) => ({ k, n, f: f || (c => c === k) }));
+const COR_CAT2 = { "Cervejas": "#f2a63b", "Drinks": "#e8607a", "Doses": "#c9844a", "Vinhos": "#9b4f6e", "Sem álcool e outras bebidas": "#7cc46a", "Comida": "#4fc3b0", "Entradas e outros": "#9b8cf2" };
 const COR_CAT = { "Cerveja": "#f2a63b", "Drinks e outras bebidas": "#e8607a", "Comida": "#4fc3b0", "Entradas, cortesias e outros": "#9b8cf2" };
 
 Chart.defaults.color = "#a99c94";
@@ -605,8 +625,12 @@ async function abaHoje() {
     const { data: fech } = S.perfil.papel === "caixa" ? { data: null } : await sb.from("fechamento_noite").select("*").eq("data", dia).maybeSingle();
     const ordenaH = h => (h < 6 ? h + 24 : h);
     const hs = (horas || []).sort((a, b) => ordenaH(a.hora) - ordenaH(b.hora));
-    const top = prods.slice(0, 10);
-    const qtdTop = [...prods].sort((a, b) => b.qtd - a.qtd).slice(0, 10);
+    H.cat ??= "tudo";
+    const fH = FILTROS_CAT.find(f => f.k === H.cat) || FILTROS_CAT[0];
+    const prodsF = prods.filter(x => fH.f(CAT2(x.grupo)));
+    const top = prodsF.slice(0, 10);
+    const qtdTop = [...prodsF].sort((a, b) => b.qtd - a.qtd).slice(0, 10);
+    const chipsH = `<div class="chips" style="margin-bottom:10px">${[["tudo", "Tudo"], ["bebidas", "Bebidas"], ["Cervejas", "Cervejas"], ["Drinks", "Drinks"], ["Comida", "Comida"]].map(([k, n]) => `<button class="${H.cat === k ? "sel" : ""}" data-hcat="${k}">${n}</button>`).join("")}</div>`;
     const maxF = Math.max(...top.map(p => p.faturamento), 1);
     const varia = comp ? (res.faturamento - comp.faturamento) / comp.faturamento : null;
 
@@ -628,7 +652,7 @@ async function abaHoje() {
     </div>
     <div class="grade dois" style="margin-top:14px">
       <div class="card"><h3>Vendas por hora</h3><div class="sub">Faturamento em cada hora da noite</div><div class="graf"><canvas id="g-hora"></canvas></div></div>
-      <div class="card"><h3>Mais vendidos da noite</h3><div class="sub">Por faturamento</div>
+      <div class="card"><h3>Mais vendidos da noite</h3><div class="sub">Por faturamento</div>${chipsH}
         <div class="rolagem"><table><tbody>${top.map(p => `<tr><td>${esc(p.produto)}<div class="barra-mini"><i style="width:${p.faturamento / maxF * 100}%"></i></div></td><td class="n">${nfmt(p.qtd)} un</td><td class="n">${brl(p.faturamento)}</td></tr>`).join("")}</tbody></table></div></div>
     </div>
     <div class="grade dois" style="margin-top:14px">
@@ -647,6 +671,7 @@ async function abaHoje() {
     if ($("#d-ant")) $("#d-ant").onclick = () => i > 0 && ir(H.lista[i - 1]);
     if ($("#d-prox")) $("#d-prox").onclick = () => i < H.lista.length - 1 && ir(H.lista[i + 1]);
     if ($("#d-ult")) $("#d-ult").onclick = () => ir(null);
+    document.querySelectorAll("[data-hcat]").forEach(b => b.onclick = () => { H.cat = b.dataset.hcat; render().then(ligar); });
     if ($("#d-cal")) $("#d-cal").onchange = e => { const v = e.target.value; const alvo = [...H.lista].reverse().find(d => d <= v) || H.lista[0]; ir(alvo); };
   };
   await render(); ligar();
@@ -807,6 +832,7 @@ async function calendarioFaturamento(el, mesPadrao) {
 }
 
 // ============ ABA: PRODUTOS ============
+const PR = {};
 async function abaProdutos() {
   const p = await periodoPadrao(); if (!p) return semDados();
   const rows = await todos(() => sb.from("vw_vendas_produto_dia").select("*").gte("dia", p.ini).lte("dia", p.fim));
@@ -817,9 +843,14 @@ async function abaProdutos() {
     ag[k].qtd += +r.qtd; ag[k].fat += +r.faturamento; ag[k].dias.add(r.dia);
     const w = dow(r.dia); if (w === 5 || w === 6) ag[k].fds += +r.faturamento; else ag[k].sem += +r.faturamento;
   });
-  const lista = Object.values(ag).sort((a, b) => b.fat - a.fat);
+  PR.cat ??= "tudo"; PR.ordem ??= "fat";
+  const todosProd = Object.values(ag).map(x => ({ ...x, cat: CAT2(x.grupo) }));
+  const totalGeral = todosProd.reduce((s, x) => s + x.fat, 0);
+  const filtro = FILTROS_CAT.find(f => f.k === PR.cat) || FILTROS_CAT[0];
+  const lista = todosProd.filter(x => filtro.f(x.cat)).sort((a, b) => PR.ordem === "qtd" ? b.qtd - a.qtd : b.fat - a.fat);
   const total = lista.reduce((s, x) => s + x.fat, 0);
-  let acum = 0; lista.forEach(x => { acum += x.fat; x.abc = acum / total <= .8 ? "A" : acum / total <= .95 ? "B" : "C"; });
+  const porCat = {}; todosProd.forEach(x => { const c = porCat[x.cat] ??= { fat: 0, qtd: 0, itens: [] }; c.fat += x.fat; c.qtd += x.qtd; c.itens.push(x); });
+  let acum = 0; [...lista].sort((a, b) => b.fat - a.fat).forEach(x => { acum += x.fat; x.abc = acum / total <= .8 ? "A" : acum / total <= .95 ? "B" : "C"; });
   const mortos = lista.filter(x => x.qtd < 10 && x.fat > 0);
   const gratis = lista.filter(x => x.fat === 0 && x.qtd > 0);
   const grupos = {}; lista.forEach(x => { grupos[x.grupo] = (grupos[x.grupo] || 0) + x.fat; });
@@ -829,7 +860,13 @@ async function abaProdutos() {
   const fracos = lista.filter(x => x.fat > total * 0.003).map(x => ({ ...x, peso: x.sem / (x.fat || 1) })).sort((a, b) => b.peso - a.peso).slice(0, 8);
 
   $("#conteudo").innerHTML = `
-  <div class="cab-sec"><div><h2>Produtos</h2><p>${br(p.ini)} a ${br(p.fim)} · ${lista.length} produtos vendidos em ${nDias} noites</p></div>${htmlFiltro(p)}</div>
+  <div class="cab-sec"><div><h2>Produtos</h2><p>${br(p.ini)} a ${br(p.fim)} · ${lista.length} produtos vendidos em ${nDias} noites${PR.cat !== "tudo" ? ` · <b>${esc(filtro.n)}</b>: ${brl0(total)} (${pct(total / totalGeral)} do faturamento)` : ""}</p></div>${htmlFiltro(p)}</div>
+  <div class="card" style="margin-bottom:14px;padding:12px 14px"><div class="chips">${FILTROS_CAT.map(f => { const v = f.k === "tudo" ? totalGeral : todosProd.filter(x => f.f(x.cat)).reduce((s, x) => s + x.fat, 0);
+    return v || f.k === "tudo" ? `<button class="${PR.cat === f.k ? "sel" : ""}" data-pcat="${esc(f.k)}">${f.n} <small>${pct(v / totalGeral)}</small></button>` : ""; }).join("")}</div></div>
+  ${PR.cat === "tudo" ? `<div class="card" style="margin-bottom:14px"><h3>Ranking por categoria</h3><div class="sub">Os 5 que mais faturam em cada uma · toque no título para ver a lista completa</div>
+    <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin-top:10px">${Object.entries(porCat).sort((a, b) => b[1].fat - a[1].fat).map(([c, d]) => `
+      <div class="rank-cat"><button class="rank-tit" data-pcat="${esc(c)}"><span style="background:${COR_CAT2[c]}"></span>${esc(c)} <small>${brl0(d.fat)} · ${pct(d.fat / totalGeral)}</small></button>
+      <ol>${d.itens.sort((a, b) => b.fat - a.fat).slice(0, 5).map(x => `<li><span>${esc(x.produto)}</span><b>${brl0(x.fat)}</b><small>${nfmt(x.qtd)} un</small></li>`).join("")}</ol></div>`).join("")}</div></div>` : ""}
   <div class="grade kpis">
     <div class="card kpi destaque"><div class="rot">Curva A</div><div class="val">${nA} produtos</div><div class="det">fazem 80% do faturamento</div></div>
     <div class="card kpi"><div class="rot">Quase parados</div><div class="val">${mortos.length}</div><div class="det">venderam menos de 10 un. e somam ${brl0(mortos.reduce((s, x) => s + x.fat, 0))}</div></div>
@@ -842,15 +879,18 @@ async function abaProdutos() {
       <table><thead><tr><th>Produto</th><th class="n">% fora de sex/sáb</th><th class="n">Faturamento</th></tr></thead><tbody>${fracos.map(x => `<tr><td>${esc(x.produto)}</td><td class="n">${pct(x.peso)}</td><td class="n">${brl0(x.fat)}</td></tr>`).join("")}</tbody></table></div>
   </div>
   <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap">
-    <div><h3>Ranking completo</h3><div class="sub">A = 80% do faturamento, B = próximos 15%, C = últimos 5%</div></div>
-    <input id="busca" placeholder="Buscar produto…" style="width:220px"></div>
+    <div><h3>Ranking ${PR.cat === "tudo" ? "completo" : "· " + esc(filtro.n)}</h3><div class="sub">A = 80% do faturamento, B = próximos 15%, C = últimos 5%</div></div>
+    <div class="filtros"><div class="segmentos" style="margin:0"><button class="${PR.ordem === "fat" ? "sel" : ""}" data-pord="fat">Por faturamento</button><button class="${PR.ordem === "qtd" ? "sel" : ""}" data-pord="qtd">Por quantidade</button></div>
+    <input id="busca" placeholder="Buscar produto…" style="width:220px"></div></div>
     <div class="rolagem"><table id="tab-prod"><thead><tr><th>#</th><th>Produto</th><th>Grupo</th><th class="n">Unid.</th><th class="n">Faturamento</th><th class="n">% total</th><th class="n">Noites</th><th>Curva</th></tr></thead>
     <tbody>${lista.map((x, i) => `<tr data-n="${esc(x.produto.toLowerCase())}"><td>${i + 1}</td><td>${esc(x.produto)}</td><td><span class="tag">${esc(x.grupo)}</span></td><td class="n">${nfmt(x.qtd)}</td><td class="n">${brl(x.fat)}</td><td class="n">${pct(x.fat / total)}</td><td class="n">${x.dias.size}</td><td><span class="tag ${x.abc === "A" ? "bom" : x.abc === "C" ? "ruim" : "ok"}">${x.abc}</span></td></tr>`).join("")}</tbody></table></div></div>
   <div class="card" style="margin-top:14px"><h3>Candidatos a sair do cardápio</h3><div class="sub">Menos de 10 unidades no período</div>
     <div class="rolagem" style="max-height:300px"><table><thead><tr><th>Produto</th><th>Grupo</th><th class="n">Unid.</th><th class="n">Faturamento</th></tr></thead><tbody>${mortos.map(x => `<tr><td>${esc(x.produto)}</td><td>${esc(x.grupo)}</td><td class="n">${nfmt(x.qtd)}</td><td class="n">${brl(x.fat)}</td></tr>`).join("")}</tbody></table></div></div>`;
   ligarFiltro();
+  document.querySelectorAll("[data-pcat]").forEach(b => b.onclick = () => { PR.cat = b.dataset.pcat; abrir("produtos"); });
+  document.querySelectorAll("[data-pord]").forEach(b => b.onclick = () => { PR.ordem = b.dataset.pord; abrir("produtos"); });
   $("#busca").oninput = e => { const t = e.target.value.toLowerCase(); document.querySelectorAll("#tab-prod tbody tr").forEach(tr => tr.style.display = tr.dataset.n.includes(t) ? "" : "none"); };
-  grafico($("#g-grupos"), { type: "bar", data: { labels: gl.map(g => g[0]), datasets: [{ data: gl.map(g => g[1]), backgroundColor: gl.map(g => COR_CAT[CATEG(g[0])]), borderRadius: 5 }] },
+  grafico($("#g-grupos"), { type: "bar", data: { labels: gl.map(g => g[0]), datasets: [{ data: gl.map(g => g[1]), backgroundColor: gl.map(g => COR_CAT2[CAT2(g[0])]), borderRadius: 5 }] },
     options: { indexAxis: "y", maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${brl0(ctx.parsed.x)} (${pct(ctx.parsed.x / total)})` } } }, scales: { x: { ticks: { callback: v => brl0(v) } } } } });
 }
 
