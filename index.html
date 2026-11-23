@@ -159,6 +159,8 @@ input.val-banda{width:110px;text-align:right;font-weight:700;padding:8px}
 .acoes-pag{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.acoes-pag select{max-width:340px}
 .dica{font-size:12.5px;color:var(--mute);margin:12px 0 0}
 .semana-nav b{min-width:170px;text-align:center}
+.cal-btn{position:relative;margin:0;display:inline-grid;place-items:center;width:38px;height:34px;border:1px solid var(--line);border-radius:10px;cursor:pointer;font-size:16px}
+.cal-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
 .servico{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#14231f;border:1px solid #24453d;border-radius:12px;padding:12px 16px;margin-bottom:14px}
 .add-banda{display:grid;gap:4px}
 .chips button small{opacity:.7;margin-left:4px}
@@ -941,6 +943,19 @@ function editarPessoa(p, tipo, aoSalvar) {
   };
 }
 
+function editarPix(p, aoSalvar) {
+  const d = $("#dlg");
+  d.innerHTML = `<h3>Pix de ${esc(p.nome)}</h3><form id="f-pix"><div class="linha-form"><div><label>Tipo</label><select name="pix_tipo">${Object.entries(PIX_TIPOS).map(([k, v]) => `<option value="${k}" ${p.pix_tipo === k ? "selected" : ""}>${v}</option>`).join("")}</select></div>
+    <div><label>Chave</label><input name="pix_chave" value="${esc(fmtPix(p))}" required></div></div>
+    <label>Titular (se for de outra pessoa)</label><input name="pix_nome" value="${esc(p.pix_nome || "")}">
+    <p class="dica">A alteração fica salva no cadastro e vale para os próximos pagamentos.</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn sec" type="button" id="px-c">Cancelar</button><button class="btn">Salvar</button></div></form>`;
+  d.showModal(); $("#px-c").onclick = () => d.close();
+  $("#f-pix").onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target); const tipo = f.get("pix_tipo");
+    let chave = f.get("pix_chave").trim(); if (["cpf", "celular", "cnpj"].includes(tipo)) chave = chave.replace(/\D/g, "");
+    await sb.from("pessoas").update({ pix_tipo: tipo, pix_chave: chave, pix_nome: f.get("pix_nome").trim() || null }).eq("id", p.id); d.close(); aoSalvar && aoSalvar(); };
+}
+
 // ============ ABA: PAGAMENTOS DA SEMANA ============
 const fatSemanaCalc = res => res.reduce((s, r) => s + +r.faturamento, 0);
 const semanaDe = d => addDias(d, -((dow(d) - 3 + 7) % 7)); // semana começa na quarta
@@ -978,11 +993,12 @@ async function abaPagamentos() {
 
   const pixCel = (p, nome) => EQ ? (p?.tem_pix ? `<span class="tag bom">Pix cadastrado</span>` : p ? `<span class="tag ruim">sem Pix — avise a gerência</span>` : `<button class="link-btn" style="margin:0" data-cad="" data-cad-nome="${esc(nome)}" data-cad-tipo="freela">+ cadastrar</button>`)
     : p?.pix_chave
-    ? `<div class="pix"><span title="${esc(PIX_TIPOS[p.pix_tipo] || "")}">${esc(fmtPix(p))}</span>${p.pix_nome ? `<small>titular: ${esc(p.pix_nome)}</small>` : ""}<button class="btn sec peq" data-copiar-pix="${esc(p.pix_chave)}">Copiar</button></div>`
+    ? `<div class="pix"><span title="${esc(PIX_TIPOS[p.pix_tipo] || "")}">${esc(fmtPix(p))}</span>${p.pix_nome ? `<small>titular: ${esc(p.pix_nome)}</small>` : ""}<div style="display:flex;gap:4px"><button class="btn sec peq" data-copiar-pix="${esc(p.pix_chave)}">Copiar</button><button class="btn sec peq" data-alt-pix="${p.id}" title="Alterar Pix">✎</button></div></div>`
     : `<button class="link-btn" style="margin:0" data-cad="${p?.id || ""}" data-cad-nome="${esc(nome)}" data-cad-tipo="${p?.tipo || "freela"}">+ cadastrar Pix</button>`;
   const status = (tab, id, st) => EQ ? `<span class="tag ${st === "pago" ? "bom" : "ok"}">${st === "pago" ? "pago" : "a pagar"}</span>` : `<button class="status ${st === "pago" ? "pago" : ""}" data-status="${tab}:${id}:${st}">${st === "pago" ? "Pago ✓" : "A pagar"}</button>`;
 
   let corpo = "";
+  const diasVis = dias.filter(d => W.todosDias || abreDow.has(dow(d)) || fr.some(l => l.dias_valores?.[d]) || !abreDow.size);
   if (W.sub === "freelas") {
     const usados = new Set(fr.map(l => l.pessoa_id));
     const disponiveis = pessoas.filter(p => p.tipo === "freela" && p.ativo && !usados.has(p.id));
@@ -990,16 +1006,18 @@ async function abaPagamentos() {
       <div class="n"><b style="font-size:18px;color:var(--teal)">${brl0(servEquipe)}</b><small class="sub2">para a equipe · ${cotas ? brl(porDiaria) + " por diária (" + nDiarias + " de freelas" + (+SV.fixas ? " + " + SV.fixas + " da equipe fixa = " + brl0(porDiaria * SV.fixas) : "") + ")" : "lance as diárias para dividir"}</small></div>
       <button class="btn sec peq" id="cfg-serv">Ajustar</button></div>
       <div class="rolagem tabela-pag" style="max-height:none"><table class="pag"><thead><tr><th>Freela</th>
-      ${dias.map(d => `<th class="c ${abreDow.has(dow(d)) ? "" : "fechado"}">${DIAS[dow(d)]}<br><small>${br(d).slice(0, 5)}</small></th>`).join("")}
-      <th class="n">Ajuste</th><th class="n">Diárias</th>${SV.incluir ? `<th class="n">${SV.percentual}%</th>` : ""}${EQ ? "" : `<th class="n">A pagar</th>`}<th>Pix</th><th>Situação</th><th></th></tr></thead><tbody>
+      ${diasVis.map(d => `<th class="c ${abreDow.has(dow(d)) ? "" : "fechado"}">${DIAS[dow(d)]}<br><small>${br(d).slice(0, 5)}</small></th>`).join("")}
+      <th class="n">Ajuste</th><th class="n">Diárias (R$)</th>${SV.incluir ? `<th class="n">${SV.percentual}%</th>` : ""}${EQ ? "" : `<th class="n">A pagar</th>`}<th>Pix</th><th>Situação</th><th></th></tr></thead><tbody>
       ${fr.map(l => { const p = pesDe(l.pessoa_id, l.nome, "freela"); const diaria = +(p?.valor_padrao || 0);
-        return `<tr data-linha="${l.id}"><td><b>${esc(l.nome)}</b><small class="sub2">${esc(l.funcao || p?.funcao || "")}${diaria ? " · diária " + brl0(diaria) : ""}</small></td>
-        ${dias.map(d => `<td class="c ${abreDow.has(dow(d)) ? "" : "fechado"}"><input class="dia ${l.dias_valores?.[d] ? "on" : ""}" inputmode="decimal" data-l="${l.id}" data-d="${d}" data-diaria="${diaria || ""}" value="${l.dias_valores?.[d] != null ? nfmt(+l.dias_valores[d]) : ""}" placeholder="·"></td>`).join("")}
+        const nd = Object.keys(l.dias_valores || {}).length;
+        return `<tr data-linha="${l.id}"><td><b>${esc(l.nome)}</b> <span class="tag ${nd ? "ok" : ""}" data-nd="${l.id}">${nd} ${nd === 1 ? "dia" : "dias"}</span><small class="sub2">${esc(l.funcao || p?.funcao || "")}${diaria ? " · diária " + brl0(diaria) : ""}</small></td>
+        ${diasVis.map(d => `<td class="c ${abreDow.has(dow(d)) ? "" : "fechado"}"><input class="dia ${l.dias_valores?.[d] ? "on" : ""}" inputmode="decimal" data-l="${l.id}" data-d="${d}" data-diaria="${diaria || ""}" value="${l.dias_valores?.[d] != null ? nfmt(+l.dias_valores[d]) : ""}" placeholder="·"></td>`).join("")}
         <td class="n"><input class="aj" inputmode="decimal" data-aj="${l.id}" value="${+l.ajuste ? nfmt(+l.ajuste, 2) : ""}" placeholder="0"><input class="aj-obs" data-ajobs="${l.id}" value="${esc(l.ajuste_obs || "")}" placeholder="motivo"></td>
         <td class="n" data-total="${l.id}">${brl(l._total)}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(l._serv)}</td>` : ""}${EQ ? "" : `<td class="n"><b data-pagar="${l.id}">${brl(l._pagar)}</b></td>`}<td>${pixCel(p, l.nome)}</td><td>${status("freelas", l.id, l.status)}</td>
         <td>${l.status === "pago" && EQ ? "" : `<button class="x" data-del-fr="${l.id}" title="Tirar da semana">×</button>`}</td></tr>`; }).join("") || `<tr><td colspan="15" class="vazio">Nenhum freela nesta semana ainda.</td></tr>`}
-      </tbody><tfoot><tr><td><b>Total</b></td>${dias.map(d => `<td class="c n"><small>${brl0(fr.reduce((s, l) => s + (+l.dias_valores?.[d] || 0), 0)) }</small></td>`).join("")}<td></td><td class="n">${brl(tFre)}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(tServ)}</td>` : ""}${EQ ? "" : `<td class="n"><b>${brl(tFre + tServ)}</b></td>`}<td colspan="3"></td></tr></tfoot></table></div>
+      </tbody><tfoot><tr><td><b>Total</b></td>${diasVis.map(d => `<td class="c n"><small>${brl0(fr.reduce((s, l) => s + (+l.dias_valores?.[d] || 0), 0)) }</small></td>`).join("")}<td></td><td class="n">${brl(tFre)}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(tServ)}</td>` : ""}${EQ ? "" : `<td class="n"><b>${brl(tFre + tServ)}</b></td>`}<td colspan="3"></td></tr></tfoot></table></div>
       <div class="acoes-pag"><select id="add-fr"><option value="">+ Adicionar freela à semana…</option>${disponiveis.map(p => `<option value="${p.id}">${esc(p.nome)}${p.funcao ? " — " + esc(p.funcao) : ""}</option>`).join("")}<option value="novo">＋ Cadastrar nova pessoa…</option></select>
+        ${diasVis.length < 7 ? `<button class="btn sec" id="todos-dias">Mostrar seg e ter (feriado)</button>` : W.todosDias ? `<button class="btn sec" id="todos-dias">Esconder dias fechados</button>` : ""}
         ${!fr.length ? `<button class="btn sec" id="repetir">Repetir a escala da semana anterior</button>` : ""}</div>
       <p class="dica">Toque no dia para lançar a diária padrão; toque de novo para mudar o valor ou apague para tirar o dia. Dias em cinza são dias em que o bar normalmente fecha. Tudo é salvo na hora.</p>`;
   }
@@ -1031,7 +1049,7 @@ async function abaPagamentos() {
       ${gl.map((g, k) => `<tr><td><b>${[...new Set(g.itens.map(i => i.nome))].map(esc).join(" + ")}</b><small class="sub2">${g.itens.map(i => esc(i.oq)).join(" · ")}</small></td>
         <td>${g.p?.pix_chave ? `<div class="pix"><span>${esc(fmtPix(g.p))}</span>${g.p.pix_nome ? `<small>titular: ${esc(g.p.pix_nome)}</small>` : ""}</div>` : `<span class="tag ruim">sem Pix</span>`}</td>
         <td class="n"><b>${brl(g.itens.reduce((s, i) => s + i.valor, 0))}</b></td>
-        <td style="white-space:nowrap">${g.p?.pix_chave ? `<button class="btn sec peq" data-copiar-pix="${esc(g.p.pix_chave)}">Copiar Pix</button> ` : ""}<button class="btn peq" data-pagar-grupo="${k}">Marcar pago</button></td></tr>`).join("")}
+        <td style="white-space:nowrap">${g.p?.pix_chave ? `<button class="btn sec peq" data-copiar-pix="${esc(g.p.pix_chave)}">Copiar Pix</button> <button class="btn sec peq" data-alt-pix="${g.p.id}" title="Alterar Pix">✎</button> ` : g.p ? `<button class="btn sec peq" data-alt-pix="${g.p.id}">+ Pix</button> ` : ""}<button class="btn peq" data-pagar-grupo="${k}">Marcar pago</button></td></tr>`).join("")}
       </tbody></table><div class="acoes-pag"><button class="btn sec" id="copiar-lista">Copiar lista completa</button></div><pre id="lista-pag" class="hidden">${esc(texto)}</pre>`
       : `<div class="vazio">Tudo pago nesta semana ✔</div>`;
     W._grupos = gl;
@@ -1039,7 +1057,8 @@ async function abaPagamentos() {
 
   $("#conteudo").innerHTML = `
   <div class="cab-sec"><div><h2>Pagamentos da semana</h2><p>${EQ ? "Lance quem trabalhou e as bandas de cada noite" : "Freelas e bandas num lugar só, com Pix salvo — substitui a planilha"}</p></div>
-    <div class="filtros semana-nav"><button class="btn sec peq" id="sem-ant">‹</button><b>${semanaTxt}</b><button class="btn sec peq" id="sem-prox">›</button><button class="btn sec peq" id="sem-hoje">Semana atual</button></div></div>
+    <div class="filtros semana-nav"><button class="btn sec peq" id="sem-ant">‹</button><b>${semanaTxt}</b><button class="btn sec peq" id="sem-prox">›</button>
+      <label class="cal-btn" title="Escolher a semana no calendário">📅<input type="date" id="sem-cal" value="${ini}"></label><button class="btn sec peq" id="sem-hoje">Semana atual</button></div></div>
   <div class="grade kpis ${EQ ? "hidden" : ""}">
     <div class="card kpi"><div class="rot">Freelas</div><div class="val">${brl0(tFre)}</div><div class="det">${fr.length} pessoas · ${nDiarias} diárias${SV.incluir ? " · + " + brl0(tServ) + " de " + SV.percentual + "%" : ""}</div></div>
     <div class="card kpi"><div class="rot">Bandas</div><div class="val">${brl0(tBan)}</div><div class="det">${bd.length} cachês</div></div>
@@ -1056,9 +1075,11 @@ async function abaPagamentos() {
   if (EQ && ini <= minEq) $("#sem-ant").disabled = true;
   $("#sem-ant").onclick = () => { if (EQ && ini <= minEq) return; W.ini = addDias(ini, -7); recarregar(); };
   $("#sem-prox").onclick = () => { W.ini = addDias(ini, 7); recarregar(); };
+  $("#sem-cal").onchange = e => { if (!e.target.value) return; let alvo = semanaDe(e.target.value); if (EQ && alvo < minEq) alvo = minEq; W.ini = alvo; recarregar(); };
   $("#sem-hoje").onclick = () => { W.ini = semanaDe(addDias(diaOperacionalHoje(), -1)); recarregar(); };
   document.querySelectorAll("[data-sub]").forEach(b => b.onclick = () => { W.sub = b.dataset.sub; recarregar(); });
   document.querySelectorAll("[data-copiar-pix]").forEach(b => b.onclick = () => copiar(b.dataset.copiarPix, b));
+  document.querySelectorAll("[data-alt-pix]").forEach(b => b.onclick = () => editarPix(P[b.dataset.altPix], recarregar));
   document.querySelectorAll("[data-cad]").forEach(b => b.onclick = () => {
     const p = P[b.dataset.cad] || pessoas.find(x => x.tipo === b.dataset.cadTipo && x.nome.toLowerCase() === b.dataset.cadNome.toLowerCase());
     editarPessoa(p || { tipo: b.dataset.cadTipo, nome: b.dataset.cadNome, ativo: true }, b.dataset.cadTipo, recarregar);
@@ -1071,6 +1092,7 @@ async function abaPagamentos() {
   const salvarLinha = (id, mudar) => {
     const l = fr.find(x => x.id == id); mudar(l); l._total = totFr(l);
     const t = $(`[data-total="${id}"]`); if (t) t.textContent = brl(l._total);
+    const nd = Object.keys(l.dias_valores || {}).length, tg = $(`[data-nd="${id}"]`); if (tg) { tg.textContent = nd + (nd === 1 ? " dia" : " dias"); tg.className = "tag " + (nd ? "ok" : ""); }
     const pg = $(`[data-pagar="${id}"]`); if (pg) pg.textContent = brl(l._total + (l._serv || 0)) + " *";
     clearTimeout(W.timers[id]);
     W.timers[id] = setTimeout(async () => {
@@ -1103,6 +1125,7 @@ async function abaPagamentos() {
     const inserir = async p => { await sb.from("freelas").insert({ semana_inicio: ini, nome: p.nome, funcao: p.funcao, pessoa_id: p.id, dias: 0, valor: 0, dias_valores: {} }); recarregar(); };
     if (v === "novo") editarPessoa(null, "freela", inserir); else inserir(P[v]);
   };
+  if ($("#todos-dias")) $("#todos-dias").onclick = () => { W.todosDias = !W.todosDias; recarregar(); };
   if ($("#repetir")) $("#repetir").onclick = async () => {
     const { data: ant } = await sb.from("freelas").select("*").eq("semana_inicio", addDias(ini, -7));
     if (!ant?.length) { $("#repetir").textContent = "Semana anterior vazia"; return; }
