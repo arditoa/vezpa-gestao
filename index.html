@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vezpa Gestão</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#141012; --panel:#1e181b; --panel2:#272024; --line:#3a3035; --ink:#f4ede6; --mute:#a99c94;
+  --amber:#f2a63b; --amber2:#ffcf7a; --rose:#e8607a; --teal:#4fc3b0; --violet:#9b8cf2; --green:#7cc46a; --red:#e8604f;
+  --r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "DM Sans",system-ui,sans-serif}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;margin:0;letter-spacing:-.01em}
+button,input,select,textarea{font:inherit}
+.hidden{display:none!important}
+a{color:var(--amber2)}
+
+/* login */
+#tela-login{min-height:100vh;display:grid;place-items:center;padding:24px;
+  background:radial-gradient(1200px 600px at 20% 0%,#3b2418 0%,transparent 60%),radial-gradient(900px 500px at 100% 100%,#2c1830 0%,transparent 60%),var(--bg)}
+.cartao-login{width:min(400px,100%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:32px}
+.marca{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.marca .logo{width:44px;height:44px;border-radius:12px;background:var(--amber);color:#1a1208;display:grid;place-items:center;font:800 22px Fraunces,serif}
+.marca h1{font-size:26px}.marca small{display:block;color:var(--mute);font-size:13px}
+label{display:block;font-size:13px;color:var(--mute);margin:14px 0 6px}
+input,select,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 12px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--amber)}
+.btn{background:var(--amber);color:#1a1208;border:0;border-radius:10px;padding:11px 16px;font-weight:700;cursor:pointer}
+.btn:hover{background:var(--amber2)}
+.btn.sec{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:500}
+.btn.sec:hover{border-color:var(--amber)}
+.btn.peq{padding:6px 10px;font-size:13px}
+.btn.perigo{background:transparent;border:1px solid #6b2b30;color:#ff9aa5}
+.btn:disabled{opacity:.5;cursor:wait}
+.largo{width:100%;margin-top:20px}
+.msg{margin-top:14px;font-size:14px;padding:10px 12px;border-radius:10px;background:var(--panel2)}
+.msg.erro{color:#ffb4b4;border:1px solid #5c2a2a}.msg.ok{color:#bfe8b0;border:1px solid #2f5a2a}
+.link-btn{background:none;border:0;color:var(--mute);text-decoration:underline;cursor:pointer;padding:0;margin-top:14px;font-size:13px}
+
+/* app */
+header.topo{position:sticky;top:0;z-index:5;background:rgba(20,16,18,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.topo-in{max-width:1240px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.topo .marca{margin:0}.topo .marca .logo{width:36px;height:36px;font-size:18px}.topo .marca h1{font-size:20px}
+nav.abas{display:flex;gap:4px;flex-wrap:wrap;flex:1}
+nav.abas button{background:none;border:0;color:var(--mute);padding:8px 12px;border-radius:9px;cursor:pointer;font-weight:500}
+nav.abas button:hover{color:var(--ink);background:var(--panel)}
+nav.abas button.ativa{color:#1a1208;background:var(--amber)}
+.quem{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--mute)}
+.selo{font-size:11px;text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:99px;border:1px solid var(--line);color:var(--amber2)}
+main{max-width:1240px;margin:0 auto;padding:22px 20px 60px}
+.cab-sec{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.cab-sec h2{font-size:28px}.cab-sec p{margin:4px 0 0;color:var(--mute)}
+.filtros{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.filtros input,.filtros select{width:auto;padding:8px 10px}
+.grade{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.dois{grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
+@media(max-width:520px){.dois{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;min-width:0}
+.card h3{font-size:17px;margin-bottom:4px}
+.card .sub{color:var(--mute);font-size:13px;margin-bottom:12px}
+.kpi .rot{color:var(--mute);font-size:12px;text-transform:uppercase;letter-spacing:.07em}
+.kpi .val{font:700 28px "DM Sans";margin-top:6px;font-variant-numeric:tabular-nums}
+.kpi .det{color:var(--mute);font-size:12.5px;margin-top:4px}
+.kpi.destaque{background:linear-gradient(135deg,#3a2612,#2a1d14);border-color:#5c3f1c}
+.kpi.destaque .val{color:var(--amber2)}
+.graf{position:relative;height:280px}.graf.alto{height:360px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mute);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.05em;position:sticky;top:0;background:var(--panel)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.rolagem{max-height:440px;overflow:auto}
+.barra-mini{height:6px;background:var(--panel2);border-radius:9px;overflow:hidden;margin-top:4px}
+.barra-mini i{display:block;height:100%;background:var(--amber)}
+.tag{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:99px;background:var(--panel2);color:var(--mute);border:1px solid var(--line)}
+.tag.bom{color:#bfe8b0;border-color:#2f5a2a}.tag.ruim{color:#ffb4b4;border-color:#5c2a2a}.tag.ok{color:var(--amber2);border-color:#5c3f1c}
+.vazio{padding:40px;text-align:center;color:var(--mute)}
+.aviso{background:#2a2112;border:1px solid #5c4a1c;color:#f5dca0;border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:14px}
+.heat{display:grid;gap:3px;font-size:11px}
+.heat .c{border-radius:4px;height:26px;display:grid;place-items:center;color:#1a1208;font-weight:700}
+.heat .h{color:var(--mute);display:grid;place-items:center}
+.drop{border:2px dashed var(--line);border-radius:var(--r);padding:30px;text-align:center;color:var(--mute);cursor:pointer;transition:.15s}
+.drop.sobre,.drop:hover{border-color:var(--amber);color:var(--ink)}
+.linha-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end}
+.ao-vivo{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--mute)}
+.ao-vivo:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(124,196,106,.6);animation:pulso 2s infinite}
+@keyframes pulso{70%{box-shadow:0 0 0 8px rgba(124,196,106,0)}100%{box-shadow:0 0 0 0 rgba(124,196,106,0)}}
+.insights li{margin:0 0 10px}
+.insights{padding-left:18px;margin:0}
+dialog{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:22px;width:min(480px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<section id="tela-login" class="hidden">
+  <div class="cartao-login">
+    <div class="marca"><div class="logo">V</div><div><h1>Vezpa Gestão</h1><small>Painel interno do Vezpa Bar</small></div></div>
+
+    <form id="form-login">
+      <label for="email">E-mail</label>
+      <input id="email" type="email" autocomplete="username" required>
+      <label for="senha">Senha</label>
+      <input id="senha" type="password" autocomplete="current-password" required>
+      <button class="btn largo" type="submit">Entrar</button>
+      <button class="link-btn" type="button" id="btn-esqueci">Esqueci minha senha</button>
+    </form>
+
+    <form id="form-nova-senha" class="hidden">
+      <p style="margin:0;color:var(--mute)">Defina a sua senha para acessar o painel.</p>
+      <label for="nova1">Nova senha (mín. 8 caracteres)</label>
+      <input id="nova1" type="password" autocomplete="new-password" minlength="8" required>
+      <label for="nova2">Repita a senha</label>
+      <input id="nova2" type="password" autocomplete="new-password" minlength="8" required>
+      <button class="btn largo" type="submit">Salvar senha e entrar</button>
+    </form>
+    <div id="msg-login" class="msg hidden"></div>
+  </div>
+</section>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <header class="topo"><div class="topo-in">
+    <div class="marca"><div class="logo">V</div><h1>Vezpa</h1></div>
+    <nav class="abas" id="abas"></nav>
+    <div class="quem"><span id="quem-nome"></span><span class="selo" id="quem-papel"></span><button class="btn sec peq" id="btn-sair">Sair</button></div>
+  </div></header>
+  <main id="conteudo"></main>
+</div>
+
+<dialog id="dlg"></dialog>
+
+<script>
+// ============ CONFIG ============
+const SUPABASE_URL = "https://obnrddlgftdxilvteuks.supabase.co";
+const SUPABASE_KEY = "sb_publishable_cXoEUXsrUgD8xZLT626bpg_RDG_GU9U";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = (s, el = document) => el.querySelector(s);
+const brl = v => (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const brl0 = v => (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const nfmt = (v, d = 0) => (v ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: d, minimumFractionDigits: d });
+const pct = v => isFinite(v) ? (v * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + "%" : "—";
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const DIAS_LONGO = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+const dt = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const br = s => s ? s.split("-").reverse().join("/") : "";
+const dow = s => dt(s).getDay();
+const addDias = (s, n) => { const d = dt(s); d.setDate(d.getDate() + n); return iso(d); };
+
+const CATEG = g => {
+  g = (g || "").toUpperCase();
+  if (/COMIDA|PRATO|ENTRADA|COMPARTILHAR|WRAP|BURGER/.test(g)) return "Comida";
+  if (/CERVEJA|LONG NECK|600/.test(g)) return "Cerveja";
+  if (/DRINK|MOCKTAIL|PROMO|DOSE|VINHO|BEBIDA|SOFT/.test(g)) return "Drinks e outras bebidas";
+  return "Entradas, cortesias e outros";
+};
+const COR_CAT = { "Cerveja": "#f2a63b", "Drinks e outras bebidas": "#e8607a", "Comida": "#4fc3b0", "Entradas, cortesias e outros": "#9b8cf2" };
+
+Chart.defaults.color = "#a99c94";
+Chart.defaults.borderColor = "#3a3035";
+Chart.defaults.font.family = "DM Sans";
+Chart.defaults.plugins.tooltip.callbacks.label = ctx => {
+  const v = ctx.parsed.y ?? ctx.parsed;
+  return `${ctx.dataset.label ? ctx.dataset.label + ": " : ""}${ctx.dataset._fmt === "n" ? nfmt(v) : brl(v)}`;
+};
+let charts = [];
+function grafico(el, cfg) { const c = new Chart(el, cfg); charts.push(c); return c; }
+function limparGraficos() { charts.forEach(c => c.destroy()); charts = []; }
+
+// ============ ESTADO ============
+const S = { user: null, perfil: null, aba: null, timer: null, periodo: null };
+
+// ============ AUTENTICAÇÃO ============
+function mostrarMsg(txt, tipo = "erro") { const m = $("#msg-login"); m.textContent = txt; m.className = "msg " + tipo; }
+
+$("#form-login").addEventListener("submit", async e => {
+  e.preventDefault();
+  const b = e.submitter; b.disabled = true;
+  const { error } = await sb.auth.signInWithPassword({ email: $("#email").value.trim(), password: $("#senha").value });
+  b.disabled = false;
+  if (error) mostrarMsg(error.message.includes("Invalid") ? "E-mail ou senha incorretos." : error.message);
+});
+
+$("#btn-esqueci").addEventListener("click", async () => {
+  const email = $("#email").value.trim();
+  if (!email) return mostrarMsg("Digite seu e-mail acima e clique de novo em “Esqueci minha senha”.");
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  mostrarMsg(error ? error.message : "Se esse e-mail tiver acesso, você vai receber um link para criar uma nova senha.", error ? "erro" : "ok");
+});
+
+$("#form-nova-senha").addEventListener("submit", async e => {
+  e.preventDefault();
+  const a = $("#nova1").value, b = $("#nova2").value;
+  if (a !== b) return mostrarMsg("As senhas não conferem.");
+  const { error } = await sb.auth.updateUser({ password: a });
+  if (error) return mostrarMsg(error.message);
+  history.replaceState(null, "", location.pathname);
+  definindoSenha = false;
+  iniciar();
+});
+
+$("#btn-sair").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
+
+let definindoSenha = /type=(invite|recovery)/.test(location.hash);
+sb.auth.onAuthStateChange((ev) => {
+  if (ev === "PASSWORD_RECOVERY") { definindoSenha = true; telaSenha(); }
+});
+
+function telaLogin() {
+  $("#app").classList.add("hidden"); $("#tela-login").classList.remove("hidden");
+  $("#form-login").classList.remove("hidden"); $("#form-nova-senha").classList.add("hidden");
+}
+function telaSenha() {
+  $("#app").classList.add("hidden"); $("#tela-login").classList.remove("hidden");
+  $("#form-login").classList.add("hidden"); $("#form-nova-senha").classList.remove("hidden");
+}
+
+async function iniciar() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return telaLogin();
+  if (definindoSenha) return telaSenha();
+  S.user = session.user;
+  const { data: perfil } = await sb.from("perfis").select("*").eq("user_id", S.user.id).maybeSingle();
+  if (!perfil) {
+    telaLogin(); mostrarMsg("Seu usuário ainda não tem perfil de acesso. Peça para a Andrea liberar.");
+    await sb.auth.signOut(); return;
+  }
+  S.perfil = perfil;
+  $("#tela-login").classList.add("hidden"); $("#app").classList.remove("hidden");
+  $("#quem-nome").textContent = perfil.nome;
+  $("#quem-papel").textContent = { dona: "Dona", gerente: "Gerente", caixa: "Caixa" }[perfil.papel];
+  montarAbas();
+}
+
+// ============ NAVEGAÇÃO ============
+const ABAS = [
+  { id: "hoje", nome: "Hoje", papeis: ["dona", "gerente", "caixa"], fn: abaHoje },
+  { id: "geral", nome: "Faturamento", papeis: ["dona", "gerente"], fn: abaGeral },
+  { id: "produtos", nome: "Produtos", papeis: ["dona", "gerente"], fn: abaProdutos },
+  { id: "equipe", nome: "Equipe", papeis: ["dona", "gerente"], fn: abaEquipe },
+  { id: "cruzamentos", nome: "Cruzamentos", papeis: ["dona", "gerente"], fn: abaCruzamentos },
+  { id: "importar", nome: "Importar dados", papeis: ["dona", "gerente"], fn: abaImportar },
+  { id: "usuarios", nome: "Usuários", papeis: ["dona"], fn: abaUsuarios },
+];
+function montarAbas() {
+  const minhas = ABAS.filter(a => a.papeis.includes(S.perfil.papel));
+  $("#abas").innerHTML = minhas.map(a => `<button data-aba="${a.id}">${a.nome}</button>`).join("");
+  $("#abas").onclick = e => { const b = e.target.closest("button"); if (b) abrir(b.dataset.aba); };
+  const h = location.hash.slice(1);
+  abrir(minhas.find(a => a.id === h) ? h : (S.perfil.papel === "caixa" ? "hoje" : "geral"));
+}
+function abrir(id) {
+  clearInterval(S.timer); limparGraficos();
+  S.aba = id; history.replaceState(null, "", "#" + id);
+  document.querySelectorAll("#abas button").forEach(b => b.classList.toggle("ativa", b.dataset.aba === id));
+  $("#conteudo").innerHTML = `<div class="vazio">Carregando…</div>`;
+  ABAS.find(a => a.id === id).fn().catch(err => {
+    console.error(err);
+    $("#conteudo").innerHTML = `<div class="msg erro">Erro ao carregar: ${esc(err.message || err)}</div>`;
+  });
+}
+
+// ============ DADOS ============
+async function todos(q) { // pagina além do limite de 1000 linhas
+  let out = [], de = 0, passo = 1000;
+  for (;;) {
+    const { data, error } = await q().range(de, de + passo - 1);
+    if (error) throw error;
+    out = out.concat(data);
+    if (data.length < passo) return out;
+    de += passo;
+  }
+}
+async function limitesDados() {
+  const { data: a } = await sb.from("vw_resumo_diario").select("dia").order("dia", { ascending: true }).limit(1);
+  const { data: b } = await sb.from("vw_resumo_diario").select("dia").order("dia", { ascending: false }).limit(1);
+  return { min: a?.[0]?.dia, max: b?.[0]?.dia };
+}
+async function periodoPadrao() {
+  if (S.periodo) return S.periodo;
+  const { min, max } = await limitesDados();
+  if (!max) return null;
+  const ini = max.slice(0, 8) + "01";
+  S.periodo = { ini: ini < min ? min : ini, fim: max, min, max };
+  return S.periodo;
+}
+function htmlFiltro(p) {
+  return `<div class="filtros">
+    <select id="f-atalho"><option value="">Atalhos…</option><option value="mes">Último mês com dados</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="tudo">Todo o histórico</option></select>
+    <input type="date" id="f-ini" value="${p.ini}"> <span style="color:var(--mute)">até</span> <input type="date" id="f-fim" value="${p.fim}">
+    <button class="btn peq" id="f-ok">Aplicar</button></div>`;
+}
+function ligarFiltro() {
+  $("#f-ok").onclick = () => { S.periodo = { ...S.periodo, ini: $("#f-ini").value, fim: $("#f-fim").value }; abrir(S.aba); };
+  $("#f-atalho").onchange = e => {
+    const v = e.target.value, p = S.periodo; if (!v) return;
+    if (v === "mes") { p.fim = p.max; p.ini = p.max.slice(0, 8) + "01"; }
+    if (v === "30") { p.fim = p.max; p.ini = addDias(p.max, -29); }
+    if (v === "90") { p.fim = p.max; p.ini = addDias(p.max, -89); }
+    if (v === "tudo") { p.ini = p.min; p.fim = p.max; }
+    abrir(S.aba);
+  };
+}
+function semDados() {
+  $("#conteudo").innerHTML = `<div class="card vazio"><h3>Ainda não há vendas no sistema</h3>
+  <p>${S.perfil.papel === "caixa" ? "Peça para a gerência importar os dados do Epoc." : `Vá em <a href="#importar" onclick="abrir('importar');return false">Importar dados</a> e envie o relatório “Venda de produtos por hora” do Epoc.`}</p></div>`;
+}
+
+// ============ ABA: HOJE ============
+async function abaHoje() {
+  const render = async () => {
+    const { max } = await limitesDados();
+    if (!max) return semDados();
+    const hojeSP = iso(new Date(Date.now() - 3 * 3600e3 - 6 * 3600e3)); // dia operacional vira às 06h
+    const dia = max;
+    const [{ data: res }, { data: horas }, prods, { data: ultimas }, { data: info }] = await Promise.all([
+      sb.from("vw_resumo_diario").select("*").eq("dia", dia).maybeSingle(),
+      sb.from("vw_vendas_hora").select("*").eq("dia", dia).order("hora"),
+      todos(() => sb.from("vw_vendas_produto_dia").select("*").eq("dia", dia).order("faturamento", { ascending: false })),
+      sb.from("vendas_itens").select("data,hora,produto,qtd,valor").eq("dia_operacional", dia).order("data", { ascending: false }).order("hora", { ascending: false }).limit(15),
+      sb.from("dias").select("*").eq("data", dia).maybeSingle(),
+    ]);
+    // comparação com mesmo dia da semana anterior (gestão)
+    let comp = null;
+    if (S.perfil.papel !== "caixa") {
+      const { data: c } = await sb.from("vw_resumo_diario").select("*").eq("dia", addDias(dia, -7)).maybeSingle();
+      comp = c;
+    }
+    const ehHoje = dia === hojeSP;
+    const ordenaH = h => (h < 6 ? h + 24 : h);
+    const hs = (horas || []).sort((a, b) => ordenaH(a.hora) - ordenaH(b.hora));
+    const top = prods.slice(0, 10);
+    const qtdTop = [...prods].sort((a, b) => b.qtd - a.qtd).slice(0, 10);
+    const maxF = Math.max(...top.map(p => p.faturamento), 1);
+    const varia = comp ? (res.faturamento - comp.faturamento) / comp.faturamento : null;
+
+    $("#conteudo").innerHTML = `
+    <div class="cab-sec"><div><h2>${ehHoje ? "Hoje" : "Último dia com vendas"}: ${DIAS_LONGO[dow(dia)]}, ${br(dia)}</h2>
+      <p>${info?.atracao ? "Atração: <b>" + esc(info.atracao) + "</b> · " : ""}${info?.jogo ? "Jogo: " + esc(info.jogo) + " · " : ""}Primeira venda ${res.primeira_venda?.slice(11, 16)} · última ${res.ultima_venda?.slice(11, 16)}</p></div>
+      <span class="ao-vivo">Atualiza sozinho a cada minuto</span></div>
+    ${!ehHoje ? `<div class="aviso">Os dados vêm da última importação do Epoc. Quando a integração automática com a API do Epoc for liberada, esta tela vai mostrar o movimento da noite em tempo real.</div>` : ""}
+    <div class="grade kpis">
+      <div class="card kpi destaque"><div class="rot">Faturamento</div><div class="val">${brl(res.faturamento)}</div>
+        <div class="det">${varia !== null ? `${varia >= 0 ? "▲" : "▼"} ${pct(Math.abs(varia))} vs ${DIAS[dow(dia)]} anterior (${brl0(comp.faturamento)})` : ""}</div></div>
+      <div class="card kpi"><div class="rot">Itens vendidos</div><div class="val">${nfmt(res.itens)}</div><div class="det">${nfmt(res.lancamentos)} lançamentos</div></div>
+      <div class="card kpi"><div class="rot">Valor médio por item</div><div class="val">${brl(res.faturamento / res.itens)}</div></div>
+      <div class="card kpi"><div class="rot">Hora mais forte</div><div class="val">${hs.length ? String([...hs].sort((a, b) => b.faturamento - a.faturamento)[0].hora).padStart(2, "0") + "h" : "—"}</div>
+        <div class="det">${hs.length ? brl0(Math.max(...hs.map(h => h.faturamento))) + " nessa hora" : ""}</div></div>
+    </div>
+    <div class="grade dois" style="margin-top:14px">
+      <div class="card"><h3>Vendas por hora</h3><div class="sub">Faturamento em cada hora da noite</div><div class="graf"><canvas id="g-hora"></canvas></div></div>
+      <div class="card"><h3>Mais vendidos da noite</h3><div class="sub">Por faturamento</div>
+        <div class="rolagem"><table><tbody>${top.map(p => `<tr><td>${esc(p.produto)}<div class="barra-mini"><i style="width:${p.faturamento / maxF * 100}%"></i></div></td><td class="n">${nfmt(p.qtd)} un</td><td class="n">${brl(p.faturamento)}</td></tr>`).join("")}</tbody></table></div></div>
+    </div>
+    <div class="grade dois" style="margin-top:14px">
+      <div class="card"><h3>Contagem por produto</h3><div class="sub">Os 10 com mais unidades — útil para conferir estoque no fechamento</div>
+        <table><thead><tr><th>Produto</th><th class="n">Unid.</th></tr></thead><tbody>${qtdTop.map(p => `<tr><td>${esc(p.produto)}</td><td class="n">${nfmt(p.qtd)}</td></tr>`).join("")}</tbody></table></div>
+      <div class="card"><h3>Últimos lançamentos</h3><div class="sub">Mais recentes primeiro</div>
+        <table><thead><tr><th>Hora</th><th>Produto</th><th class="n">Qtd</th><th class="n">Valor</th></tr></thead><tbody>${(ultimas || []).map(u => `<tr><td>${u.hora.slice(0, 5)}</td><td>${esc(u.produto)}</td><td class="n">${nfmt(u.qtd)}</td><td class="n">${brl(u.valor)}</td></tr>`).join("")}</tbody></table></div>
+    </div>`;
+    limparGraficos();
+    grafico($("#g-hora"), { type: "bar", data: { labels: hs.map(h => String(h.hora).padStart(2, "0") + "h"), datasets: [{ data: hs.map(h => h.faturamento), backgroundColor: "#f2a63b", borderRadius: 6 }] },
+      options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => brl0(v) } } } } });
+  };
+  await render();
+  S.timer = setInterval(() => { if (S.aba === "hoje") render().catch(console.error); }, 60000);
+}
+
+// ============ ABA: FATURAMENTO ============
+async function abaGeral() {
+  const p = await periodoPadrao(); if (!p) return semDados();
+  const [dias, horas, prods, { data: infos }] = await Promise.all([
+    todos(() => sb.from("vw_resumo_diario").select("*").gte("dia", p.ini).lte("dia", p.fim).order("dia")),
+    todos(() => sb.from("vw_vendas_hora").select("*").gte("dia", p.ini).lte("dia", p.fim)),
+    todos(() => sb.from("vw_vendas_produto_dia").select("dia,grupo,faturamento").gte("dia", p.ini).lte("dia", p.fim)),
+    sb.from("dias").select("*").gte("data", p.ini).lte("data", p.fim),
+  ]);
+  if (!dias.length) { $("#conteudo").innerHTML = `<div class="cab-sec"><h2>Faturamento</h2>${htmlFiltro(p)}</div><div class="card vazio">Sem vendas nesse período.</div>`; return ligarFiltro(); }
+  const info = Object.fromEntries((infos || []).map(i => [i.data, i]));
+  const total = dias.reduce((s, d) => s + +d.faturamento, 0);
+  const itens = dias.reduce((s, d) => s + +d.itens, 0);
+  const melhor = [...dias].sort((a, b) => b.faturamento - a.faturamento)[0];
+  const pior = [...dias].sort((a, b) => a.faturamento - b.faturamento)[0];
+  // por dia da semana
+  const porDow = Array.from({ length: 7 }, () => ({ soma: 0, n: 0 }));
+  dias.forEach(d => { const w = dow(d.dia); porDow[w].soma += +d.faturamento; porDow[w].n++; });
+  const ordemDow = [3, 4, 5, 6, 0, 1, 2].filter(w => porDow[w].n);
+  // categorias
+  const porCat = {}; prods.forEach(r => { const c = CATEG(r.grupo); porCat[c] = (porCat[c] || 0) + +r.faturamento; });
+  // heatmap
+  const horasLista = [...new Set(horas.map(h => h.hora))].sort((a, b) => (a < 6 ? a + 24 : a) - (b < 6 ? b + 24 : b));
+  const hm = {}; horas.forEach(h => { const k = dow(h.dia) + "-" + h.hora; hm[k] = (hm[k] || 0) + +h.faturamento; });
+  Object.keys(hm).forEach(k => { const w = +k.split("-")[0]; hm[k] /= porDow[w].n; });
+  const hmMax = Math.max(...Object.values(hm), 1);
+  const corHeat = v => { const t = v / hmMax; return `rgba(242,166,59,${0.08 + t * 0.92})`; };
+
+  // insights automáticos
+  const medDow = ordemDow.map(w => ({ w, m: porDow[w].soma / porDow[w].n })).sort((a, b) => b.m - a.m);
+  const ins = [];
+  if (medDow.length > 1) ins.push(`<b>${DIAS_LONGO[medDow[0].w]}</b> é o dia mais forte (média ${brl0(medDow[0].m)}), ${nfmt(medDow[0].m / medDow[medDow.length - 1].m, 1)}× a <b>${DIAS_LONGO[medDow[medDow.length - 1].w].toLowerCase()}</b> (${brl0(medDow[medDow.length - 1].m)}).`);
+  const pico = Object.entries(hm).sort((a, b) => b[1] - a[1])[0];
+  if (pico) { const [w, h] = pico[0].split("-"); ins.push(`O pico médio é <b>${DIAS_LONGO[w].toLowerCase()} às ${h}h</b>, com ${brl0(pico[1])} por hora — é aí que a equipe não pode faltar.`); }
+  const cerv = (porCat["Cerveja"] || 0) / total; ins.push(`Cerveja responde por <b>${pct(cerv)}</b> do faturamento; comida por <b>${pct((porCat["Comida"] || 0) / total)}</b>.`);
+  ins.push(`Melhor dia: <b>${br(melhor.dia)}</b> (${brl0(melhor.faturamento)})${info[melhor.dia]?.jogo ? " — dia de " + esc(info[melhor.dia].jogo) : info[melhor.dia]?.atracao ? " — " + esc(info[melhor.dia].atracao) : ""}. Pior: ${br(pior.dia)} (${brl0(pior.faturamento)}).`);
+
+  $("#conteudo").innerHTML = `
+  <div class="cab-sec"><div><h2>Faturamento</h2><p>${br(p.ini)} a ${br(p.fim)} · ${dias.length} dias com vendas</p></div>${htmlFiltro(p)}</div>
+  <div class="grade kpis">
+    <div class="card kpi destaque"><div class="rot">Faturamento no período</div><div class="val">${brl0(total)}</div><div class="det">${nfmt(itens)} itens vendidos</div></div>
+    <div class="card kpi"><div class="rot">Média por noite aberta</div><div class="val">${brl0(total / dias.length)}</div></div>
+    <div class="card kpi"><div class="rot">Valor médio por item</div><div class="val">${brl(total / itens)}</div></div>
+    <div class="card kpi"><div class="rot">Melhor noite</div><div class="val">${brl0(melhor.faturamento)}</div><div class="det">${DIAS[dow(melhor.dia)]} ${br(melhor.dia)}</div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>O que os números dizem</h3><div class="sub">Gerado automaticamente a partir do período escolhido</div><ul class="insights">${ins.map(i => `<li>${i}</li>`).join("")}</ul></div>
+  <div class="card" style="margin-top:14px"><h3>Faturamento por noite</h3><div class="sub">Cor da barra = dia da semana</div><div class="graf alto"><canvas id="g-dias"></canvas></div></div>
+  <div class="grade dois" style="margin-top:14px">
+    <div class="card"><h3>Média por dia da semana</h3><div class="sub">Faturamento médio por noite aberta</div><div class="graf"><canvas id="g-dow"></canvas></div></div>
+    <div class="card"><h3>De onde vem o dinheiro</h3><div class="sub">Faturamento por categoria</div><div class="graf"><canvas id="g-cat"></canvas></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>Mapa de calor: dia × hora</h3><div class="sub">Faturamento médio por hora em cada dia da semana — use para escalar equipe</div>
+    <div style="overflow-x:auto"><div class="heat" style="grid-template-columns:44px repeat(${horasLista.length},minmax(42px,1fr));min-width:${60 + horasLista.length * 46}px">
+      <div></div>${horasLista.map(h => `<div class="h">${String(h).padStart(2, "0")}h</div>`).join("")}
+      ${ordemDow.map(w => `<div class="h">${DIAS[w]}</div>${horasLista.map(h => { const v = hm[w + "-" + h] || 0; return `<div class="c" style="background:${v ? corHeat(v) : "var(--panel2)"};color:${v / hmMax > .45 ? "#1a1208" : "#f4ede6"}" title="${DIAS[w]} ${h}h: ${brl0(v)}">${v ? nfmt(v / 1000, 1) + "k" : ""}</div>`; }).join("")}`).join("")}
+    </div></div></div>`;
+  ligarFiltro();
+  const coresDow = ["#9b8cf2", "#555", "#555", "#4fc3b0", "#7cc46a", "#e8607a", "#f2a63b"];
+  grafico($("#g-dias"), { type: "bar", data: { labels: dias.map(d => DIAS[dow(d.dia)] + " " + br(d.dia).slice(0, 5)), datasets: [{ data: dias.map(d => d.faturamento), backgroundColor: dias.map(d => coresDow[dow(d.dia)]), borderRadius: 5 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { afterLabel: ctx => { const i = info[dias[ctx.dataIndex].dia]; return i ? [i.atracao, i.jogo].filter(Boolean).join(" · ") : ""; } } } }, scales: { y: { ticks: { callback: v => brl0(v) } } } } });
+  grafico($("#g-dow"), { type: "bar", data: { labels: ordemDow.map(w => DIAS[w] + ` (${porDow[w].n})`), datasets: [{ data: ordemDow.map(w => porDow[w].soma / porDow[w].n), backgroundColor: ordemDow.map(w => coresDow[w]), borderRadius: 6 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => brl0(v) } } } } });
+  const cats = Object.entries(porCat).sort((a, b) => b[1] - a[1]);
+  grafico($("#g-cat"), { type: "bar", data: { labels: cats.map(c => c[0]), datasets: [{ data: cats.map(c => c[1]), backgroundColor: cats.map(c => COR_CAT[c[0]]), borderRadius: 6 }] },
+    options: { indexAxis: "y", maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${brl0(ctx.parsed.x)} (${pct(ctx.parsed.x / total)})` } } }, scales: { x: { ticks: { callback: v => brl0(v) } } } } });
+}
+
+// ============ ABA: PRODUTOS ============
+async function abaProdutos() {
+  const p = await periodoPadrao(); if (!p) return semDados();
+  const rows = await todos(() => sb.from("vw_vendas_produto_dia").select("*").gte("dia", p.ini).lte("dia", p.fim));
+  const nDias = new Set(rows.map(r => r.dia)).size;
+  const ag = {};
+  rows.forEach(r => {
+    const k = r.produto; ag[k] ??= { produto: k, grupo: r.grupo, qtd: 0, fat: 0, dias: new Set(), fds: 0, sem: 0 };
+    ag[k].qtd += +r.qtd; ag[k].fat += +r.faturamento; ag[k].dias.add(r.dia);
+    const w = dow(r.dia); if (w === 5 || w === 6) ag[k].fds += +r.faturamento; else ag[k].sem += +r.faturamento;
+  });
+  const lista = Object.values(ag).sort((a, b) => b.fat - a.fat);
+  const total = lista.reduce((s, x) => s + x.fat, 0);
+  let acum = 0; lista.forEach(x => { acum += x.fat; x.abc = acum / total <= .8 ? "A" : acum / total <= .95 ? "B" : "C"; });
+  const mortos = lista.filter(x => x.qtd < 10 && x.fat > 0);
+  const gratis = lista.filter(x => x.fat === 0 && x.qtd > 0);
+  const grupos = {}; lista.forEach(x => { grupos[x.grupo] = (grupos[x.grupo] || 0) + x.fat; });
+  const gl = Object.entries(grupos).sort((a, b) => b[1] - a[1]);
+  const nA = lista.filter(x => x.abc === "A").length;
+  // produtos de dia fraco: maior peso relativo qua/qui/dom
+  const fracos = lista.filter(x => x.fat > total * 0.003).map(x => ({ ...x, peso: x.sem / (x.fat || 1) })).sort((a, b) => b.peso - a.peso).slice(0, 8);
+
+  $("#conteudo").innerHTML = `
+  <div class="cab-sec"><div><h2>Produtos</h2><p>${br(p.ini)} a ${br(p.fim)} · ${lista.length} produtos vendidos em ${nDias} noites</p></div>${htmlFiltro(p)}</div>
+  <div class="grade kpis">
+    <div class="card kpi destaque"><div class="rot">Curva A</div><div class="val">${nA} produtos</div><div class="det">fazem 80% do faturamento</div></div>
+    <div class="card kpi"><div class="rot">Quase parados</div><div class="val">${mortos.length}</div><div class="det">venderam menos de 10 un. e somam ${brl0(mortos.reduce((s, x) => s + x.fat, 0))}</div></div>
+    <div class="card kpi"><div class="rot">Saíram a R$ 0</div><div class="val">${nfmt(gratis.reduce((s, x) => s + x.qtd, 0))} un.</div><div class="det">${gratis.length} itens (cortesias, welcome drink…)</div></div>
+    <div class="card kpi"><div class="rot">Grupo líder</div><div class="val" style="font-size:22px">${esc(gl[0]?.[0])}</div><div class="det">${pct(gl[0]?.[1] / total)} do faturamento</div></div>
+  </div>
+  <div class="grade dois" style="margin-top:14px">
+    <div class="card"><h3>Faturamento por grupo do cardápio</h3><div class="sub">Grupos cadastrados no Epoc</div><div class="graf alto"><canvas id="g-grupos"></canvas></div></div>
+    <div class="card"><h3>Bons para promover nos dias fracos</h3><div class="sub">Produtos relevantes que já vendem proporcionalmente mais de qua, qui e dom</div>
+      <table><thead><tr><th>Produto</th><th class="n">% fora de sex/sáb</th><th class="n">Faturamento</th></tr></thead><tbody>${fracos.map(x => `<tr><td>${esc(x.produto)}</td><td class="n">${pct(x.peso)}</td><td class="n">${brl0(x.fat)}</td></tr>`).join("")}</tbody></table></div>
+  </div>
+  <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap">
+    <div><h3>Ranking completo</h3><div class="sub">A = 80% do faturamento, B = próximos 15%, C = últimos 5%</div></div>
+    <input id="busca" placeholder="Buscar produto…" style="width:220px"></div>
+    <div class="rolagem"><table id="tab-prod"><thead><tr><th>#</th><th>Produto</th><th>Grupo</th><th class="n">Unid.</th><th class="n">Faturamento</th><th class="n">% total</th><th class="n">Noites</th><th>Curva</th></tr></thead>
+    <tbody>${lista.map((x, i) => `<tr data-n="${esc(x.produto.toLowerCase())}"><td>${i + 1}</td><td>${esc(x.produto)}</td><td><span class="tag">${esc(x.grupo)}</span></td><td class="n">${nfmt(x.qtd)}</td><td class="n">${brl(x.fat)}</td><td class="n">${pct(x.fat / total)}</td><td class="n">${x.dias.size}</td><td><span class="tag ${x.abc === "A" ? "bom" : x.abc === "C" ? "ruim" : "ok"}">${x.abc}</span></td></tr>`).join("")}</tbody></table></div></div>
+  <div class="card" style="margin-top:14px"><h3>Candidatos a sair do cardápio</h3><div class="sub">Menos de 10 unidades no período</div>
+    <div class="rolagem" style="max-height:300px"><table><thead><tr><th>Produto</th><th>Grupo</th><th class="n">Unid.</th><th class="n">Faturamento</th></tr></thead><tbody>${mortos.map(x => `<tr><td>${esc(x.produto)}</td><td>${esc(x.grupo)}</td><td class="n">${nfmt(x.qtd)}</td><td class="n">${brl(x.fat)}</td></tr>`).join("")}</tbody></table></div></div>`;
+  ligarFiltro();
+  $("#busca").oninput = e => { const t = e.target.value.toLowerCase(); document.querySelectorAll("#tab-prod tbody tr").forEach(tr => tr.style.display = tr.dataset.n.includes(t) ? "" : "none"); };
+  grafico($("#g-grupos"), { type: "bar", data: { labels: gl.map(g => g[0]), datasets: [{ data: gl.map(g => g[1]), backgroundColor: gl.map(g => COR_CAT[CATEG(g[0])]), borderRadius: 5 }] },
+    options: { indexAxis: "y", maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${brl0(ctx.parsed.x)} (${pct(ctx.parsed.x / total)})` } } }, scales: { x: { ticks: { callback: v => brl0(v) } } } } });
+}
+
+// ============ ABA: EQUIPE ============
+async function abaEquipe() {
+  const p = await periodoPadrao(); if (!p) return semDados();
+  const [{ data: fr }, { data: vf }, dias] = await Promise.all([
+    sb.from("freelas").select("*").order("semana_inicio"),
+    sb.from("vendas_funcionario").select("*").order("valor", { ascending: false }),
+    todos(() => sb.from("vw_resumo_diario").select("dia,faturamento")),
+  ]);
+  const semanas = {};
+  (fr || []).forEach(f => { const s = semanas[f.semana_inicio] ??= { ini: f.semana_inicio, pessoas: 0, diarias: 0, custo: 0, temCusto: false, lista: [] }; s.pessoas++; s.diarias += +f.dias || 0; if (f.valor != null) { s.custo += +f.valor; s.temCusto = true; } s.lista.push(f); });
+  const sl = Object.values(semanas).sort((a, b) => a.ini.localeCompare(b.ini));
+  sl.forEach(s => { const fim = addDias(s.ini, 6); s.fat = dias.filter(d => d.dia >= s.ini && d.dia <= fim).reduce((t, d) => t + +d.faturamento, 0); s.noites = dias.filter(d => d.dia >= s.ini && d.dia <= fim).length; });
+  const ultima = sl[sl.length - 1];
+  const totVF = (vf || []).reduce((s, x) => s + +x.valor, 0);
+  const custoMedioDiaria = sl.filter(s => s.temCusto).reduce((a, s) => a + s.custo, 0) / Math.max(1, sl.filter(s => s.temCusto).reduce((a, s) => a + s.diarias, 0));
+
+  $("#conteudo").innerHTML = `
+  <div class="cab-sec"><div><h2>Equipe</h2><p>Freelas por semana e vendas por funcionário</p></div></div>
+  <div class="grade kpis">
+    <div class="card kpi destaque"><div class="rot">Faturamento por diária de freela</div><div class="val">${ultima ? brl0(ultima.fat / ultima.diarias) : "—"}</div><div class="det">semana de ${ultima ? br(ultima.ini) : ""} · quanto mais alto, mais enxuta a escala</div></div>
+    <div class="card kpi"><div class="rot">Diárias na última semana</div><div class="val">${ultima ? nfmt(ultima.diarias, 1) : "—"}</div><div class="det">${ultima?.pessoas || 0} pessoas · ${ultima?.noites || 0} noites</div></div>
+    <div class="card kpi"><div class="rot">Custo de freelas (última semana)</div><div class="val">${ultima?.temCusto ? brl0(ultima.custo) : "—"}</div><div class="det">${ultima?.temCusto ? pct(ultima.custo / ultima.fat) + " do faturamento da semana" : "sem valores informados"}</div></div>
+    <div class="card kpi"><div class="rot">Custo médio da diária</div><div class="val">${isFinite(custoMedioDiaria) && custoMedioDiaria ? brl0(custoMedioDiaria) : "—"}</div></div>
+  </div>
+  <div class="grade dois" style="margin-top:14px">
+    <div class="card"><h3>Faturamento × diárias de freela por semana</h3><div class="sub">Barras: faturamento · linha: diárias</div><div class="graf"><canvas id="g-sem"></canvas></div></div>
+    <div class="card"><h3>Vendas por funcionário</h3><div class="sub">${vf?.length ? "Período " + br(vf[0].periodo_inicio) + " a " + br(vf[0].periodo_fim) : "Sem relatório importado"}</div>
+      <div class="rolagem"><table><thead><tr><th>Funcionário</th><th class="n">Itens</th><th class="n">Média/item</th><th class="n">Total</th></tr></thead><tbody>${(vf || []).map(x => `<tr><td>${esc(x.funcionario)}<div class="barra-mini"><i style="width:${x.valor / (vf[0].valor || 1) * 100}%"></i></div></td><td class="n">${nfmt(x.qtd)}</td><td class="n">${brl(x.valor / x.qtd)}</td><td class="n">${brl0(x.valor)}</td></tr>`).join("")}</tbody></table></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>Escala por semana</h3><div class="sub">Semanas começam na quarta</div>
+    <div class="rolagem"><table><thead><tr><th>Semana</th><th class="n">Pessoas</th><th class="n">Diárias</th><th class="n">Custo</th><th class="n">Faturamento</th><th class="n">Fat./diária</th><th>Quem</th></tr></thead><tbody>
+    ${sl.map(s => `<tr><td>${br(s.ini)}</td><td class="n">${s.pessoas}</td><td class="n">${nfmt(s.diarias, 1)}</td><td class="n">${s.temCusto ? brl0(s.custo) : "—"}</td><td class="n">${brl0(s.fat)}</td><td class="n">${s.diarias ? brl0(s.fat / s.diarias) : "—"}</td><td style="font-size:12.5px;color:var(--mute)">${s.lista.map(f => esc(f.nome) + (f.funcao ? " (" + esc(f.funcao) + ")" : "")).join(", ")}</td></tr>`).join("")}
+    </tbody></table></div></div>`;
+  grafico($("#g-sem"), { type: "bar", data: { labels: sl.map(s => br(s.ini).slice(0, 5)), datasets: [
+    { label: "Faturamento", data: sl.map(s => s.fat), backgroundColor: "#f2a63b", borderRadius: 6, yAxisID: "y" },
+    { label: "Diárias", type: "line", data: sl.map(s => s.diarias), borderColor: "#4fc3b0", backgroundColor: "#4fc3b0", yAxisID: "y2", _fmt: "n", tension: .3 }] },
+    options: { maintainAspectRatio: false, scales: { y: { ticks: { callback: v => brl0(v) } }, y2: { position: "right", grid: { display: false } } } } });
+}
+
+// ============ ABA: CRUZAMENTOS ============
+async function abaCruzamentos() {
+  const p = await periodoPadrao(); if (!p) return semDados();
+  const [dias, { data: infos }, prods] = await Promise.all([
+    todos(() => sb.from("vw_resumo_diario").select("*").gte("dia", p.ini).lte("dia", p.fim).order("dia")),
+    sb.from("dias").select("*").gte("data", p.ini).lte("data", p.fim),
+    todos(() => sb.from("vw_vendas_produto_dia").select("dia,grupo,faturamento").gte("dia", p.ini).lte("dia", p.fim)),
+  ]);
+  const info = Object.fromEntries((infos || []).map(i => [i.data, i]));
+  const porDow = {}; dias.forEach(d => { const w = dow(d.dia); (porDow[w] ??= []).push(+d.faturamento); });
+  const mediaDow = w => porDow[w].reduce((a, b) => a + b, 0) / porDow[w].length;
+  const comida = {}; prods.forEach(r => { if (CATEG(r.grupo) === "Comida") comida[r.dia] = (comida[r.dia] || 0) + +r.faturamento; });
+  const linhas = dias.map(d => {
+    const i = info[d.dia] || {}; const m = mediaDow(dow(d.dia)); const desvio = (d.faturamento - m) / m;
+    return { ...d, i, m, desvio, liq: d.faturamento - (+i.cache_valor || 0), comida: (comida[d.dia] || 0) / d.faturamento };
+  });
+  const comChuva = linhas.filter(l => l.i.chuva === true), semChuva = linhas.filter(l => l.i.chuva === false);
+  const md = a => a.length ? a.reduce((s, l) => s + l.desvio, 0) / a.length : null;
+  const ins = [];
+  const acima = linhas.filter(l => l.i.atracao).sort((a, b) => b.desvio - a.desvio);
+  if (acima.length) ins.push(`Atração que mais puxou acima da média do seu dia da semana: <b>${esc(acima[0].i.atracao)}</b> (${acima[0].desvio >= 0 ? "+" : ""}${pct(acima[0].desvio)} em ${br(acima[0].dia)}).`);
+  if (acima.length > 1) ins.push(`A que ficou mais abaixo: <b>${esc(acima[acima.length - 1].i.atracao)}</b> (${pct(acima[acima.length - 1].desvio)}).`);
+  const jogos = linhas.filter(l => l.i.jogo); if (jogos.length) ins.push(`Dias com jogo ficaram em média <b>${md(jogos) >= 0 ? "+" : ""}${pct(md(jogos))}</b> vs a média do dia da semana.`);
+  if (comChuva.length && semChuva.length) ins.push(`Com chuva: <b>${pct(md(comChuva))}</b> vs média; sem chuva: <b>${pct(md(semChuva))}</b>.`);
+  if (!ins.length) ins.push("Preencha atração, cachê, clima e jogo na tabela abaixo para o painel começar a encontrar padrões.");
+  const podeEditar = ["dona", "gerente"].includes(S.perfil.papel);
+
+  $("#conteudo").innerHTML = `
+  <div class="cab-sec"><div><h2>Cruzamentos</h2><p>Atração, cachê, clima e jogos contra o faturamento · comparação sempre contra a média do mesmo dia da semana</p></div>${htmlFiltro(p)}</div>
+  <div class="card"><h3>Padrões encontrados</h3><div class="sub">Quanto mais dias você preencher, mais confiáveis ficam</div><ul class="insights">${ins.map(i => `<li>${i}</li>`).join("")}</ul></div>
+  <div class="card" style="margin-top:14px"><h3>Desempenho de cada noite vs. a média do seu dia da semana</h3><div class="sub">Assim uma quarta não é comparada com um sábado</div><div class="graf"><canvas id="g-desvio"></canvas></div></div>
+  <div class="card" style="margin-top:14px"><h3>Noite a noite</h3><div class="sub">${podeEditar ? "Clique em “Editar” para lançar atração, cachê, clima ou jogo" : ""}</div>
+    <div class="rolagem" style="max-height:600px"><table><thead><tr><th>Data</th><th>Atração</th><th>Clima</th><th>Jogo / obs.</th><th class="n">Faturamento</th><th class="n">vs média</th><th class="n">Cachê</th><th class="n">Fat. − cachê</th><th class="n">% comida</th>${podeEditar ? "<th></th>" : ""}</tr></thead><tbody>
+    ${linhas.map(l => `<tr><td>${DIAS[dow(l.dia)]} ${br(l.dia)}</td><td>${esc(l.i.atracao || "")}${l.i.genero ? ` <span class="tag">${esc(l.i.genero)}</span>` : ""}</td>
+      <td>${[l.i.clima, l.i.temp_min != null ? nfmt(+l.i.temp_min) + "–" + nfmt(+l.i.temp_max) + "°C" : "", l.i.chuva ? "chuva" : ""].filter(Boolean).map(esc).join(" · ")}</td>
+      <td style="font-size:13px">${esc([l.i.jogo, l.i.observacao].filter(Boolean).join(" · "))}</td>
+      <td class="n">${brl0(l.faturamento)}</td><td class="n"><span class="tag ${l.desvio > .1 ? "bom" : l.desvio < -.1 ? "ruim" : ""}">${l.desvio >= 0 ? "+" : ""}${pct(l.desvio)}</span></td>
+      <td class="n">${l.i.cache_valor != null ? brl0(+l.i.cache_valor) : "—"}</td><td class="n">${l.i.cache_valor != null ? brl0(l.liq) : "—"}</td><td class="n">${pct(l.comida)}</td>
+      ${podeEditar ? `<td><button class="btn sec peq" data-ed="${l.dia}">Editar</button></td>` : ""}</tr>`).join("")}
+    </tbody></table></div></div>`;
+  ligarFiltro();
+  grafico($("#g-desvio"), { type: "bar", data: { labels: linhas.map(l => DIAS[dow(l.dia)] + " " + br(l.dia).slice(0, 5)), datasets: [{ data: linhas.map(l => l.desvio * 100), backgroundColor: linhas.map(l => l.desvio >= 0 ? "#7cc46a" : "#e8604f"), borderRadius: 4 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${nfmt(ctx.parsed.y, 1)}% vs média · ${brl0(linhas[ctx.dataIndex].faturamento)}`, afterLabel: ctx => linhas[ctx.dataIndex].i.atracao || "" } } }, scales: { y: { ticks: { callback: v => v + "%" } } } } });
+  document.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => editarDia(b.dataset.ed, info[b.dataset.ed] || {}));
+}
+function editarDia(dia, i) {
+  const d = $("#dlg");
+  d.innerHTML = `<h3>${DIAS_LONGO[dow(dia)]}, ${br(dia)}</h3>
+  <form id="f-dia" method="dialog">
+    <label>Atração</label><input name="atracao" value="${esc(i.atracao || "")}">
+    <div class="linha-form"><div><label>Gênero</label><input name="genero" value="${esc(i.genero || "")}" placeholder="samba, pagode, DJ…"></div><div><label>Cachê (R$)</label><input name="cache_valor" type="number" step="0.01" value="${i.cache_valor ?? ""}"></div></div>
+    <div class="linha-form"><div><label>Clima</label><input name="clima" value="${esc(i.clima || "")}" placeholder="frio, calor, nublado…"></div><div><label>Mín °C</label><input name="temp_min" type="number" step="0.1" value="${i.temp_min ?? ""}"></div><div><label>Máx °C</label><input name="temp_max" type="number" step="0.1" value="${i.temp_max ?? ""}"></div></div>
+    <label><input type="checkbox" name="chuva" style="width:auto" ${i.chuva ? "checked" : ""}> Choveu</label>
+    <label>Jogo</label><input name="jogo" value="${esc(i.jogo || "")}" placeholder="ex.: Brasil x Argentina">
+    <label>Observação</label><textarea name="observacao" rows="2">${esc(i.observacao || "")}</textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn sec" value="cancel" formnovalidate>Cancelar</button><button class="btn" id="salvar-dia" value="ok">Salvar</button></div>
+  </form>`;
+  d.showModal();
+  $("#salvar-dia").onclick = async e => {
+    e.preventDefault();
+    const f = new FormData($("#f-dia"));
+    const num = k => f.get(k) === "" ? null : +f.get(k);
+    const reg = { data: dia, atracao: f.get("atracao") || null, genero: f.get("genero") || null, cache_valor: num("cache_valor"), clima: f.get("clima") || null, temp_min: num("temp_min"), temp_max: num("temp_max"), chuva: f.get("chuva") === "on", jogo: f.get("jogo") || null, observacao: f.get("observacao") || null };
+    const { error } = await sb.from("dias").upsert(reg);
+    if (error) return alertaDlg(error.message);
+    d.close(); abrir("cruzamentos");
+  };
+}
+function alertaDlg(t) { const m = document.createElement("div"); m.className = "msg erro"; m.textContent = t; $("#dlg form").appendChild(m); }
+
+// ============ ABA: IMPORTAR ============
+function lerCSV(texto, sep) {
+  const linhas = []; let campo = "", linha = [], aspas = false;
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto[i];
+    if (aspas) { if (c === '"') { if (texto[i + 1] === '"') { campo += '"'; i++; } else aspas = false; } else campo += c; }
+    else if (c === '"') aspas = true;
+    else if (c === sep) { linha.push(campo); campo = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && texto[i + 1] === "\n") i++; linha.push(campo); linhas.push(linha); linha = []; campo = ""; }
+    else campo += c;
+  }
+  if (campo || linha.length) { linha.push(campo); linhas.push(linha); }
+  return linhas;
+}
+const numBR = s => { s = String(s ?? "").replace(/R\$|\s/g, ""); const neg = s.startsWith("(-)"); s = s.replace("(-)", ""); if (!s) return null; const v = parseFloat(s.replace(/\./g, "").replace(",", ".")); return neg ? -v : v; };
+const dataBR = s => { const m = String(s).match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? `${m[3]}-${m[2]}-${m[1]}` : null; };
+const diasTxt = s => { s = String(s || "").toLowerCase(); let m = s.match(/(\d+)?\s*(\d)\/(\d)/); if (m) return (+(m[1] || 0)) + m[2] / m[3]; m = s.match(/(\d+(?:[.,]\d+)?)/); return m ? +m[1].replace(",", ".") : 0; };
+async function lerArquivo(f) {
+  const buf = await f.arrayBuffer();
+  let t = new TextDecoder("utf-8").decode(buf);
+  if (t.includes("�")) t = new TextDecoder("windows-1252").decode(buf);
+  return t.replace(/^﻿/, "");
+}
+function detectar(texto) {
+  const h = texto.slice(0, 300).toLowerCase();
+  if (h.includes('"data";"hora"') || /^data;hora/.test(h)) return "hora";
+  if (h.includes("total recebido") || (h.includes("codigo") && h.includes("grupo"))) return "produtos";
+  if (h.includes("funcionario")) return "funcionario";
+  if (/dias?\s*,/.test(h)) return "freelas";
+  return "";
+}
+const TIPOS = { hora: "Venda de produtos por hora (Epoc)", produtos: "Relatório de venda de produtos — atualiza os grupos (Epoc)", funcionario: "Vendas por funcionário (Epoc)", freelas: "Pagamento de freelancers da semana" };
+
+async function abaImportar() {
+  const { data: log } = await sb.from("importacoes").select("*").order("feito_em", { ascending: false }).limit(30);
+  const { min, max } = await limitesDados();
+  $("#conteudo").innerHTML = `
+  <div class="cab-sec"><div><h2>Importar dados</h2><p>${max ? `Vendas no sistema: ${br(min)} a ${br(max)}` : "Nenhuma venda importada ainda"}</p></div></div>
+  <div class="aviso">Enquanto a API do Epoc não é liberada, exporte os relatórios no Epoc e solte aqui. Reimportar o mesmo período <b>substitui</b> os dados (não duplica).</div>
+  <div class="grade dois">
+    <div class="card"><h3>1. Escolha o arquivo</h3><div class="sub">CSV exportado do Epoc ou planilha de freelas salva como CSV</div>
+      <div class="drop" id="drop">Arraste o arquivo aqui ou <u>clique para escolher</u><input type="file" id="arq" accept=".csv,.txt" class="hidden"></div>
+      <div id="prev" style="margin-top:14px"></div></div>
+    <div class="card"><h3>Quais relatórios usar</h3><div class="sub">Do mais importante para o menos</div>
+      <ol class="insights"><li><b>Venda de produtos por hora</b> — alimenta quase todo o painel. Exporte toda semana (ou todo dia).</li>
+      <li><b>Venda de produtos</b> (o relatório com Grupo, Desconto e Rateio) — mantém os grupos do cardápio atualizados. Exporte quando criar ou mudar produtos.</li>
+      <li><b>Vendas por funcionário</b> — informe o período do relatório ao importar.</li>
+      <li><b>Pagamento de freelancers</b> — nome, dias, CPF/Pix, valor, função. O CPF e o Pix são ignorados e não ficam guardados.</li></ol></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>Histórico de importações</h3>
+    <table><thead><tr><th>Quando</th><th>Tipo</th><th>Arquivo</th><th class="n">Linhas</th><th>Período</th></tr></thead><tbody>
+    ${(log || []).map(l => `<tr><td>${new Date(l.feito_em).toLocaleString("pt-BR")}</td><td>${esc(l.tipo)}</td><td>${esc(l.arquivo)}</td><td class="n">${nfmt(l.linhas)}</td><td>${br(l.periodo_inicio)} – ${br(l.periodo_fim)}</td></tr>`).join("") || `<tr><td colspan="5" style="color:var(--mute)">Nada ainda</td></tr>`}
+    </tbody></table></div>`;
+  const drop = $("#drop"), inp = $("#arq");
+  drop.onclick = () => inp.click();
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add("sobre"); };
+  drop.ondragleave = () => drop.classList.remove("sobre");
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove("sobre"); if (e.dataTransfer.files[0]) preparar(e.dataTransfer.files[0]); };
+  inp.onchange = () => inp.files[0] && preparar(inp.files[0]);
+}
+
+async function preparar(arquivo) {
+  const texto = await lerArquivo(arquivo);
+  const tipo = detectar(texto);
+  const prev = $("#prev");
+  prev.innerHTML = `<label>Tipo de relatório</label><select id="tipo">${Object.entries(TIPOS).map(([k, v]) => `<option value="${k}" ${k === tipo ? "selected" : ""}>${v}</option>`).join("")}</select>
+    <div id="extra"></div><div id="resumo" class="msg" style="margin-top:12px"></div>
+    <button class="btn largo" id="btn-imp">Importar</button>`;
+  const atualizar = () => {
+    const t = $("#tipo").value; const ex = $("#extra");
+    ex.innerHTML = t === "funcionario" ? `<div class="linha-form"><div><label>Período de</label><input type="date" id="p-ini"></div><div><label>até</label><input type="date" id="p-fim"></div></div>`
+      : t === "freelas" ? `<label>Semana que começa na quarta-feira</label><input type="date" id="p-sem">` : "";
+    try { const r = analisar(t, texto); $("#resumo").innerHTML = r.resumo; $("#resumo").className = "msg ok"; $("#btn-imp").disabled = false; prev._r = r; }
+    catch (e) { $("#resumo").textContent = e.message; $("#resumo").className = "msg erro"; $("#btn-imp").disabled = true; }
+  };
+  $("#tipo").onchange = atualizar; atualizar();
+  $("#btn-imp").onclick = async () => {
+    const b = $("#btn-imp"); b.disabled = true; b.textContent = "Importando…";
+    try { await enviar($("#tipo").value, prev._r, arquivo.name); $("#resumo").innerHTML = "Importado com sucesso ✔"; $("#resumo").className = "msg ok"; S.periodo = null; setTimeout(() => abrir("importar"), 1200); }
+    catch (e) { $("#resumo").textContent = "Erro: " + (e.message || e); $("#resumo").className = "msg erro"; b.disabled = false; b.textContent = "Importar"; }
+  };
+}
+
+function analisar(tipo, texto) {
+  if (tipo === "hora") {
+    const ls = lerCSV(texto, ";").slice(1).filter(l => dataBR(l[0]) && l[1]);
+    if (!ls.length) throw new Error("Não encontrei linhas de venda (esperado: Data;Hora;Cód.;Produto;Qtde.;Vlr. Total).");
+    const itens = ls.map(l => ({ data: dataBR(l[0]), hora: l[1].trim(), codigo: (l[2] || "").trim(), produto: (l[3] || "").trim(), qtd: numBR(l[4]) ?? 1, valor: numBR(l[5]) ?? 0 }));
+    const datas = [...new Set(itens.map(i => i.data))].sort();
+    const total = itens.reduce((s, i) => s + i.valor, 0);
+    return { itens, resumo: `${nfmt(itens.length)} lançamentos de ${br(datas[0])} a ${br(datas[datas.length - 1])} · total ${brl(total)}` };
+  }
+  if (tipo === "produtos") {
+    const ls = lerCSV(texto, ";").slice(1).filter(l => l.length >= 13 && /^\d+$/.test((l[0] || "").trim()));
+    if (!ls.length) throw new Error("Não encontrei produtos com código e grupo.");
+    const itens = ls.map(l => ({ codigo: l[0].trim(), nome: l[1].trim(), grupo: l[2].trim() }));
+    return { itens, resumo: `${itens.length} produtos em ${new Set(itens.map(i => i.grupo)).size} grupos` };
+  }
+  if (tipo === "funcionario") {
+    const ls = lerCSV(texto, ";").slice(1).filter(l => /^\d+$/.test((l[0] || "").trim()));
+    const itens = ls.map(l => ({ funcionario: l[1].trim(), qtd: parseFloat(l[2]), valor: numBR(l[4]) }));
+    if (!itens.length) throw new Error("Não encontrei funcionários.");
+    return { itens, resumo: `${itens.length} funcionários · total ${brl(itens.reduce((s, i) => s + i.valor, 0))}` };
+  }
+  if (tipo === "freelas") {
+    const sep = (texto.split("\n")[0].match(/;/g) || []).length > (texto.split("\n")[0].match(/,/g) || []).length ? ";" : ",";
+    const ls = lerCSV(texto, sep).filter(l => (l[0] || "").trim() && /dia/i.test(l[1] || ""));
+    const itens = ls.map(l => ({ nome: l[0].trim(), dias: diasTxt(l[1]), valor: numBR(l[3]), funcao: (l[4] || "").trim() || null }));
+    if (!itens.length) throw new Error("Não encontrei freelas (esperado: Nome, X dias, CPF/Pix, Valor, Função).");
+    return { itens, resumo: `${itens.length} freelas · ${nfmt(itens.reduce((s, i) => s + i.dias, 0), 1)} diárias · ${brl(itens.reduce((s, i) => s + (i.valor || 0), 0))}` };
+  }
+  throw new Error("Escolha o tipo de relatório.");
+}
+
+async function enviar(tipo, r, nome) {
+  if (tipo === "hora") {
+    // envia em lotes de datas inteiras (cada lote substitui as suas datas)
+    const porData = {}; r.itens.forEach(i => (porData[i.data] ??= []).push(i));
+    let lote = [];
+    const datas = Object.keys(porData).sort();
+    for (let k = 0; k < datas.length; k++) {
+      lote = lote.concat(porData[datas[k]]);
+      if (lote.length > 2500 || k === datas.length - 1) {
+        const { error } = await sb.rpc("importar_vendas_itens", { p_arquivo: nome, p_linhas: lote });
+        if (error) throw error; lote = [];
+      }
+    }
+  } else if (tipo === "produtos") {
+    const { error } = await sb.rpc("importar_produtos", { p_linhas: r.itens }); if (error) throw error;
+  } else if (tipo === "funcionario") {
+    const ini = $("#p-ini").value, fim = $("#p-fim").value; if (!ini || !fim) throw new Error("Informe o período do relatório.");
+    const { error } = await sb.rpc("importar_vendas_funcionario", { p_arquivo: nome, p_ini: ini, p_fim: fim, p_linhas: r.itens }); if (error) throw error;
+  } else if (tipo === "freelas") {
+    const sem = $("#p-sem").value; if (!sem) throw new Error("Informe a quarta-feira que inicia a semana.");
+    const { error } = await sb.rpc("importar_freelas", { p_arquivo: nome, p_semana: sem, p_linhas: r.itens }); if (error) throw error;
+  }
+}
+
+// ============ ABA: USUÁRIOS ============
+async function fnUsuarios(body) {
+  const { data, error } = await sb.functions.invoke("usuarios", { body });
+  if (error) { let m = error.message; try { m = (await error.context.json()).erro || m; } catch (_) {} throw new Error(m); }
+  return data;
+}
+async function abaUsuarios() {
+  const lista = await fnUsuarios({ acao: "listar" });
+  $("#conteudo").innerHTML = `
+  <div class="cab-sec"><div><h2>Usuários</h2><p>Quem pode entrar no painel e o que cada um vê</p></div></div>
+  <div class="grade dois">
+    <div class="card"><h3>Convidar pessoa</h3><div class="sub">Ela recebe um e-mail com link para criar a própria senha</div>
+      <form id="f-conv"><div class="linha-form"><div><label>Nome</label><input name="nome" required></div><div><label>E-mail</label><input name="email" type="email" required></div></div>
+      <label>Acesso</label><select name="papel"><option value="caixa">Caixa — só o movimento do dia</option><option value="gerente">Gerente — tudo, menos usuários</option><option value="dona">Dona — tudo</option></select>
+      <button class="btn largo">Enviar convite</button><div id="msg-conv"></div></form></div>
+    <div class="card"><h3>O que cada acesso vê</h3><table><tbody>
+      <tr><td><span class="selo">Dona</span></td><td>Tudo: faturamento, produtos, equipe e custos, cruzamentos, importação e usuários</td></tr>
+      <tr><td><span class="selo">Gerente</span></td><td>Tudo, menos gerenciar usuários</td></tr>
+      <tr><td><span class="selo">Caixa</span></td><td>Só a aba Hoje: vendas e contagem da noite (o banco bloqueia o histórico)</td></tr></tbody></table></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>Pessoas com acesso</h3><table><thead><tr><th>Nome</th><th>E-mail</th><th>Acesso</th><th>Último acesso</th><th></th></tr></thead><tbody>
+  ${lista.map(u => `<tr><td>${esc(u.nome)}</td><td>${esc(u.email)}</td><td><select data-papel="${u.user_id}" style="width:auto;padding:6px" ${u.user_id === S.user.id ? "disabled" : ""}>${["dona", "gerente", "caixa"].map(p => `<option ${p === u.papel ? "selected" : ""}>${p}</option>`).join("")}</select></td>
+    <td>${u.ultimo ? new Date(u.ultimo).toLocaleString("pt-BR") : "<span class='tag'>convite pendente</span>"}</td>
+    <td>${u.user_id === S.user.id ? "" : `<button class="btn perigo peq" data-rem="${u.user_id}" data-nome="${esc(u.nome)}">Remover</button>`}</td></tr>`).join("")}
+  </tbody></table></div>`;
+  $("#f-conv").onsubmit = async e => {
+    e.preventDefault(); const f = new FormData(e.target); const m = $("#msg-conv");
+    try { await fnUsuarios({ acao: "convidar", nome: f.get("nome"), email: f.get("email"), papel: f.get("papel"), redirect: location.origin + location.pathname }); m.className = "msg ok"; m.textContent = "Convite enviado."; setTimeout(() => abrir("usuarios"), 1200); }
+    catch (err) { m.className = "msg erro"; m.textContent = err.message; }
+  };
+  document.querySelectorAll("[data-papel]").forEach(s => s.onchange = async () => {
+    const { error } = await sb.from("perfis").update({ papel: s.value }).eq("user_id", s.dataset.papel);
+    if (error) alert(error.message);
+  });
+  document.querySelectorAll("[data-rem]").forEach(b => b.onclick = () => {
+    const d = $("#dlg");
+    d.innerHTML = `<h3>Remover ${b.dataset.nome}?</h3><p style="color:var(--mute)">A pessoa perde o acesso na hora. Os dados do bar não são apagados.</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn sec" id="c-n">Cancelar</button><button class="btn perigo" id="c-s">Remover</button></div>`;
+    d.showModal(); $("#c-n").onclick = () => d.close();
+    $("#c-s").onclick = async () => { try { await fnUsuarios({ acao: "remover", user_id: b.dataset.rem }); d.close(); abrir("usuarios"); } catch (err) { d.close(); } };
+  });
+}
+
+iniciar();
+</script>
+</body>
+</html>
