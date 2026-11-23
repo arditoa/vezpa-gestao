@@ -344,11 +344,16 @@ const DIAS_LONGO = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta",
 // serviços do Epoc que são cobrança de porta (entrada, ingresso, festas como Forró/Halloween); o resto é taxa, gorjeta, chapelaria…
 const ehServicoEntrada = n => !/taxa|gorjeta|repique|chapelaria|cliente gold|consuma/i.test(n || "");
 const diaNormal = w => `${[0, 6].includes(w) ? "um" : "uma"} ${DIAS_LONGO[w].toLowerCase()} normal`;
-// a atração se pagou? compara o faturamento da noite com a média do mesmo dia da semana e vê se o "a mais" cobre o cachê
-function vereditoAtracao(fat, media, nBase, cache) {
+// a atração se pagou? 1º pela porta (entrada ≥ cachê); se não, vê se a entrada + o consumo acima de um dia igual normal cobriram o cachê
+function vereditoAtracao(fat, media, nBase, cache, ent) {
   if (!cache) return { txt: "—", cls: "" };
-  if (!media || nBase < 3) return { txt: "sem base", cls: "", det: "poucas noites desse dia para comparar" };
-  const extra = fat - media;
+  const extra = media && nBase >= 3 ? fat - media : null;
+  if (ent != null) {
+    if (ent >= cache) return { txt: "✅ Se pagou na porta", cls: "bom", det: `entrada ${brl0(ent)} cobriu o cachê ${brl0(cache)} · sobrou ${brl0(ent - cache)}` };
+    if (extra != null && ent + Math.max(extra, 0) >= cache) return { txt: "🟡 Se pagou com o consumo", cls: "", det: `entrada cobriu ${pct(ent / cache)} e o bar vendeu ${brl0(extra)} acima do normal` };
+    return { txt: "❌ Não se pagou", cls: "ruim", det: `entrada cobriu ${pct(ent / cache)}${extra != null ? (extra > 0 ? ` e o consumo extra (${brl0(extra)}) não completou` : " e o consumo ficou abaixo do normal") : ""}` };
+  }
+  if (extra == null) return { txt: "sem base", cls: "", det: "sem entrada importada e poucas noites desse dia para comparar" };
   if (extra >= cache) return { txt: "✅ Se pagou", cls: "bom", det: `trouxe ${brl0(extra)} a mais · sobrou ${brl0(extra - cache)}` };
   if (extra > 0) return { txt: "🟡 Pagou em parte", cls: "", det: `trouxe ${brl0(extra)} a mais · cobriu ${pct(extra / cache)} do cachê` };
   return { txt: "❌ Não se pagou", cls: "ruim", det: `noite ${brl0(-extra)} abaixo do normal` };
@@ -1018,6 +1023,8 @@ async function abaCruzamentos() {
     sb.from("pagamentos_bandas").select("data,atracao,valor").gte("data", p.ini).lte("data", p.fim),
   ]);
   const clima = await climaDias(p.ini, p.fim < diaOperacionalHoje() ? p.fim : diaOperacionalHoje());
+  const { data: serv } = await sb.from("servicos_noite").select("dia,servico,qtd,total").gte("dia", p.ini).lte("dia", p.fim);
+  const entDia = {}; (serv || []).filter(r => ehServicoEntrada(r.servico)).forEach(r => { const e = entDia[r.dia] ??= { q: 0, v: 0 }; e.q += +r.qtd; e.v += +r.total; });
   const info = Object.fromEntries((infos || []).map(i => [i.data, { ...i }]));
   (pags || []).forEach(pg => {
     const i = info[pg.data] ??= { data: pg.data };
@@ -1051,22 +1058,24 @@ async function abaCruzamentos() {
   <div class="card" style="margin-top:14px"><h3>Cada noite comparada a uma noite normal do mesmo dia</h3><div class="sub">Barra verde: faturou acima de um dia igual normal · vermelha: abaixo. Assim uma quarta não é comparada com um sábado</div><div class="graf"><canvas id="g-desvio"></canvas></div></div>
   <div class="card" style="margin-top:14px"><h3>Noite a noite</h3><div class="sub">${podeEditar ? "Clique em “Editar” para lançar atração, cachê, clima ou jogo" : ""}</div>
     <div class="legenda-cx">
-      <div><b>Comparado a uma noite normal</b>: quanto a noite faturou a mais (ou a menos) que a média do mesmo dia da semana no período. Ex.: um domingo com +R$ 4.452 faturou isso acima de um domingo normal.</div>
-      <div><b>A atração se pagou?</b> O “a mais” da noite cobriu o cachê?
-        <span class="tag bom">✅ Se pagou</span> trouxe mais do que custou ·
-        <span class="tag">🟡 Pagou em parte</span> trouxe gente, mas não o suficiente para cobrir o cachê ·
-        <span class="tag ruim">❌ Não se pagou</span> a noite ficou abaixo do normal.</div>
-      <div style="color:var(--mute)">É uma estimativa pelo faturamento bruto: chuva, feriado e jogo também mexem na noite (veja as colunas ao lado). Com menos de 3 noites do mesmo dia da semana no período, não dá para comparar.</div>
+      <div><b>Consumo (bar)</b> = o que vendeu de bebida e comida (Epoc, produtos). <b>Entrada (porta)</b> = ingresso cobrado na entrada (Epoc, serviços).</div>
+      <div><b>Comparado a uma noite normal</b>: quanto o bar vendeu a mais (ou a menos) que a média do mesmo dia da semana no período.</div>
+      <div><b>A atração se pagou?</b>
+        <span class="tag bom">✅ Se pagou na porta</span> a entrada sozinha cobriu o cachê ·
+        <span class="tag">🟡 Se pagou com o consumo</span> a entrada não cobriu tudo, mas somada ao que o bar vendeu acima do normal, cobriu ·
+        <span class="tag ruim">❌ Não se pagou</span> nem a entrada nem o consumo extra cobriram o cachê.</div>
+      <div style="color:var(--mute)">Quando duas atrações tocam na mesma noite, o cachê é somado. Chuva, feriado e jogo também mexem no movimento (veja as colunas ao lado).</div>
     </div>
-    <div class="rolagem" style="max-height:600px"><table><thead><tr><th>Data</th><th>Atração</th><th>Choveu?</th><th>Clima</th><th>Jogo / obs.</th><th class="n">Faturamento</th><th class="n">Comparado a uma noite normal</th><th class="n">Cachê</th><th>A atração se pagou?</th><th class="n">% comida</th>${podeEditar ? "<th></th>" : ""}</tr></thead><tbody>
+    <div class="rolagem" style="max-height:600px"><table><thead><tr><th>Data</th><th>Atração</th><th>Choveu?</th><th>Clima</th><th>Jogo / obs.</th><th class="n">Consumo (bar)</th><th class="n">Entrada (porta)</th><th class="n">Comparado a uma noite normal</th><th class="n">Cachê</th><th>A atração se pagou?</th><th class="n">% comida</th>${podeEditar ? "<th></th>" : ""}</tr></thead><tbody>
     ${linhas.map(l => `<tr><td>${DIAS[dow(l.dia)]} ${br(l.dia)}</td><td>${esc(l.i.atracao || "")}${l.i.genero ? ` <span class="tag">${esc(l.i.genero)}</span>` : ""}</td>
       <td style="white-space:nowrap">${l.choveu == null ? "—" : l.choveu ? `🌧️ sim${l.mm >= .2 ? ` <small class="sub2">${nfmt(l.mm, 1)} mm à noite</small>` : ""}` : `${iconeClima(l.cl)} não`}</td>
       <td>${l.i.clima || l.i.temp_min != null ? [l.i.clima, l.i.temp_min != null ? nfmt(+l.i.temp_min) + "–" + nfmt(+l.i.temp_max) + "°C" : ""].filter(Boolean).map(esc).join(" · ") : l.cl ? `${nfmt(l.cl.tmin)}°–${nfmt(l.cl.tmax)}°` : ""}</td>
       <td style="font-size:13px">${esc([l.i.jogo, l.i.observacao].filter(Boolean).join(" · "))}</td>
       <td class="n">${brl0(l.faturamento)}</td>
+      <td class="n">${entDia[l.dia] ? brl0(entDia[l.dia].v) + `<small class="sub2">${nfmt(entDia[l.dia].q)} pagantes</small>` : "—"}</td>
       <td class="n">${nDow(dow(l.dia)) < 3 ? `<span style="color:var(--mute)">poucos dados</span>` : `<span class="tag ${l.desvio > .1 ? "bom" : l.desvio < -.1 ? "ruim" : ""}">${l.faturamento >= l.m ? "+" : "−"}${brl0(Math.abs(l.faturamento - l.m))}</span><small class="sub2">${l.desvio >= 0 ? "+" : ""}${pct(l.desvio)} · ${diaNormal(dow(l.dia))}: ${brl0(l.m)}</small>`}</td>
       <td class="n">${l.i.cache_valor != null ? brl0(+l.i.cache_valor) : "—"}</td>
-      <td>${(v => v.txt === "—" ? `<span style="color:var(--mute)">—</span>` : `<span class="tag ${v.cls}">${v.txt}</span>${v.det ? `<small class="sub2">${v.det}</small>` : ""}`)(vereditoAtracao(+l.faturamento, l.m, nDow(dow(l.dia)), +l.i.cache_valor || 0))}</td>
+      <td>${(v => v.txt === "—" ? `<span style="color:var(--mute)">—</span>` : `<span class="tag ${v.cls}">${v.txt}</span>${v.det ? `<small class="sub2">${v.det}</small>` : ""}`)(vereditoAtracao(+l.faturamento, l.m, nDow(dow(l.dia)), +l.i.cache_valor || 0, serv?.length ? (entDia[l.dia]?.v || 0) : null))}</td>
       <td class="n">${pct(l.comida)}</td>
       ${podeEditar ? `<td><button class="btn sec peq" data-ed="${l.dia}">Editar</button></td>` : ""}</tr>`).join("")}
     </tbody></table></div></div>`;
@@ -1750,8 +1759,9 @@ async function abaAtracoes() {
   const linhas = AT.modo === "semana" ? sl : noites;
   const tot = linhas.reduce((a, l) => ({ cache: a.cache + l.cache, fat: a.fat + l.fat, entV: a.entV + l.entV, entQ: a.entQ + l.entQ }), { cache: 0, fat: 0, entV: 0, entQ: 0 });
   // ranking (sempre por noite, respeitando o período e os dias escolhidos)
-  const rk = {}; noites.forEach(n => n.atr.forEach(a => { const r = rk[a] ??= { nome: a, n: 0, cache: 0, fat: 0, ent: 0, desv: [] };
-    r.n++; r.fat += n.fat; r.ent += n.entV; if (n.desv != null) r.desv.push(n.desv); }));
+  const rk = {}; noites.forEach(n => [...new Set(n.atr)].forEach(a => { const r = rk[a] ??= { nome: a, n: 0, cache: 0, fat: 0, ent: 0, pag: 0, desv: [], pagou: 0, comCache: 0 };
+    r.n++; r.fat += n.fat; r.ent += n.entV; r.pag += n.entQ; if (n.desv != null) r.desv.push(n.desv);
+    if (n.cache) { r.comCache++; const v = vereditoAtracao(n.fat, n.m, n.nb, n.cache, entServ.length ? n.entV : null); if (v.cls === "bom" || v.txt.startsWith("🟡")) r.pagou++; } }));
   pags.filter(x => x.data >= AT.ini && x.data <= AT.fim && AT.dows.includes(dow(x.data))).forEach(x => { if (rk[x.atracao]) rk[x.atracao].cache += +x.valor; });
   const rank = Object.values(rk).map(r => ({ ...r, desvMed: r.desv.length ? r.desv.reduce((a, b) => a + b, 0) / r.desv.length : null })).sort((a, b) => (b.desvMed ?? -9) - (a.desvMed ?? -9));
 
@@ -1777,11 +1787,11 @@ async function abaAtracoes() {
     <div class="rolagem" style="max-height:560px"><table><thead><tr><th>${AT.modo === "semana" ? "Semana" : "Noite"}</th><th>Atração</th><th>Choveu?</th><th class="n">Cachê</th><th class="n">Faturamento</th><th class="n">Cachê % fat.</th><th class="n">Entrada</th><th class="n">Entrada cobre</th><th class="n">Fat. − cachê</th>${AT.modo === "noite" ? `<th>A atração se pagou?</th>` : ""}</tr></thead><tbody>
     ${linhas.map(l => `<tr><td>${nomeLinha(l)}</td><td>${atrs(l)}</td><td style="white-space:nowrap">${AT.modo === "semana" ? (l.comClima ? (l.chuvosas ? `🌧️ ${l.chuvosas} de ${l.noites} noites` : "☀️ nenhuma") : "—") : celChuva(l.d)}</td><td class="n">${l.cache ? brl0(l.cache) : "—"}</td><td class="n">${brl0(l.fat)}</td><td class="n">${l.cache && l.fat ? `<span class="tag ${l.cache / l.fat > .2 ? "ruim" : l.cache / l.fat < .1 ? "bom" : "ok"}">${pct(l.cache / l.fat)}</span>` : "—"}</td>
       <td class="n">${l.entV ? brl0(l.entV) + `<small class="sub2">${nfmt(l.entQ)} pag.</small>` : "—"}</td><td class="n">${l.cache ? pct(l.entV / l.cache) : "—"}</td><td class="n"><b>${brl0(l.res)}</b></td>
-      ${AT.modo === "noite" ? `<td>${(v => v.txt === "—" ? `<span style="color:var(--mute)">—</span>` : `<span class="tag ${v.cls}">${v.txt}</span>${v.det ? `<small class="sub2">${v.det}</small>` : ""}`)(vereditoAtracao(l.fat, l.m, l.nb, l.cache))}</td>` : ""}</tr>`).join("") || `<tr><td colspan="10" class="vazio">Nada no período</td></tr>`}
+      ${AT.modo === "noite" ? `<td>${(v => v.txt === "—" ? `<span style="color:var(--mute)">—</span>` : `<span class="tag ${v.cls}">${v.txt}</span>${v.det ? `<small class="sub2">${v.det}</small>` : ""}`)(vereditoAtracao(l.fat, l.m, l.nb, l.cache, entServ.length ? l.entV : null))}</td>` : ""}</tr>`).join("") || `<tr><td colspan="10" class="vazio">Nada no período</td></tr>`}
     </tbody><tfoot><tr><td colspan="3"><b>Total</b></td><td class="n"><b>${brl0(tot.cache)}</b></td><td class="n"><b>${brl0(tot.fat)}</b></td><td class="n">${pct(tot.cache / (tot.fat || 1))}</td><td class="n"><b>${brl0(tot.entV)}</b></td><td class="n">${pct(tot.entV / (tot.cache || 1))}</td><td class="n"><b>${brl0(tot.fat - tot.cache)}</b></td>${AT.modo === "noite" ? "<td></td>" : ""}</tr></tfoot></table></div></div>
   <div class="card" style="margin-top:14px"><h3>Quais atrações valem o cachê</h3><div class="sub">No período e dias escolhidos · comparado com a média do mesmo dia da semana</div>
-    <div class="rolagem"><table><thead><tr><th>Atração</th><th class="n">Noites</th><th class="n">Cachê total</th><th class="n">Faturamento das noites</th><th class="n">Entradas</th><th class="n">Acima de uma noite normal</th><th class="n">R$ faturado por R$ 1 de cachê</th></tr></thead><tbody>
-    ${rank.map(r => `<tr><td>${esc(r.nome)}</td><td class="n">${r.n}</td><td class="n">${brl0(r.cache)}</td><td class="n">${brl0(r.fat)}</td><td class="n">${r.ent ? brl0(r.ent) : "—"}</td><td class="n">${r.desvMed != null ? `<span class="tag ${r.desvMed > .1 ? "bom" : r.desvMed < -.1 ? "ruim" : ""}">${r.desvMed >= 0 ? "+" : ""}${pct(r.desvMed)}</span>` : "—"}</td><td class="n">${r.cache ? nfmt(r.fat / r.cache, 1) : "—"}</td></tr>`).join("") || `<tr><td colspan="7" class="vazio">Sem cachês no período</td></tr>`}
+    <div class="rolagem"><table><thead><tr><th>Atração</th><th class="n">Noites</th><th class="n">Cachê total</th><th class="n">Faturamento das noites</th><th class="n">Entrada por noite</th><th class="n">Entrada cobre o cachê</th><th class="n">Acima de uma noite normal</th><th class="n">Se pagou</th></tr></thead><tbody>
+    ${rank.map(r => `<tr><td>${esc(r.nome)}</td><td class="n">${r.n}</td><td class="n">${brl0(r.cache)}</td><td class="n">${brl0(r.fat)}</td><td class="n">${r.ent ? brl0(r.ent / r.n) + `<small class="sub2">${nfmt(r.pag / r.n, 0)} pagantes</small>` : "—"}</td><td class="n">${r.cache && r.ent ? `<span class="tag ${r.ent >= r.cache ? "bom" : r.ent >= .7 * r.cache ? "" : "ruim"}">${pct(r.ent / r.cache)}</span>` : "—"}</td><td class="n">${r.desvMed != null ? `<span class="tag ${r.desvMed > .1 ? "bom" : r.desvMed < -.1 ? "ruim" : ""}">${r.desvMed >= 0 ? "+" : ""}${pct(r.desvMed)}</span>` : "—"}</td><td class="n">${r.comCache ? `<b>${r.pagou}</b> de ${r.comCache} noites` : "—"}</td></tr>`).join("") || `<tr><td colspan="7" class="vazio">Sem cachês no período</td></tr>`}
     </tbody></table></div><p class="dica">Quando duas atrações tocam na mesma noite (ex.: banda + DJ), o faturamento da noite conta para as duas.</p></div>`;
 
   const lbl = AT.modo === "semana" ? sl.map(s => br(s.ini).slice(0, 5)) : noites.map(n => DIAS[dow(n.d)] + " " + br(n.d).slice(0, 5));
