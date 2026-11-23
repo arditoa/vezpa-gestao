@@ -48,6 +48,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--amber)}
 #app{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:100vh}
 #menu{position:sticky;top:0;height:100vh;overflow-y:auto;background:#100c0e;border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 14px}
 .logo-img{width:40px;height:40px;border-radius:50%;flex:none;display:block;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+.wa-tela{background:#0b141a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='2' cy='2' r='1' fill='%23ffffff10'/%3E%3C/svg%3E");border-radius:12px;padding:16px 14px;display:flex}
+.wa-bolha{background:#005c4b;color:#e9edef;border-radius:10px 2px 10px 10px;padding:8px 10px 6px;max-width:92%;margin-left:auto;font:14px/1.45 -apple-system,"Segoe UI",Roboto,sans-serif;white-space:normal;word-wrap:break-word;box-shadow:0 1px 1px rgba(0,0,0,.25)}
+.wa-hora{display:block;text-align:right;font-size:11px;color:#8fbfb2;margin-top:3px}
 .marca2{display:flex;align-items:center;gap:11px;margin:2px 6px 16px}
 .logo-hex{width:34px;height:34px;flex:none}
 .marca2 b{display:block;font-size:17px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
@@ -2202,6 +2205,8 @@ async function abaAniversarios() {
     <div class="card kpi"><div class="rot">Mensagens enviadas</div><div class="val">${enviados}</div><div class="det">${itens.length ? pct(enviados / itens.length) + " da lista" : ""}</div></div>
     <div class="card kpi"><div class="rot">Vieram comemorar</div><div class="val">${(envios || []).filter(e => e.veio).length}</div><div class="det">em ${ay} · marque na lista</div></div>
   </div>
+  <div class="card" style="margin-top:14px;display:flex;gap:18px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:220px"><h3>Mensagem atual</h3><div class="sub">Assim ela chega no WhatsApp (exemplo com o nome Juliana). Presente: <b>${esc(C2.presente)}</b></div><button class="btn sec peq" style="margin-top:10px" id="an-msg2">✎ Trocar mensagem</button></div>
+    <div class="wa-tela" style="flex:1.4;min-width:260px"><div class="wa-bolha">${esc(C2.mensagem.replaceAll("{nome}", "Juliana").replaceAll("{presente}", C2.presente)).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
   <div class="card" style="margin-top:14px">
     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <div class="segmentos" style="margin:0">${[["hoje", "Hoje"], ["semana", "Próximos 7 dias"], ["mes", "Mês"]].map(([k, n]) => `<button class="${AN.filtro === k ? "sel" : ""}" data-anf="${k}">${n}</button>`).join("")}</div>
@@ -2215,11 +2220,11 @@ async function abaAniversarios() {
       return `<tr><td><b>${String(c.nasc_dia).padStart(2, "0")}/${String(c.nasc_mes).padStart(2, "0")}</b> ${quando(c)}${id ? `<small class="sub2">faz ${id} anos</small>` : ""}</td>
       <td><b>${esc(c.nome)}</b> <button class="x" style="font-size:13px" data-nc="${c.codigo}" title="${c.nao_contatar ? "Liberar contato" : "Marcar: não quer receber mensagens"}">${c.nao_contatar ? "↺" : "🚫"}</button>${c.nao_contatar ? `<small class="sub2">não quer contato</small>` : ""}</td><td>${fone(c.telefone) || "<span class='tag'>sem telefone</span>"}</td>
       <td>${c.ultima_visita ? br(c.ultima_visita) : "—"}</td>
-      <td style="white-space:nowrap">${c.telefone && !c.nao_contatar ? `<a class="btn ${e ? "sec" : ""} peq" target="_blank" rel="noopener" data-wa="${c.codigo}" href="https://wa.me/55${c.telefone}?text=${encodeURIComponent(msg(c))}">${e ? "Enviar de novo" : "WhatsApp"}</a>` : ""} <button class="btn sec peq" data-copmsg="${c.codigo}">Copiar texto</button>${e ? `<small class="sub2">enviado ${new Date(e.enviado_em).toLocaleDateString("pt-BR")}</small>` : ""}</td>
+      <td style="white-space:nowrap">${c.telefone && !c.nao_contatar ? `<button class="btn ${e ? "sec" : ""} peq" data-wa="${c.codigo}">${e ? "Enviar de novo" : "WhatsApp"}</button>` : ""} <button class="btn sec peq" data-copmsg="${c.codigo}">Copiar texto</button>${e ? `<small class="sub2">enviado ${new Date(e.enviado_em).toLocaleDateString("pt-BR")}</small>` : ""}</td>
       <td>${e ? `<button class="status ${e.veio ? "pago" : ""}" data-veio="${c.codigo}">${e.veio ? "Veio ✓" : "Ainda não"}</button>` : ""}</td></tr>`; }).join("") || `<tr><td colspan="6" class="vazio">Ninguém nesse filtro</td></tr>`}
     </tbody></table></div>
     ${itens.length > 600 ? `<p class="dica">Mostrando os 600 primeiros de ${nfmt(itens.length)} — use a busca ou “Só quem falta mandar”.</p>` : ""}
-    <p class="dica">O botão WhatsApp abre a conversa com a mensagem pronta; você confere e envia. Mande só para quem deixou o telefone para contato e respeite quem pedir para não receber: toque em 🚫 ao lado do nome.</p>
+    <p class="dica">O botão WhatsApp mostra a prévia da mensagem para aquela pessoa (dá para ajustar o texto) e só então abre a conversa; você confere e envia. Mande só para quem deixou o telefone para contato e respeite quem pedir para não receber: toque em 🚫 ao lado do nome.</p>
   </div>`;
   const porCod = Object.fromEntries(itens.map(c => [c.codigo, c]));
   const ir = () => abaAniversarios();
@@ -2228,10 +2233,28 @@ async function abaAniversarios() {
   let tb; $("#an-busca").oninput = e => { clearTimeout(tb); tb = setTimeout(() => { AN.busca = e.target.value; ir(); }, 350); };
   $("#an-fone").onchange = e => { AN.soFone = e.target.checked; ir(); };
   $("#an-pend").onchange = e => { AN.pendentes = e.target.checked; ir(); };
-  document.querySelectorAll("[data-wa]").forEach(a => a.addEventListener("click", () => { sb.from("aniversario_envios").upsert({ cliente_codigo: a.dataset.wa, ano: ay, enviado_em: new Date().toISOString() }, { onConflict: "cliente_codigo,ano" }).then(() => setTimeout(ir, 800)); }));
+  document.querySelectorAll("[data-wa]").forEach(b => b.onclick = () => previaWhats(porCod[b.dataset.wa]));
+  function previaWhats(c) {
+    const d = $("#dlg"), id = idade(c);
+    d.innerHTML = `<h3>Prévia da mensagem</h3>
+      <div class="sub" style="margin-bottom:10px">Para <b>${esc(c.nome)}</b> · ${fone(c.telefone)} · aniversário ${String(c.nasc_dia).padStart(2, "0")}/${String(c.nasc_mes).padStart(2, "0")}${id ? ` · faz ${id} anos` : ""}</div>
+      <div class="wa-tela"><div class="wa-bolha" id="wa-bolha"></div></div>
+      <label style="margin-top:12px">Ajustar só para esta pessoa</label><textarea id="wa-txt" rows="5">${esc(msg(c))}</textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap"><button class="btn sec" type="button" id="wa-c">Cancelar</button><button class="btn sec" type="button" id="wa-cop">Copiar texto</button><button class="btn" type="button" id="wa-ok">Abrir no WhatsApp</button></div>`;
+    d.showModal();
+    const t = $("#wa-txt"), at = () => { $("#wa-bolha").innerHTML = esc(t.value).replace(/\n/g, "<br>") + `<span class="wa-hora">${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} ✓✓</span>`; };
+    t.oninput = at; at();
+    $("#wa-c").onclick = () => d.close();
+    $("#wa-cop").onclick = () => copiar(t.value, $("#wa-cop"));
+    $("#wa-ok").onclick = () => {
+      window.open(`https://wa.me/55${c.telefone}?text=${encodeURIComponent(t.value)}`, "_blank", "noopener");
+      sb.from("aniversario_envios").upsert({ cliente_codigo: c.codigo, ano: ay, enviado_em: new Date().toISOString() }, { onConflict: "cliente_codigo,ano" }).then(() => { d.close(); ir(); });
+    };
+  }
   document.querySelectorAll("[data-nc]").forEach(b => b.onclick = async () => { const c = porCod[b.dataset.nc]; await sb.from("clientes").update({ nao_contatar: !c.nao_contatar }).eq("codigo", c.codigo); ir(); });
   document.querySelectorAll("[data-copmsg]").forEach(b => b.onclick = () => copiar(msg(porCod[b.dataset.copmsg]), b));
   document.querySelectorAll("[data-veio]").forEach(b => b.onclick = async () => { const e = env[b.dataset.veio]; await sb.from("aniversario_envios").update({ veio: !e.veio }).eq("cliente_codigo", b.dataset.veio).eq("ano", ay); ir(); });
+  $("#an-msg2").onclick = () => $("#an-msg").click();
   $("#an-msg").onclick = () => {
     const d = $("#dlg");
     const MODELOS = [
@@ -2243,10 +2266,10 @@ async function abaAniversarios() {
       <label>Presente / convite</label><input name="presente" value="${esc(C2.presente)}" placeholder="ex.: um drink de cortesia">
       <label>Mensagem</label><textarea name="mensagem" rows="6">${esc(C2.mensagem)}</textarea>
       <p class="dica">Use {nome} para o primeiro nome e {presente} para o presente.</p>
-      <div class="msg" id="an-prev" style="white-space:pre-wrap"></div>
+      <label>Prévia (como chega no WhatsApp)</label><div class="wa-tela"><div class="wa-bolha" id="an-prev"></div></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn sec" type="button" id="an-c">Cancelar</button><button class="btn">Salvar</button></div></form>`;
     d.showModal();
-    const prev = () => { const f = new FormData($("#f-an")); $("#an-prev").textContent = "Prévia: " + f.get("mensagem").replaceAll("{nome}", "Juliana").replaceAll("{presente}", f.get("presente")); };
+    const prev = () => { const f = new FormData($("#f-an")); $("#an-prev").innerHTML = esc(f.get("mensagem").replaceAll("{nome}", "Juliana").replaceAll("{presente}", f.get("presente"))).replace(/\n/g, "<br>") + `<span class="wa-hora">12:00 ✓✓</span>`; };
     $("#f-an").oninput = prev; prev(); $("#an-c").onclick = () => d.close();
     $("#an-mod").onclick = e => { const b = e.target.closest("button"); if (!b) return; $("#f-an").mensagem.value = MODELOS[b.dataset.mod][1]; prev(); };
     $("#f-an").onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target);
