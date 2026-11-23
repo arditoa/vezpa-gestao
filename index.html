@@ -43,25 +43,37 @@ input:focus,select:focus,textarea:focus{border-color:var(--amber)}
 .msg.erro{color:#ffb4b4;border:1px solid #5c2a2a}.msg.ok{color:#bfe8b0;border:1px solid #2f5a2a}
 .link-btn{background:none;border:0;color:var(--mute);text-decoration:underline;cursor:pointer;padding:0;margin-top:14px;font-size:13px}
 
-/* app */
-header.topo{position:sticky;top:0;z-index:5;background:rgba(20,16,18,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-.topo-in{max-width:1240px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.topo .marca{margin:0}.topo .marca .logo{width:36px;height:36px;font-size:18px}.topo .marca h1{font-size:20px}
-nav.abas{display:flex;gap:4px;flex-wrap:wrap;flex:1}
-nav.abas button{background:none;border:0;color:var(--mute);padding:8px 12px;border-radius:9px;cursor:pointer;font-weight:500}
-nav.abas button:hover{color:var(--ink);background:var(--panel)}
-nav.abas button.ativa{color:#1a1208;background:var(--amber)}
-.quem{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--mute)}
-.selo{font-size:11px;text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:99px;border:1px solid var(--line);color:var(--amber2)}
-@media(max-width:760px){
-  .topo-in{padding:10px 14px;gap:8px}
-  nav.abas{order:3;flex:1 0 100%;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-  nav.abas button{white-space:nowrap}
-  .quem{margin-left:auto}.quem #quem-nome{display:none}
-  main{padding:16px 14px 60px}
+/* app: menu lateral agrupado */
+#app{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:100vh}
+#menu{position:sticky;top:0;height:100vh;overflow-y:auto;background:#100c0e;border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 14px}
+#menu .marca{margin:0 6px 20px}#menu .marca .logo{width:36px;height:36px;font-size:18px}#menu .marca h1{font-size:19px}
+.grupo{margin-bottom:16px}
+.grupo-tit{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:#7d7069;margin:0 10px 6px;font-weight:700}
+#abas button{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;color:var(--mute);padding:8px 10px;border-radius:9px;cursor:pointer;font-weight:500;text-align:left;font-size:14px;position:relative}
+#abas button svg{width:17px;height:17px;flex:none;opacity:.85}
+#abas button:hover{color:var(--ink);background:var(--panel)}
+#abas button.ativa{color:var(--ink);background:#2a1f17}
+#abas button.ativa:before{content:"";position:absolute;left:-14px;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--amber)}
+#abas button.ativa svg{color:var(--amber);opacity:1}
+.menu-rodape{margin-top:auto;border-top:1px solid var(--line);padding:14px 6px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px}
+.menu-rodape b{display:block;font-weight:600}
+.selo{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--amber2)}
+.barra{position:sticky;top:0;z-index:5;background:rgba(20,16,18,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:12px 28px;min-height:56px}
+.trilha{color:var(--mute);font-size:13px}.trilha b{color:var(--ink);font-weight:600}
+#btn-menu{display:none;background:none;border:1px solid var(--line);color:var(--ink);border-radius:9px;width:38px;height:38px;font-size:18px;cursor:pointer}
+#veu{display:none}
+.area{min-width:0}
+@media(max-width:900px){
+  #app{grid-template-columns:1fr}
+  #menu{position:fixed;left:0;top:0;bottom:0;width:270px;z-index:30;transform:translateX(-102%);transition:transform .2s}
+  #app.menu-aberto #menu{transform:none}
+  #app.menu-aberto #veu{display:block;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:20}
+  #btn-menu{display:block}
+  .barra{padding:10px 14px}
+  main{padding:16px 14px 60px!important}
   .cab-sec h2{font-size:23px}
 }
-main{max-width:1240px;margin:0 auto;padding:22px 20px 60px}
+main{max-width:1280px;margin:0 auto;padding:26px 28px 60px}
 .cab-sec{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
 .cab-sec h2{font-size:28px}.cab-sec p{margin:4px 0 0;color:var(--mute)}
 .filtros{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -125,6 +137,39 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .chips button.sel{background:var(--amber);color:#1a1208;border-color:var(--amber);font-weight:700}
 input.grande{font-size:26px;font-weight:700;padding:14px}
 .dif-pos{color:#ff9aa5;font-weight:700}.dif-neg{color:var(--amber2);font-weight:700}
+/* pagamentos / cadastros / notas */
+.segmentos{display:inline-flex;gap:4px;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:4px;margin-bottom:16px;flex-wrap:wrap}
+.segmentos button{background:none;border:0;color:var(--mute);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px}
+.segmentos button.sel{background:var(--amber);color:#1a1208}
+.segmentos small{opacity:.7;font-weight:500;margin-left:2px}
+table.pag td{vertical-align:middle}
+.sub2{display:block;color:var(--mute);font-size:12px;font-weight:400;margin-top:2px}
+th.c,td.c{text-align:center;padding:6px 3px}
+th.fechado,td.fechado{opacity:.45}
+input.dia{width:58px;text-align:center;padding:8px 2px;font-weight:700;border-radius:8px;cursor:pointer}
+input.dia.on{background:#3a2a14;border-color:#7a5422;color:var(--amber2)}
+input.aj{width:76px;text-align:right;padding:6px}
+input.aj-obs{width:90px;padding:4px 6px;font-size:12px;margin-top:4px;display:block;margin-left:auto}
+input.val-banda{width:110px;text-align:right;font-weight:700;padding:8px}
+.pix{display:flex;flex-direction:column;gap:3px;align-items:flex-start;font-size:13px}
+.pix small{color:var(--mute);font-size:11.5px}
+.status{background:var(--panel2);border:1px solid #5c3f1c;color:var(--amber2);border-radius:99px;padding:5px 11px;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.status.pago{border-color:#2f5a2a;color:#bfe8b0;background:#1c2a19}
+.x{background:none;border:0;color:var(--mute);font-size:20px;cursor:pointer;padding:2px 6px;border-radius:6px}.x:hover{color:var(--red);background:var(--panel2)}
+.acoes-pag{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.acoes-pag select{max-width:340px}
+.dica{font-size:12.5px;color:var(--mute);margin:12px 0 0}
+.semana-nav b{min-width:170px;text-align:center}
+.servico{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#14231f;border:1px solid #24453d;border-radius:12px;padding:12px 16px;margin-bottom:14px}
+.add-banda{display:grid;gap:4px}
+.chips button small{opacity:.7;margin-left:4px}
+.filtros-at{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.linha-check{display:flex;gap:8px;align-items:center;margin:0;padding:7px 4px;border-bottom:1px solid var(--line);color:var(--ink);font-size:14px;cursor:pointer}
+.linha-check input{width:auto}
+.fotos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.foto-btn{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:130px;border:2px dashed var(--line);border-radius:14px;cursor:pointer;color:var(--ink);background-size:cover;background-position:center;text-align:center;padding:10px}
+.foto-btn span{font-size:30px}.foto-btn small{color:var(--mute);font-size:12px}
+.foto-btn.ok{border-style:solid;border-color:var(--green)}
+tfoot td{border-top:1px solid var(--line);border-bottom:0}
 dialog{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:22px;width:min(480px,92vw)}
 dialog::backdrop{background:rgba(0,0,0,.6)}
 </style>
@@ -159,12 +204,16 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
 
 <!-- APP -->
 <div id="app" class="hidden">
-  <header class="topo"><div class="topo-in">
-    <div class="marca"><div class="logo">V</div><h1>Vezpa</h1></div>
-    <nav class="abas" id="abas"></nav>
-    <div class="quem"><span id="quem-nome"></span><span class="selo" id="quem-papel"></span><button class="btn sec peq" id="btn-sair">Sair</button></div>
-  </div></header>
-  <main id="conteudo"></main>
+  <aside id="menu">
+    <div class="marca"><div class="logo">V</div><div><h1>Vezpa Gestão</h1><small>Rua Augusta · SP</small></div></div>
+    <nav id="abas"></nav>
+    <div class="menu-rodape"><div><b id="quem-nome"></b><span class="selo" id="quem-papel"></span></div><button class="btn sec peq" id="btn-sair">Sair</button></div>
+  </aside>
+  <div class="area">
+    <header class="barra"><button id="btn-menu" aria-label="Abrir menu">☰</button><div class="trilha" id="trilha"></div></header>
+    <main id="conteudo"></main>
+  </div>
+  <div id="veu"></div>
 </div>
 
 <dialog id="dlg"></dialog>
@@ -277,33 +326,60 @@ async function iniciar() {
 }
 
 // ============ NAVEGAÇÃO ============
+const ICONE = {
+  hoje: '<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/>',
+  geral: '<path d="M4 19V5M4 19h16M8 15l3-4 3 2 5-6"/>',
+  produtos: '<path d="M4 7l8-4 8 4-8 4-8-4zM4 7v10l8 4 8-4V7"/>',
+  atracoes: '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
+  cruzamentos: '<path d="M4 4l16 16M20 4L4 20"/>',
+  equipe: '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M16 11a3 3 0 100-6M21 20c0-2-1.5-4-4-4.6"/>',
+  contagem: '<path d="M9 4h6v3H9zM6 6h12v15H6z"/><path d="M9 12l2 2 4-4"/>',
+  pedido: '<path d="M3 4h2l2.5 11h11L21 8H7"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/>',
+  pagamentos: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/>',
+  cadastros: '<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M8 17c1-2 2.5-3 4-3s3 1 4 3"/>',
+  importar: '<path d="M12 3v12M7 10l5 5 5-5M4 21h16"/>',
+  notas: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/>',
+  usuarios: '<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/>',
+};
 const ABAS = [
-  { id: "hoje", nome: "Hoje", papeis: ["dona", "gerente", "caixa"], fn: abaHoje },
-  { id: "geral", nome: "Faturamento", papeis: ["dona", "gerente"], fn: abaGeral },
-  { id: "produtos", nome: "Produtos", papeis: ["dona", "gerente"], fn: abaProdutos },
-  { id: "equipe", nome: "Equipe", papeis: ["dona", "gerente"], fn: abaEquipe },
-  { id: "cruzamentos", nome: "Cruzamentos", papeis: ["dona", "gerente"], fn: abaCruzamentos },
-  { id: "contagem", nome: "Contagem", papeis: ["dona", "gerente", "caixa"], fn: abaContagem },
-  { id: "bandas", nome: "Bandas", papeis: ["dona", "gerente"], fn: abaBandas },
-  { id: "pedido", nome: "Pedido", papeis: ["dona", "gerente"], fn: abaPedido },
-  { id: "importar", nome: "Importar dados", papeis: ["dona", "gerente"], fn: abaImportar },
-  { id: "usuarios", nome: "Usuários", papeis: ["dona"], fn: abaUsuarios },
+  { id: "hoje", nome: "Hoje", grupo: "Visão geral", papeis: ["dona", "gerente", "caixa"], fn: abaHoje },
+  { id: "geral", nome: "Faturamento", grupo: "Visão geral", papeis: ["dona", "gerente"], fn: abaGeral },
+  { id: "produtos", nome: "Produtos", grupo: "Análises", papeis: ["dona", "gerente"], fn: abaProdutos },
+  { id: "atracoes", nome: "Atrações", grupo: "Análises", papeis: ["dona", "gerente"], fn: abaAtracoes },
+  { id: "cruzamentos", nome: "Cruzamentos", grupo: "Análises", papeis: ["dona", "gerente"], fn: abaCruzamentos },
+  { id: "equipe", nome: "Equipe", grupo: "Análises", papeis: ["dona", "gerente"], fn: abaEquipe },
+  { id: "contagem", nome: "Contagem", grupo: "Operação", papeis: ["dona", "gerente", "caixa"], fn: abaContagem },
+  { id: "pedido", nome: "Pedido sugerido", grupo: "Operação", papeis: ["dona", "gerente"], fn: abaPedido },
+  { id: "pagamentos", nome: "Pagamentos da semana", grupo: "Financeiro", papeis: ["dona", "gerente"], fn: abaPagamentos },
+  { id: "notas", nome: "Notas e boletos", grupo: "Financeiro", papeis: ["dona", "gerente", "caixa"], fn: abaNotas },
+  { id: "cadastros", nome: "Freelas e bandas", grupo: "Configurações", papeis: ["dona", "gerente"], fn: abaCadastros },
+  { id: "importar", nome: "Importar dados", grupo: "Configurações", papeis: ["dona", "gerente"], fn: abaImportar },
+  { id: "usuarios", nome: "Usuários", grupo: "Configurações", papeis: ["dona"], fn: abaUsuarios },
 ];
 function montarAbas() {
   const minhas = ABAS.filter(a => a.papeis.includes(S.perfil.papel));
-  $("#abas").innerHTML = minhas.map(a => `<button data-aba="${a.id}">${a.nome}</button>`).join("");
+  const grupos = [...new Set(minhas.map(a => a.grupo))];
+  $("#abas").innerHTML = grupos.map(g => `<div class="grupo"><div class="grupo-tit">${g}</div>${minhas.filter(a => a.grupo === g).map(a =>
+    `<button data-aba="${a.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONE[a.id] || ""}</svg>${a.nome}</button>`).join("")}</div>`).join("");
   $("#abas").onclick = e => { const b = e.target.closest("button"); if (b) abrir(b.dataset.aba); };
+  $("#btn-menu").onclick = () => $("#app").classList.toggle("menu-aberto");
+  $("#veu").onclick = () => $("#app").classList.remove("menu-aberto");
   const h = location.hash.slice(1);
   if (h === "receber" && gestor()) return abaReceber();
-  abrir(minhas.find(a => a.id === h) ? h : (S.perfil.papel === "caixa" ? "hoje" : "geral"));
+  const alias = { bandas: "pagamentos" };
+  const alvo = alias[h] || h;
+  abrir(minhas.find(a => a.id === alvo) ? alvo : (S.perfil.papel === "caixa" ? "hoje" : "geral"));
 }
 function abrir(id) {
   clearInterval(S.timer); limparGraficos();
   S.aba = id; history.replaceState(null, "", "#" + id);
+  const aba = ABAS.find(a => a.id === id);
   document.querySelectorAll("#abas button").forEach(b => b.classList.toggle("ativa", b.dataset.aba === id));
-  $("#abas .ativa")?.scrollIntoView({ inline: "center", block: "nearest" });
+  $("#trilha").innerHTML = `${aba.grupo} / <b>${aba.nome}</b>`;
+  $("#app").classList.remove("menu-aberto");
+  window.scrollTo(0, 0);
   $("#conteudo").innerHTML = `<div class="vazio">Carregando…</div>`;
-  ABAS.find(a => a.id === id).fn().catch(err => {
+  aba.fn().catch(err => {
     console.error(err);
     $("#conteudo").innerHTML = `<div class="msg erro">Erro ao carregar: ${esc(err.message || err)}</div>`;
   });
@@ -800,108 +876,585 @@ async function editarItens() {
   });
 }
 
-// ============ ABA: BANDAS (passo a passo) ============
-const B = { passo: 1, reg: {} };
-async function abaBandas() {
-  const p = await periodoPadrao();
-  B.mes ??= (p?.max || diaOperacionalHoje()).slice(0, 7);
-  B.reg.data ??= diaOperacionalHoje();
-  B.reg.status ??= "pago";
-  const ini = B.mes + "-01", fim = iso(new Date(+B.mes.slice(0, 4), +B.mes.slice(5, 7), 0));
-  const [{ data: pags }, { data: todasAtr }, dias] = await Promise.all([
-    sb.from("pagamentos_bandas").select("*").order("data", { ascending: false }),
-    sb.from("dias").select("atracao").not("atracao", "is", null),
-    todos(() => sb.from("vw_resumo_diario").select("dia,faturamento")),
-  ]);
-  const fat = Object.fromEntries(dias.map(d => [d.dia, +d.faturamento]));
-  const nomes = [...new Set([...(pags || []).map(x => x.atracao), ...(todasAtr || []).map(x => x.atracao)])].sort();
-  const doMes = (pags || []).filter(x => x.data >= ini && x.data <= fim);
-  const pend = (pags || []).filter(x => x.status === "a pagar");
-  const totMes = doMes.reduce((s, x) => s + +x.valor, 0);
-  const noitesMes = new Set(doMes.map(x => x.data));
-  const fatNoites = [...noitesMes].reduce((s, d) => s + (fat[d] || 0), 0);
-  // média por dia da semana (para comparar atrações de forma justa)
-  const porDow = {}; dias.forEach(d => (porDow[dow(d.dia)] ??= []).push(+d.faturamento));
-  const mediaDow = w => porDow[w] ? porDow[w].reduce((a, b) => a + b, 0) / porDow[w].length : null;
-  // ranking por atração (todas as datas)
-  const rk = {}; (pags || []).forEach(x => { const r = rk[x.atracao] ??= { nome: x.atracao, noites: new Set(), cache: 0, fat: 0, desv: [] };
-    if (!r.noites.has(x.data)) { r.noites.add(x.data); if (fat[x.data] != null) { r.fat += fat[x.data]; const m = mediaDow(dow(x.data)); if (m) r.desv.push((fat[x.data] - m) / m); } } r.cache += +x.valor; });
-  const rank = Object.values(rk).map(r => ({ ...r, n: r.noites.size, desvMed: r.desv.length ? r.desv.reduce((a, b) => a + b, 0) / r.desv.length : null })).sort((a, b) => (b.desvMed ?? -9) - (a.desvMed ?? -9));
+// ============ PESSOAS (freelas e bandas) ============
+const PIX_TIPOS = { cpf: "CPF", celular: "Celular", email: "E-mail", cnpj: "CNPJ", aleatoria: "Chave aleatória" };
+function detectarPix(v) {
+  if (v == null) return null;
+  let s = typeof v === "number" ? String(Math.round(v)) : String(v).trim();
+  if (!s || /^(pg|dh|-)$/i.test(s)) return null;
+  if (/@/.test(s)) return { tipo: "email", chave: s.toLowerCase() };
+  const d = s.replace(/\D/g, "");
+  if (/^\(?\d{2}\)?\s?9/.test(s) && d.length === 11) return { tipo: "celular", chave: d };
+  if (d.length === 14) return { tipo: "cnpj", chave: d };
+  if (/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(s)) return { tipo: "cpf", chave: d };
+  if (d.length === 11) return { tipo: /^[1-9]{2}9/.test(d) ? "celular" : "cpf", chave: d };
+  if (d.length === 10 && typeof v === "number") return { tipo: "cpf", chave: d.padStart(11, "0") };
+  if (d.length >= 8) return { tipo: "aleatoria", chave: s };
+  return null;
+}
+function fmtPix(p) {
+  if (!p?.pix_chave) return "";
+  const c = p.pix_chave;
+  if (p.pix_tipo === "cpf" && c.length === 11) return `${c.slice(0, 3)}.${c.slice(3, 6)}.${c.slice(6, 9)}-${c.slice(9)}`;
+  if (p.pix_tipo === "celular" && c.length === 11) return `(${c.slice(0, 2)}) ${c.slice(2, 7)}-${c.slice(7)}`;
+  return c;
+}
+async function copiar(txt, btn) {
+  try { await navigator.clipboard.writeText(txt); if (btn) { const t = btn.textContent; btn.textContent = "Copiado ✔"; setTimeout(() => btn.textContent = t, 1400); } }
+  catch (_) { if (btn) btn.textContent = "Selecione e copie"; }
+}
+function editarPessoa(p, tipo, aoSalvar) {
+  p = p || { tipo, ativo: true };
+  const d = $("#dlg");
+  const ehBanda = p.tipo === "banda";
+  d.innerHTML = `<h3>${p.id ? "Editar" : "Novo cadastro"} · ${ehBanda ? "Banda / DJ" : "Freela"}</h3>
+  <form id="f-pes">
+    <label>Nome</label><input name="nome" value="${esc(p.nome || "")}" required>
+    <div class="linha-form"><div><label>${ehBanda ? "Gênero" : "Função"}</label><input name="funcao" value="${esc(p.funcao || "")}" placeholder="${ehBanda ? "samba, pagode, DJ…" : "atendimento, cozinha, cumim…"}"></div>
+      <div><label>${ehBanda ? "Cachê padrão" : "Diária padrão"} (R$)</label><input name="valor_padrao" inputmode="decimal" value="${p.valor_padrao != null ? nfmt(+p.valor_padrao, 2) : ""}"></div></div>
+    <div class="linha-form"><div><label>Tipo de Pix</label><select name="pix_tipo"><option value="">—</option>${Object.entries(PIX_TIPOS).map(([k, v]) => `<option value="${k}" ${p.pix_tipo === k ? "selected" : ""}>${v}</option>`).join("")}</select></div>
+      <div><label>Chave Pix</label><input name="pix_chave" value="${esc(fmtPix(p))}"></div></div>
+    <label>Titular do Pix (se for de outra pessoa)</label><input name="pix_nome" value="${esc(p.pix_nome || "")}" placeholder="ex.: Silvia">
+    <div class="linha-form"><div><label>Telefone</label><input name="telefone" value="${esc(p.telefone || "")}"></div>
+      <div><label>Situação</label><select name="ativo"><option value="1" ${p.ativo !== false ? "selected" : ""}>Ativo</option><option value="0" ${p.ativo === false ? "selected" : ""}>Inativo</option></select></div></div>
+    <label>Observação</label><input name="observacao" value="${esc(p.observacao || "")}" placeholder="ex.: depositar junto com…">
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn sec" type="button" id="pes-cancel">Cancelar</button><button class="btn" id="pes-ok">Salvar</button></div>
+    <div id="pes-msg"></div></form>`;
+  d.showModal();
+  $("#pes-cancel").onclick = () => d.close();
+  $("#f-pes").onsubmit = async e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    let chave = (f.get("pix_chave") || "").trim(), tipoPix = f.get("pix_tipo") || null;
+    if (chave && ["cpf", "celular", "cnpj"].includes(tipoPix)) chave = chave.replace(/\D/g, "");
+    if (chave && !tipoPix) { const dp = detectarPix(chave); tipoPix = dp?.tipo || "aleatoria"; chave = dp?.chave || chave; }
+    const reg = { tipo: p.tipo, nome: f.get("nome").trim(), funcao: f.get("funcao").trim() || null, valor_padrao: f.get("valor_padrao") ? numBR(f.get("valor_padrao")) : null,
+      pix_tipo: chave ? tipoPix : null, pix_chave: chave || null, pix_nome: f.get("pix_nome").trim() || null, telefone: f.get("telefone").trim() || null,
+      ativo: f.get("ativo") === "1", observacao: f.get("observacao").trim() || null };
+    const q = p.id ? sb.from("pessoas").update(reg).eq("id", p.id).select().single() : sb.from("pessoas").insert(reg).select().single();
+    const { data, error } = await q;
+    if (error) { $("#pes-msg").innerHTML = `<div class="msg erro">${esc(error.message.includes("pessoas_tipo_nome") ? "Já existe um cadastro com esse nome." : error.message)}</div>`; return; }
+    d.close(); aoSalvar && aoSalvar(data);
+  };
+}
 
-  const passos = cabPassos(["Noite", "Atração", "Valor", "Confirmar"], B.passo);
-  const R = B.reg;
-  let wiz = "";
-  if (B.passo === 1) wiz = `<h3>De qual noite é o pagamento?</h3><input type="date" id="b-data" class="grande" value="${R.data}" style="max-width:280px">
-    <div id="b-info" class="sub" style="margin-top:10px"></div><div class="rodape-passos"><span></span><button class="btn" id="b-prox">Próximo →</button></div>`;
-  if (B.passo === 2) wiz = `<h3>Quem tocou?</h3><input id="b-atr" class="grande" list="lista-atr" value="${esc(R.atracao || "")}" placeholder="Nome da banda / DJ" autocomplete="off">
-    <datalist id="lista-atr">${nomes.map(n => `<option value="${esc(n)}">`).join("")}</datalist>
-    <div class="chips" style="margin-top:12px">${nomes.slice(0, 12).map(n => `<button data-nome="${esc(n)}">${esc(n)}</button>`).join("")}</div>
-    <div class="rodape-passos"><button class="btn sec" id="b-volta">← Voltar</button><button class="btn" id="b-prox">Próximo →</button></div>`;
-  if (B.passo === 3) wiz = `<h3>Quanto e como?</h3><label>Valor do cachê (R$)</label><input id="b-valor" class="grande" inputmode="decimal" value="${R.valor != null ? nfmt(R.valor, 2) : ""}" placeholder="0,00" style="max-width:280px">
-    <label>Forma de pagamento</label><div class="chips" id="b-forma">${["Pix", "Dinheiro", "Transferência", "Outro"].map(f => `<button class="${R.forma === f ? "sel" : ""}" data-v="${f}">${f}</button>`).join("")}</div>
-    <label>Situação</label><div class="chips" id="b-status"><button class="${R.status === "pago" ? "sel" : ""}" data-v="pago">Já paguei</button><button class="${R.status === "a pagar" ? "sel" : ""}" data-v="a pagar">Ainda vou pagar</button></div>
-    <div class="rodape-passos"><button class="btn sec" id="b-volta">← Voltar</button><button class="btn" id="b-prox">Próximo →</button></div>`;
-  if (B.passo === 4) wiz = `<h3>Confere?</h3><table><tbody>
-    <tr><td>Noite</td><td><b>${DIAS_LONGO[dow(R.data)]}, ${br(R.data)}</b></td></tr><tr><td>Atração</td><td><b>${esc(R.atracao)}</b></td></tr>
-    <tr><td>Cachê</td><td><b>${brl(R.valor)}</b> · ${esc(R.forma || "—")}</td></tr><tr><td>Situação</td><td><span class="tag ${R.status === "pago" ? "bom" : "ok"}">${R.status === "pago" ? "pago" : "a pagar"}</span></td></tr>
-    ${fat[R.data] ? `<tr><td>Faturamento da noite</td><td>${brl0(fat[R.data])} · cachê = <b>${pct(R.valor / fat[R.data])}</b></td></tr>` : ""}</tbody></table>
-    <label>Observação (opcional)</label><input id="b-obs" value="${esc(R.observacao || "")}" placeholder="ex.: cachê dividido em 3 noites">
-    <div class="rodape-passos"><button class="btn sec" id="b-volta">← Voltar</button><button class="btn" id="b-salvar">Salvar pagamento ✔</button></div><div id="b-msg"></div>`;
-  if (B.passo === 5) wiz = `<div class="msg ok">Pagamento salvo ✔</div><div class="rodape-passos"><button class="btn" id="b-outro">Lançar outro</button></div>`;
+// ============ ABA: PAGAMENTOS DA SEMANA ============
+const fatSemanaCalc = res => res.reduce((s, r) => s + +r.faturamento, 0);
+const semanaDe = d => addDias(d, -((dow(d) - 3 + 7) % 7)); // semana começa na quarta
+const W = { sub: "freelas", timers: {} };
+async function abaPagamentos() {
+  W.ini ??= semanaDe(addDias(diaOperacionalHoje(), -1));
+  const ini = W.ini, fim = addDias(ini, 6);
+  const dias = Array.from({ length: 7 }, (_, i) => addDias(ini, i));
+  const [{ data: pessoas }, { data: fr }, { data: bd }, res, hist, { data: cfgServ }] = await Promise.all([
+    sb.from("pessoas").select("*").order("nome"),
+    sb.from("freelas").select("*").eq("semana_inicio", ini).order("id"),
+    sb.from("pagamentos_bandas").select("*").gte("data", ini).lte("data", fim).order("data").order("id"),
+    todos(() => sb.from("vw_resumo_diario").select("dia,faturamento").gte("dia", ini).lte("dia", fim)),
+    todos(() => sb.from("vw_resumo_diario").select("dia").gte("dia", addDias(ini, -56)).lt("dia", ini)),
+    sb.from("config").select("valor").eq("chave", "servico").maybeSingle(),
+  ]);
+  const SV = { percentual: 10, casa: 20, incluir: true, fixas: 0, ...(cfgServ?.valor || {}) };
+  const P = Object.fromEntries(pessoas.map(p => [p.id, p]));
+  const pesDe = (id, nome, tipo) => P[id] || pessoas.find(p => p.tipo === tipo && p.nome.toLowerCase() === (nome || "").toLowerCase());
+  const abreDow = new Set(hist.map(h => dow(h.dia)));
+  const fatSemana = res.reduce((s, r) => s + +r.faturamento, 0);
+  const totFr = l => Object.values(l.dias_valores || {}).reduce((s, v) => s + +v, 0) + +(l.ajuste || 0);
+  fr.forEach(l => { l._total = totFr(l); });
+  const nDiarias = fr.reduce((s, l) => s + Object.keys(l.dias_valores || {}).length, 0);
+  const servBruto = fatSemanaCalc(res) * SV.percentual / 100, servCasa = servBruto * SV.casa / 100, servEquipe = servBruto - servCasa;
+  const cotas = nDiarias + (+SV.fixas || 0);
+  const porDiaria = cotas ? servEquipe / cotas : 0;
+  fr.forEach(l => { l._serv = SV.incluir ? Object.keys(l.dias_valores || {}).length * porDiaria : 0; l._pagar = l._total + l._serv; });
+  const tFre = fr.reduce((s, l) => s + l._total, 0), tBan = bd.reduce((s, b) => s + +b.valor, 0);
+  const tServ = fr.reduce((s, l) => s + l._serv, 0);
+  const pago = fr.filter(l => l.status === "pago").reduce((s, l) => s + l._pagar, 0) + bd.filter(b => b.status === "pago").reduce((s, b) => s + +b.valor, 0);
+  const semanaTxt = `${DIAS[dow(ini)]} ${br(ini).slice(0, 5)} a ${DIAS[dow(fim)]} ${br(fim).slice(0, 5)}`;
+
+  const pixCel = (p, nome) => p?.pix_chave
+    ? `<div class="pix"><span title="${esc(PIX_TIPOS[p.pix_tipo] || "")}">${esc(fmtPix(p))}</span>${p.pix_nome ? `<small>titular: ${esc(p.pix_nome)}</small>` : ""}<button class="btn sec peq" data-copiar-pix="${esc(p.pix_chave)}">Copiar</button></div>`
+    : `<button class="link-btn" style="margin:0" data-cad="${p?.id || ""}" data-cad-nome="${esc(nome)}" data-cad-tipo="${p?.tipo || "freela"}">+ cadastrar Pix</button>`;
+  const status = (tab, id, st) => `<button class="status ${st === "pago" ? "pago" : ""}" data-status="${tab}:${id}:${st}">${st === "pago" ? "Pago ✓" : "A pagar"}</button>`;
+
+  let corpo = "";
+  if (W.sub === "freelas") {
+    const usados = new Set(fr.map(l => l.pessoa_id));
+    const disponiveis = pessoas.filter(p => p.tipo === "freela" && p.ativo && !usados.has(p.id));
+    corpo = `<div class="servico"><div><b>Taxa de serviço da semana</b><small class="sub2">Faturamento ${brl0(fatSemanaCalc(res))} × ${SV.percentual}% = ${brl0(servBruto)} · casa fica com ${SV.casa}% (${brl0(servCasa)})</small></div>
+      <div class="n"><b style="font-size:18px;color:var(--teal)">${brl0(servEquipe)}</b><small class="sub2">para a equipe · ${cotas ? brl(porDiaria) + " por diária (" + nDiarias + " de freelas" + (+SV.fixas ? " + " + SV.fixas + " da equipe fixa = " + brl0(porDiaria * SV.fixas) : "") + ")" : "lance as diárias para dividir"}</small></div>
+      <button class="btn sec peq" id="cfg-serv">Ajustar</button></div>
+      <div class="rolagem tabela-pag" style="max-height:none"><table class="pag"><thead><tr><th>Freela</th>
+      ${dias.map(d => `<th class="c ${abreDow.has(dow(d)) ? "" : "fechado"}">${DIAS[dow(d)]}<br><small>${br(d).slice(0, 5)}</small></th>`).join("")}
+      <th class="n">Ajuste</th><th class="n">Diárias</th>${SV.incluir ? `<th class="n">${SV.percentual}%</th>` : ""}<th class="n">A pagar</th><th>Pix</th><th>Situação</th><th></th></tr></thead><tbody>
+      ${fr.map(l => { const p = pesDe(l.pessoa_id, l.nome, "freela"); const diaria = +(p?.valor_padrao || 0);
+        return `<tr data-linha="${l.id}"><td><b>${esc(l.nome)}</b><small class="sub2">${esc(l.funcao || p?.funcao || "")}${diaria ? " · diária " + brl0(diaria) : ""}</small></td>
+        ${dias.map(d => `<td class="c ${abreDow.has(dow(d)) ? "" : "fechado"}"><input class="dia ${l.dias_valores?.[d] ? "on" : ""}" inputmode="decimal" data-l="${l.id}" data-d="${d}" data-diaria="${diaria || ""}" value="${l.dias_valores?.[d] != null ? nfmt(+l.dias_valores[d]) : ""}" placeholder="·"></td>`).join("")}
+        <td class="n"><input class="aj" inputmode="decimal" data-aj="${l.id}" value="${+l.ajuste ? nfmt(+l.ajuste, 2) : ""}" placeholder="0"><input class="aj-obs" data-ajobs="${l.id}" value="${esc(l.ajuste_obs || "")}" placeholder="motivo"></td>
+        <td class="n" data-total="${l.id}">${brl(l._total)}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(l._serv)}</td>` : ""}<td class="n"><b data-pagar="${l.id}">${brl(l._pagar)}</b></td><td>${pixCel(p, l.nome)}</td><td>${status("freelas", l.id, l.status)}</td>
+        <td><button class="x" data-del-fr="${l.id}" title="Tirar da semana">×</button></td></tr>`; }).join("") || `<tr><td colspan="15" class="vazio">Nenhum freela nesta semana ainda.</td></tr>`}
+      </tbody><tfoot><tr><td><b>Total</b></td>${dias.map(d => `<td class="c n"><small>${brl0(fr.reduce((s, l) => s + (+l.dias_valores?.[d] || 0), 0)) }</small></td>`).join("")}<td></td><td class="n">${brl(tFre)}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(tServ)}</td>` : ""}<td class="n"><b>${brl(tFre + tServ)}</b></td><td colspan="3"></td></tr></tfoot></table></div>
+      <div class="acoes-pag"><select id="add-fr"><option value="">+ Adicionar freela à semana…</option>${disponiveis.map(p => `<option value="${p.id}">${esc(p.nome)}${p.funcao ? " — " + esc(p.funcao) : ""}</option>`).join("")}<option value="novo">＋ Cadastrar nova pessoa…</option></select>
+        ${!fr.length ? `<button class="btn sec" id="repetir">Repetir a escala da semana anterior</button>` : ""}</div>
+      <p class="dica">Toque no dia para lançar a diária padrão; toque de novo para mudar o valor ou apague para tirar o dia. Dias em cinza são dias em que o bar normalmente fecha. Tudo é salvo na hora.</p>`;
+  }
+  if (W.sub === "bandas") {
+    const bandas = pessoas.filter(p => p.tipo === "banda" && p.ativo);
+    const noites = dias.filter(d => abreDow.has(dow(d)));
+    W.noite = noites.includes(W.noite) ? W.noite : noites[0] || ini;
+    corpo = `<div class="add-banda"><div><label style="margin-top:0">1. Noite</label><div class="chips" id="noites">${dias.map(d => `<button class="${d === W.noite ? "sel" : ""}" data-noite="${d}">${DIAS[dow(d)]} ${br(d).slice(0, 5)}</button>`).join("")}</div></div>
+      <div><label>2. Toque na banda (o Pix vem do cadastro)</label><div class="chips">${bandas.map(p => `<button data-banda="${p.id}">${esc(p.nome)}${p.valor_padrao ? ` <small>${brl0(+p.valor_padrao)}</small>` : ""}</button>`).join("")}<button data-banda="novo">＋ Nova banda</button></div></div></div>
+      <div class="rolagem" style="max-height:none;margin-top:14px"><table class="pag"><thead><tr><th>Noite</th><th>Atração</th><th class="n">Cachê</th><th>Pix</th><th>Obs.</th><th>Situação</th><th></th></tr></thead><tbody>
+      ${bd.map(b => { const p = pesDe(b.pessoa_id, b.atracao, "banda");
+        return `<tr><td>${DIAS[dow(b.data)]} ${br(b.data).slice(0, 5)}</td><td><b>${esc(b.atracao)}</b></td>
+        <td class="n"><input class="val-banda" inputmode="decimal" data-vb="${b.id}" value="${nfmt(+b.valor, 2)}"></td><td>${pixCel(p, b.atracao)}</td>
+        <td><input class="aj-obs" style="width:150px" data-obsb="${b.id}" value="${esc(b.observacao || "")}" placeholder="—"></td><td>${status("pagamentos_bandas", b.id, b.status)}</td>
+        <td><button class="x" data-del-bd="${b.id}" title="Apagar">×</button></td></tr>`; }).join("") || `<tr><td colspan="7" class="vazio">Nenhuma banda lançada nesta semana.</td></tr>`}
+      </tbody><tfoot><tr><td colspan="2"><b>Total</b></td><td class="n"><b>${brl(tBan)}</b></td><td colspan="4"></td></tr></tfoot></table></div>`;
+  }
+  if (W.sub === "pagar") {
+    const itens = [
+      ...fr.filter(l => l.status !== "pago" && l._pagar > 0).map(l => ({ tab: "freelas", id: l.id, nome: l.nome, p: pesDe(l.pessoa_id, l.nome, "freela"), valor: l._pagar, oq: l._serv ? `diárias ${brl0(l._total)} + ${SV.percentual}% ${brl0(l._serv)}` : `diárias ${brl0(l._total)}` })),
+      ...bd.filter(b => b.status !== "pago").map(b => ({ tab: "pagamentos_bandas", id: b.id, nome: b.atracao, p: pesDe(b.pessoa_id, b.atracao, "banda"), valor: +b.valor, oq: `cachê ${DIAS[dow(b.data)]} ${br(b.data).slice(0, 5)} ${brl0(+b.valor)}` })),
+    ];
+    const grupos = {};
+    itens.forEach(i => { const k = i.p?.pix_chave ? "pix:" + i.p.pix_chave : "nome:" + i.nome.toLowerCase(); (grupos[k] ??= { p: i.p, itens: [] }).itens.push(i); });
+    const gl = Object.values(grupos).sort((a, b) => b.itens.reduce((s, i) => s + i.valor, 0) - a.itens.reduce((s, i) => s + i.valor, 0));
+    const texto = gl.map(g => `${[...new Set(g.itens.map(i => i.nome))].join(" + ")} — ${brl(g.itens.reduce((s, i) => s + i.valor, 0))} — Pix ${g.p?.pix_chave ? fmtPix(g.p) + (g.p.pix_nome ? " (" + g.p.pix_nome + ")" : "") : "SEM PIX"}`).join("\n");
+    corpo = gl.length ? `<div class="sub" style="margin-bottom:10px">${gl.length} Pix para fazer · quem usa a mesma chave aparece junto (ex.: “depositar junto”)</div>
+      <table class="pag"><thead><tr><th>Para</th><th>Pix</th><th class="n">Valor</th><th></th></tr></thead><tbody>
+      ${gl.map((g, k) => `<tr><td><b>${[...new Set(g.itens.map(i => i.nome))].map(esc).join(" + ")}</b><small class="sub2">${g.itens.map(i => esc(i.oq)).join(" · ")}</small></td>
+        <td>${g.p?.pix_chave ? `<div class="pix"><span>${esc(fmtPix(g.p))}</span>${g.p.pix_nome ? `<small>titular: ${esc(g.p.pix_nome)}</small>` : ""}</div>` : `<span class="tag ruim">sem Pix</span>`}</td>
+        <td class="n"><b>${brl(g.itens.reduce((s, i) => s + i.valor, 0))}</b></td>
+        <td style="white-space:nowrap">${g.p?.pix_chave ? `<button class="btn sec peq" data-copiar-pix="${esc(g.p.pix_chave)}">Copiar Pix</button> ` : ""}<button class="btn peq" data-pagar-grupo="${k}">Marcar pago</button></td></tr>`).join("")}
+      </tbody></table><div class="acoes-pag"><button class="btn sec" id="copiar-lista">Copiar lista completa</button></div><pre id="lista-pag" class="hidden">${esc(texto)}</pre>`
+      : `<div class="vazio">Tudo pago nesta semana ✔</div>`;
+    W._grupos = gl;
+  }
 
   $("#conteudo").innerHTML = `
-  <div class="cab-sec"><div><h2>Pagamentos de bandas</h2><p>Lance o cachê em 4 passos; o painel soma e compara com o faturamento</p></div>
-    <div class="filtros"><label style="margin:0">Mês</label><input type="month" id="b-mes" value="${B.mes}"></div></div>
-  <div class="grade dois"><div class="card">${B.passo <= 4 ? passos : ""}${wiz}</div>
-    <div class="card"><h3>Resumo de ${new Date(ini + "T12:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</h3><div class="sub">${noitesMes.size} noites com atração paga</div>
-      <div class="grade kpis"><div class="card kpi destaque"><div class="rot">Cachês no mês</div><div class="val">${brl0(totMes)}</div></div>
-      <div class="card kpi"><div class="rot">% do faturamento dessas noites</div><div class="val">${fatNoites ? pct(totMes / fatNoites) : "—"}</div><div class="det">${fatNoites ? brl0(fatNoites) + " faturados" : "vendas ainda não importadas"}</div></div>
-      <div class="card kpi"><div class="rot">A pagar (todos os meses)</div><div class="val">${brl0(pend.reduce((s, x) => s + +x.valor, 0))}</div><div class="det">${pend.length} lançamentos</div></div></div>
-      ${pend.length ? `<h3 style="margin-top:16px">Pendentes</h3><table><tbody>${pend.map(x => `<tr><td>${br(x.data)}</td><td>${esc(x.atracao)}</td><td class="n">${brl(x.valor)}</td><td><button class="btn peq" data-pagar="${x.id}">Marcar pago</button></td></tr>`).join("")}</tbody></table>` : ""}
-    </div></div>
-  <div class="card" style="margin-top:14px"><h3>Lançamentos do mês</h3><div class="rolagem"><table><thead><tr><th>Noite</th><th>Atração</th><th class="n">Cachê</th><th>Forma</th><th>Situação</th><th class="n">Faturamento da noite</th><th class="n">Cachê / fat.</th><th></th></tr></thead><tbody>
-    ${doMes.map(x => `<tr><td>${DIAS[dow(x.data)]} ${br(x.data)}</td><td>${esc(x.atracao)}${x.observacao ? `<div style="font-size:12px;color:var(--mute)">${esc(x.observacao)}</div>` : ""}</td><td class="n">${brl(x.valor)}</td><td>${esc(x.forma || "")}</td><td><span class="tag ${x.status === "pago" ? "bom" : "ok"}">${x.status}</span></td>
-      <td class="n">${fat[x.data] != null ? brl0(fat[x.data]) : "—"}</td><td class="n">${fat[x.data] ? pct(x.valor / fat[x.data]) : "—"}</td><td><button class="btn perigo peq" data-apagar="${x.id}">Apagar</button></td></tr>`).join("") || `<tr><td colspan="8" style="color:var(--mute)">Nenhum pagamento neste mês</td></tr>`}
-  </tbody></table></div></div>
-  <div class="card" style="margin-top:14px"><h3>Quais atrações valem o cachê</h3><div class="sub">Todo o histórico · comparação com a média do mesmo dia da semana, para não comparar quarta com sábado</div>
-    <div class="rolagem"><table><thead><tr><th>Atração</th><th class="n">Noites</th><th class="n">Cachê total</th><th class="n">Faturamento das noites</th><th class="n">vs média do dia</th><th class="n">R$ faturado por R$ 1 de cachê</th></tr></thead><tbody>
-    ${rank.map(r => `<tr><td>${esc(r.nome)}</td><td class="n">${r.n}</td><td class="n">${brl0(r.cache)}</td><td class="n">${r.fat ? brl0(r.fat) : "—"}</td><td class="n">${r.desvMed != null ? `<span class="tag ${r.desvMed > .1 ? "bom" : r.desvMed < -.1 ? "ruim" : ""}">${r.desvMed >= 0 ? "+" : ""}${pct(r.desvMed)}</span>` : "—"}</td><td class="n">${r.fat && r.cache ? nfmt(r.fat / r.cache, 1) : "—"}</td></tr>`).join("")}
-    </tbody></table></div><p style="font-size:13px;color:var(--mute)">Quando duas atrações tocam na mesma noite (ex.: banda + DJ), o faturamento da noite conta para as duas.</p></div>`;
+  <div class="cab-sec"><div><h2>Pagamentos da semana</h2><p>Freelas e bandas num lugar só, com Pix salvo — substitui a planilha</p></div>
+    <div class="filtros semana-nav"><button class="btn sec peq" id="sem-ant">‹</button><b>${semanaTxt}</b><button class="btn sec peq" id="sem-prox">›</button><button class="btn sec peq" id="sem-hoje">Semana atual</button></div></div>
+  <div class="grade kpis">
+    <div class="card kpi"><div class="rot">Freelas</div><div class="val">${brl0(tFre)}</div><div class="det">${fr.length} pessoas · ${nDiarias} diárias${SV.incluir ? " · + " + brl0(tServ) + " de " + SV.percentual + "%" : ""}</div></div>
+    <div class="card kpi"><div class="rot">Bandas</div><div class="val">${brl0(tBan)}</div><div class="det">${bd.length} cachês</div></div>
+    <div class="card kpi destaque"><div class="rot">Custo da semana (diárias + cachês)</div><div class="val">${brl0(tFre + tBan)}</div><div class="det">${fatSemana ? pct((tFre + tBan) / fatSemana) + " do faturamento (" + brl0(fatSemana) + ")" : "faturamento ainda não importado"}</div></div>
+    <div class="card kpi"><div class="rot">Falta pagar</div><div class="val" style="color:${tFre + tServ + tBan - pago > 0 ? "var(--amber2)" : "var(--green)"}">${brl0(tFre + tServ + tBan - pago)}</div><div class="det">já pago ${brl0(pago)}${SV.incluir ? " · inclui o " + SV.percentual + "%" : ""}</div></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div class="segmentos">${[["freelas", "Freelas"], ["bandas", "Bandas"], ["pagar", "Para pagar"]].map(([k, n]) => `<button class="${W.sub === k ? "sel" : ""}" data-sub="${k}">${n}</button>`).join("")}</div>
+    ${corpo}</div>`;
 
-  // eventos do passo a passo
-  const ir = n => { B.passo = n; abaBandas(); };
-  $("#b-mes").onchange = e => { B.mes = e.target.value; abaBandas(); };
-  if (B.passo === 1) {
-    const info = () => { const d = $("#b-data").value; const ja = (pags || []).filter(x => x.data === d);
-      $("#b-info").innerHTML = (fat[d] != null ? `Faturamento dessa noite: <b>${brl0(fat[d])}</b>. ` : "") + (ja.length ? `Já lançado: ${ja.map(x => esc(x.atracao) + " " + brl0(x.valor)).join(", ")}` : ""); };
-    $("#b-data").onchange = info; info();
-    $("#b-prox").onclick = () => { R.data = $("#b-data").value; if (R.data) ir(2); };
-  }
-  if (B.passo === 2) {
-    document.querySelectorAll("[data-nome]").forEach(b => b.onclick = () => { $("#b-atr").value = b.dataset.nome; });
-    $("#b-volta").onclick = () => ir(1);
-    $("#b-prox").onclick = () => { R.atracao = $("#b-atr").value.trim(); if (R.atracao) ir(3); else $("#b-atr").focus(); };
-  }
-  if (B.passo === 3) {
-    R.status ??= "pago";
-    ["b-forma", "b-status"].forEach(id => $("#" + id).onclick = e => { const b = e.target.closest("button"); if (!b) return; $("#" + id).querySelectorAll("button").forEach(x => x.classList.remove("sel")); b.classList.add("sel"); if (id === "b-forma") R.forma = b.dataset.v; else R.status = b.dataset.v; });
-    $("#b-volta").onclick = () => ir(2);
-    $("#b-prox").onclick = () => { R.valor = numBR($("#b-valor").value); if (R.valor > 0) ir(4); else $("#b-valor").focus(); };
-  }
-  if (B.passo === 4) {
-    $("#b-volta").onclick = () => ir(3);
-    $("#b-salvar").onclick = async () => {
-      $("#b-salvar").disabled = true;
-      const { error } = await sb.from("pagamentos_bandas").insert({ data: R.data, atracao: R.atracao, valor: R.valor, forma: R.forma || null, status: R.status, pago_em: R.status === "pago" ? iso(new Date()) : null, observacao: $("#b-obs").value.trim() || null });
-      if (error) { $("#b-msg").innerHTML = `<div class="msg erro">${esc(error.message)}</div>`; $("#b-salvar").disabled = false; return; }
-      B.mes = R.data.slice(0, 7); ir(5);
+  // ---------- eventos ----------
+  const recarregar = () => abaPagamentos().catch(e => $("#conteudo").innerHTML = `<div class="msg erro">${esc(e.message)}</div>`);
+  $("#sem-ant").onclick = () => { W.ini = addDias(ini, -7); recarregar(); };
+  $("#sem-prox").onclick = () => { W.ini = addDias(ini, 7); recarregar(); };
+  $("#sem-hoje").onclick = () => { W.ini = semanaDe(addDias(diaOperacionalHoje(), -1)); recarregar(); };
+  document.querySelectorAll("[data-sub]").forEach(b => b.onclick = () => { W.sub = b.dataset.sub; recarregar(); });
+  document.querySelectorAll("[data-copiar-pix]").forEach(b => b.onclick = () => copiar(b.dataset.copiarPix, b));
+  document.querySelectorAll("[data-cad]").forEach(b => b.onclick = () => {
+    const p = P[b.dataset.cad] || pessoas.find(x => x.tipo === b.dataset.cadTipo && x.nome.toLowerCase() === b.dataset.cadNome.toLowerCase());
+    editarPessoa(p || { tipo: b.dataset.cadTipo, nome: b.dataset.cadNome, ativo: true }, b.dataset.cadTipo, recarregar);
+  });
+  document.querySelectorAll("[data-status]").forEach(b => b.onclick = async () => {
+    const [tab, id, st] = b.dataset.status.split(":"); const novo = st === "pago" ? "a pagar" : "pago";
+    await sb.from(tab).update({ status: novo, pago_em: novo === "pago" ? iso(new Date()) : null }).eq("id", id); recarregar();
+  });
+  // freelas: dias, ajuste, adicionar, remover, repetir
+  const salvarLinha = (id, mudar) => {
+    const l = fr.find(x => x.id == id); mudar(l); l._total = totFr(l);
+    const t = $(`[data-total="${id}"]`); if (t) t.textContent = brl(l._total);
+    const pg = $(`[data-pagar="${id}"]`); if (pg) pg.textContent = brl(l._total + (l._serv || 0)) + " *";
+    clearTimeout(W.timers[id]);
+    W.timers[id] = setTimeout(async () => {
+      const { error } = await sb.from("freelas").update({ dias_valores: l.dias_valores, dias: Object.keys(l.dias_valores).length, ajuste: +l.ajuste || 0, ajuste_obs: l.ajuste_obs || null, valor: l._total }).eq("id", id);
+      if (error && t) t.textContent = "erro ao salvar";
+    }, 500);
+  };
+  document.querySelectorAll("input.dia").forEach(inp => {
+    inp.onfocus = () => { if (!inp.value && inp.dataset.diaria) { inp.value = nfmt(+inp.dataset.diaria); inp.classList.add("on"); salvarLinha(inp.dataset.l, l => { l.dias_valores = { ...l.dias_valores, [inp.dataset.d]: +inp.dataset.diaria }; }); } setTimeout(() => inp.select(), 0); };
+    inp.oninput = () => { const v = inp.value.trim() ? numQtd(inp.value) : null; inp.classList.toggle("on", !!v);
+      salvarLinha(inp.dataset.l, l => { const dv = { ...l.dias_valores }; if (v) dv[inp.dataset.d] = v; else delete dv[inp.dataset.d]; l.dias_valores = dv; }); };
+  });
+  document.querySelectorAll("input.dia").forEach(inp => inp.addEventListener("change", () => setTimeout(recarregar, 700)));
+  if ($("#cfg-serv")) $("#cfg-serv").onclick = () => {
+    const d = $("#dlg");
+    d.innerHTML = `<h3>Taxa de serviço</h3><form id="f-serv"><div class="linha-form"><div><label>Taxa (%)</label><input name="percentual" type="number" step="0.1" value="${SV.percentual}"></div><div><label>Parte da casa (% da taxa)</label><input name="casa" type="number" step="0.1" value="${SV.casa}"></div></div>
+      <label>Diárias da equipe fixa na semana (quem é registrado e também divide os ${SV.percentual}%)</label><input name="fixas" type="number" min="0" value="${+SV.fixas || 0}" placeholder="ex.: 4 pessoas × 5 noites = 20">
+      <label><input type="checkbox" name="incluir" style="width:auto" ${SV.incluir ? "checked" : ""}> Somar a parte de cada freela no pagamento da semana</label>
+      <p class="dica">A taxa é calculada sobre o faturamento das noites da semana no Epoc. A parte da casa sai primeiro; o resto é dividido por diária trabalhada (freelas + equipe fixa): quem trabalhou 3 noites recebe 3 partes.</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn sec" type="button" id="sv-c">Cancelar</button><button class="btn">Salvar</button></div></form>`;
+    d.showModal(); $("#sv-c").onclick = () => d.close();
+    $("#f-serv").onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target);
+      await sb.from("config").upsert({ chave: "servico", valor: { percentual: +f.get("percentual") || 0, casa: +f.get("casa") || 0, fixas: +f.get("fixas") || 0, incluir: f.get("incluir") === "on" } }); d.close(); recarregar(); };
+  };
+  document.querySelectorAll("[data-aj]").forEach(inp => inp.oninput = () => salvarLinha(inp.dataset.aj, l => { l.ajuste = inp.value.trim() ? numBR(inp.value.replace(/^\+/, "")) * (inp.value.trim().startsWith("-") ? 1 : 1) : 0; }));
+  document.querySelectorAll("[data-ajobs]").forEach(inp => inp.oninput = () => salvarLinha(inp.dataset.ajobs, l => { l.ajuste_obs = inp.value; }));
+  document.querySelectorAll("[data-del-fr]").forEach(b => b.onclick = async () => { await sb.from("freelas").delete().eq("id", b.dataset.delFr); recarregar(); });
+  if ($("#add-fr")) $("#add-fr").onchange = async e => {
+    const v = e.target.value; if (!v) return;
+    const inserir = async p => { await sb.from("freelas").insert({ semana_inicio: ini, nome: p.nome, funcao: p.funcao, pessoa_id: p.id, dias: 0, valor: 0, dias_valores: {} }); recarregar(); };
+    if (v === "novo") editarPessoa(null, "freela", inserir); else inserir(P[v]);
+  };
+  if ($("#repetir")) $("#repetir").onclick = async () => {
+    const { data: ant } = await sb.from("freelas").select("*").eq("semana_inicio", addDias(ini, -7));
+    if (!ant?.length) { $("#repetir").textContent = "Semana anterior vazia"; return; }
+    await sb.from("freelas").insert(ant.map(l => ({ semana_inicio: ini, nome: l.nome, funcao: l.funcao, pessoa_id: l.pessoa_id, dias: l.dias,
+      dias_valores: Object.fromEntries(Object.entries(l.dias_valores || {}).map(([d, v]) => [addDias(d, 7), v])), valor: Object.values(l.dias_valores || {}).reduce((s, v) => s + +v, 0) })));
+    recarregar();
+  };
+  // bandas
+  document.querySelectorAll("[data-noite]").forEach(b => b.onclick = () => { W.noite = b.dataset.noite; document.querySelectorAll("[data-noite]").forEach(x => x.classList.toggle("sel", x === b)); });
+  document.querySelectorAll("[data-banda]").forEach(b => b.onclick = async () => {
+    const inserir = async p => {
+      const { data } = await sb.from("pagamentos_bandas").insert({ data: W.noite, atracao: p.nome, pessoa_id: p.id, valor: +(p.valor_padrao || 0), status: "a pagar", observacao: p.observacao || null }).select().single();
+      await recarregar(); const inp = $(`[data-vb="${data?.id}"]`); if (inp) { inp.focus(); inp.select(); }
     };
+    if (b.dataset.banda === "novo") editarPessoa(null, "banda", inserir); else inserir(P[b.dataset.banda]);
+  });
+  document.querySelectorAll("[data-vb]").forEach(inp => inp.oninput = () => { clearTimeout(W.timers["b" + inp.dataset.vb]); W.timers["b" + inp.dataset.vb] = setTimeout(() => sb.from("pagamentos_bandas").update({ valor: numBR(inp.value) || 0 }).eq("id", inp.dataset.vb), 500); });
+  document.querySelectorAll("[data-vb]").forEach(inp => inp.onchange = () => setTimeout(recarregar, 700));
+  document.querySelectorAll("[data-obsb]").forEach(inp => inp.oninput = () => { clearTimeout(W.timers["o" + inp.dataset.obsb]); W.timers["o" + inp.dataset.obsb] = setTimeout(() => sb.from("pagamentos_bandas").update({ observacao: inp.value || null }).eq("id", inp.dataset.obsb), 500); });
+  document.querySelectorAll("[data-del-bd]").forEach(b => b.onclick = async () => { await sb.from("pagamentos_bandas").delete().eq("id", b.dataset.delBd); recarregar(); });
+  // para pagar
+  document.querySelectorAll("[data-pagar-grupo]").forEach(b => b.onclick = async () => {
+    const g = W._grupos[b.dataset.pagarGrupo]; b.disabled = true;
+    for (const i of g.itens) await sb.from(i.tab).update({ status: "pago", pago_em: iso(new Date()) }).eq("id", i.id);
+    recarregar();
+  });
+  if ($("#copiar-lista")) $("#copiar-lista").onclick = e => copiar($("#lista-pag").textContent, e.target);
+}
+
+// ============ ABA: CADASTROS (freelas e bandas) ============
+const CAD = { tipo: "freela" };
+async function abaCadastros() {
+  const { data: pessoas } = await sb.from("pessoas").select("*").eq("tipo", CAD.tipo).order("ativo", { ascending: false }).order("nome");
+  const semPix = pessoas.filter(p => p.ativo && !p.pix_chave).length;
+  $("#conteudo").innerHTML = `
+  <div class="cab-sec"><div><h2>Freelas e bandas</h2><p>Cadastro com Pix — usado nos Pagamentos da semana</p></div>
+    <div class="filtros"><button class="btn sec" id="imp-excel">Importar da planilha antiga</button><button class="btn" id="novo-cad">+ Novo cadastro</button></div></div>
+  ${semPix ? `<div class="aviso">${semPix} cadastro(s) ativo(s) sem Pix.</div>` : ""}
+  <div class="card"><div class="segmentos">${[["freela", "Freelas"], ["banda", "Bandas / DJs"]].map(([k, n]) => `<button class="${CAD.tipo === k ? "sel" : ""}" data-tipo="${k}">${n}</button>`).join("")}</div>
+    <input id="busca-cad" placeholder="Buscar…" style="max-width:260px;margin-bottom:10px">
+    <div class="rolagem" style="max-height:none"><table class="pag" id="tab-cad"><thead><tr><th>Nome</th><th>${CAD.tipo === "banda" ? "Gênero" : "Função"}</th><th class="n">${CAD.tipo === "banda" ? "Cachê padrão" : "Diária"}</th><th>Pix</th><th>Telefone</th><th>Situação</th><th></th></tr></thead><tbody>
+    ${pessoas.map(p => `<tr data-n="${esc(p.nome.toLowerCase())}" style="${p.ativo ? "" : "opacity:.5"}"><td><b>${esc(p.nome)}</b>${p.observacao ? `<small class="sub2">${esc(p.observacao)}</small>` : ""}</td><td>${esc(p.funcao || "")}</td><td class="n">${p.valor_padrao != null ? brl0(+p.valor_padrao) : "—"}</td>
+      <td>${p.pix_chave ? `<div class="pix"><span>${esc(PIX_TIPOS[p.pix_tipo] || "")}: ${esc(fmtPix(p))}</span>${p.pix_nome ? `<small>titular: ${esc(p.pix_nome)}</small>` : ""}</div>` : `<span class="tag ruim">sem Pix</span>`}</td>
+      <td>${esc(p.telefone || "")}</td><td><span class="tag ${p.ativo ? "bom" : ""}">${p.ativo ? "ativo" : "inativo"}</span></td><td><button class="btn sec peq" data-ed="${p.id}">Editar</button></td></tr>`).join("") || `<tr><td colspan="7" class="vazio">Nenhum cadastro ainda — use “Importar da planilha antiga” ou “+ Novo cadastro”.</td></tr>`}
+    </tbody></table></div></div>`;
+  const P = Object.fromEntries(pessoas.map(p => [p.id, p]));
+  document.querySelectorAll("[data-tipo]").forEach(b => b.onclick = () => { CAD.tipo = b.dataset.tipo; abaCadastros(); });
+  document.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => editarPessoa(P[b.dataset.ed], CAD.tipo, () => abaCadastros()));
+  $("#novo-cad").onclick = () => editarPessoa(null, CAD.tipo, () => abaCadastros());
+  $("#busca-cad").oninput = e => { const t = e.target.value.toLowerCase(); document.querySelectorAll("#tab-cad tbody tr").forEach(tr => tr.style.display = (tr.dataset.n || "").includes(t) ? "" : "none"); };
+  $("#imp-excel").onclick = importarPlanilhaAntiga;
+}
+
+async function carregarXLSX() {
+  if (window.XLSX) return;
+  await new Promise((ok, erro) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; s.onload = ok; s.onerror = erro; document.head.appendChild(s); });
+}
+function lerPlanilhaPagamentos(wb) {
+  const freelas = {}, bandas = {};
+  for (const nomeAba of wb.SheetNames) {
+    const linhas = XLSX.utils.sheet_to_json(wb.Sheets[nomeAba], { header: 1, raw: true, defval: null });
+    let musicos = false;
+    for (const r of linhas) {
+      const nome = typeof r[0] === "string" ? r[0].trim() : null;
+      if (!nome) continue;
+      if (/^m[uú]sicos/i.test(nome)) { musicos = true; continue; }
+      const cels = r.slice(1, 5);
+      if (!musicos) {
+        const iDias = cels.findIndex(c => typeof c === "string" && /\bdi[as]|dia/i.test(c));
+        if (iDias < 0) continue;
+        const nDias = diasTxt(cels[iDias]) || 1;
+        let pix = null, valor = null, funcao = null;
+        cels.forEach((c, i) => {
+          if (i === iDias || c == null) return;
+          const dp = (typeof c === "number" && c >= 1e9) || (typeof c === "string" && (/@|\d{3}\.\d{3}\.\d{3}-\d{2}|\(\d{2}\)/.test(c))) ? detectarPix(c) : null;
+          if (dp) pix = dp;
+          else if (typeof c === "number" && c > 0 && c < 100000) valor = c;
+          else if (typeof c === "string" && /[a-zà-ú]{3,}/i.test(c) && !/@/.test(c)) funcao = c.trim();
+        });
+        const k = nome.toLowerCase();
+        const atual = freelas[k] ||= { nome, funcao: null, pix: null, diaria: null };
+        if (funcao) atual.funcao = funcao.charAt(0).toUpperCase() + funcao.slice(1).toLowerCase();
+        if (pix) atual.pix = pix;
+        if (valor && nDias) { const d = valor / nDias; if (d >= 50 && d <= 400) atual.diaria = Math.round(d / 5) * 5; }
+      } else {
+        let valor = null, dp = null, obs = null;
+        r.slice(1, 6).forEach(c => {
+          if (c == null || c === "") return;
+          const pixAqui = (typeof c === "number" && c >= 1e9) || (typeof c === "string" && /@|\d{3}\.\d{3}\.\d{3}-\d{2}|\d{2}\s?9\d{4}-?\d{4}|^\(?\d{2}\)?[\s.-]*9/.test(c.trim())) ? detectarPix(c) : null;
+          if (pixAqui && !dp) dp = pixAqui;
+          else if (typeof c === "number" && c > 0 && c < 100000 && valor == null) valor = c;
+          else if (typeof c === "string" && !pixAqui && !/^(segunda|terça|terca|quarta|quinta|sexta|s[aá]bado|domingo)\s*$/i.test(c.trim())) obs = c.trim();
+        });
+        const k = nome.toLowerCase().replace(/\s+/g, " ");
+        const atual = bandas[k] ||= { nome: nome.replace(/\s+/g, " "), pix: null, cache: null, obs: null };
+        if (dp) atual.pix = dp; if (valor) atual.cache = valor; if (obs) atual.obs = obs;
+      }
+    }
   }
-  if (B.passo === 5) $("#b-outro").onclick = () => { B.reg = { data: R.data, status: "pago" }; ir(1); };
-  document.querySelectorAll("[data-pagar]").forEach(b => b.onclick = async () => { await sb.from("pagamentos_bandas").update({ status: "pago", pago_em: iso(new Date()) }).eq("id", b.dataset.pagar); abaBandas(); });
-  document.querySelectorAll("[data-apagar]").forEach(b => b.onclick = () => {
-    const d = $("#dlg"); d.innerHTML = `<h3>Apagar este pagamento?</h3><p style="color:var(--mute)">Não dá para desfazer.</p><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn sec" id="c-n">Cancelar</button><button class="btn perigo" id="c-s">Apagar</button></div>`;
-    d.showModal(); $("#c-n").onclick = () => d.close(); $("#c-s").onclick = async () => { await sb.from("pagamentos_bandas").delete().eq("id", b.dataset.apagar); d.close(); abaBandas(); };
+  return { freelas: Object.values(freelas), bandas: Object.values(bandas) };
+}
+function importarPlanilhaAntiga() {
+  const d = $("#dlg");
+  d.innerHTML = `<h3>Importar da planilha de pagamentos</h3><p style="color:var(--mute);font-size:14px">Escolha o Excel de pagamentos (com as abas de cada semana). O painel puxa nomes, funções, diárias, cachês e Pix de freelas e músicos. Nada é apagado: quem já existe é atualizado.</p>
+    <input type="file" id="xls" accept=".xlsx,.xls"><div id="xls-prev"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn sec" id="xls-fechar">Fechar</button><button class="btn hidden" id="xls-ok">Importar</button></div>`;
+  d.showModal();
+  $("#xls-fechar").onclick = () => d.close();
+  let dados = null;
+  $("#xls").onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    $("#xls-prev").innerHTML = `<div class="msg">Lendo…</div>`;
+    try {
+      await carregarXLSX();
+      dados = lerPlanilhaPagamentos(XLSX.read(await f.arrayBuffer(), { type: "array" }));
+      const sp = a => a.filter(x => !x.pix).length;
+      $("#xls-prev").innerHTML = `<div class="msg ok"><b>${dados.freelas.length} freelas</b> (${sp(dados.freelas)} sem Pix) e <b>${dados.bandas.length} bandas/DJs</b> (${sp(dados.bandas)} sem Pix) encontrados.</div>
+        <div class="rolagem" style="max-height:220px;margin-top:8px"><table><tbody>${[...dados.freelas.map(x => ["Freela", x.nome, x.funcao, x.diaria, x.pix]), ...dados.bandas.map(x => ["Banda", x.nome, x.obs, x.cache, x.pix])]
+          .map(([t, n, f, v, p]) => `<tr><td><span class="tag">${t}</span></td><td>${esc(n)}</td><td style="color:var(--mute)">${esc(f || "")}</td><td class="n">${v ? brl0(v) : ""}</td><td>${p ? esc(PIX_TIPOS[p.tipo]) : "<span class='tag ruim'>sem Pix</span>"}</td></tr>`).join("")}</tbody></table></div>
+        <p class="dica">Confira os Pix depois em Freelas e bandas: números de 11 dígitos podem ser CPF ou celular, e o painel tenta adivinhar.</p>`;
+      $("#xls-ok").classList.remove("hidden");
+    } catch (err) { $("#xls-prev").innerHTML = `<div class="msg erro">Não consegui ler: ${esc(err.message || err)}</div>`; }
+  };
+  $("#xls-ok").onclick = async () => {
+    const b = $("#xls-ok"); b.disabled = true; b.textContent = "Importando…";
+    const { data: existentes } = await sb.from("pessoas").select("id,tipo,nome,pix_chave,funcao,valor_padrao");
+    const idx = Object.fromEntries(existentes.map(p => [p.tipo + "|" + p.nome.toLowerCase(), p]));
+    const regs = [...dados.freelas.map(x => ({ tipo: "freela", nome: x.nome, funcao: x.funcao, valor_padrao: x.diaria, pix: x.pix })),
+                  ...dados.bandas.map(x => ({ tipo: "banda", nome: x.nome, valor_padrao: x.cache, pix: x.pix, observacao: x.obs }))];
+    let novos = 0, atual = 0;
+    for (const r of regs) {
+      const ex = idx[r.tipo + "|" + r.nome.toLowerCase()];
+      const campos = { funcao: r.funcao || ex?.funcao || null, valor_padrao: r.valor_padrao ?? ex?.valor_padrao ?? null };
+      if (r.pix) Object.assign(campos, { pix_tipo: r.pix.tipo, pix_chave: r.pix.chave });
+      if (r.observacao) campos.observacao = r.observacao;
+      if (ex) { await sb.from("pessoas").update(campos).eq("id", ex.id); atual++; }
+      else { await sb.from("pessoas").insert({ tipo: r.tipo, nome: r.nome, ...campos }); novos++; }
+    }
+    d.close(); abaCadastros();
+  };
+}
+
+// ============ ABA: ATRAÇÕES (cachê × faturamento × entrada) ============
+const AT = { modo: "noite", dows: [3, 4, 5, 6, 0] };
+const ENTRADA_PADRAO = ["1049", "1138", "1107", "1098", "1066"];
+async function abaAtracoes() {
+  const p = await periodoPadrao();
+  AT.ini ??= p ? p.ini : diaOperacionalHoje().slice(0, 8) + "01";
+  AT.fim ??= p ? p.fim : diaOperacionalHoje();
+  const [{ data: pags }, dias, { data: cfg }, { data: prods }] = await Promise.all([
+    sb.from("pagamentos_bandas").select("*").order("data"),
+    todos(() => sb.from("vw_resumo_diario").select("dia,faturamento")),
+    sb.from("config").select("valor").eq("chave", "entrada").maybeSingle(),
+    sb.from("produtos").select("codigo,nome,grupo").order("nome"),
+  ]);
+  const codEntrada = cfg?.valor?.codigos || ENTRADA_PADRAO;
+  const ent = codEntrada.length ? await todos(() => sb.from("vw_vendas_codigo_dia").select("*").in("codigo", codEntrada)) : [];
+  // vendas de entrada com valor (para R$) vêm de vendas_itens agregadas por dia
+  const entValor = codEntrada.length ? await todos(() => sb.from("vw_vendas_produto_dia").select("dia,produto,qtd,faturamento").in("produto", (prods || []).filter(x => codEntrada.includes(x.codigo)).map(x => x.nome))) : [];
+  const entDia = {}; entValor.forEach(r => { const e = entDia[r.dia] ??= { q: 0, v: 0 }; e.q += +r.qtd; e.v += +r.faturamento; });
+  if (!entValor.length) ent.forEach(r => { const e = entDia[r.dia] ??= { q: 0, v: 0 }; e.q += +r.qtd; });
+  const fat = Object.fromEntries(dias.map(d => [d.dia, +d.faturamento]));
+  const porDow = {}; dias.forEach(d => (porDow[dow(d.dia)] ??= []).push(+d.faturamento));
+  const mediaDow = w => porDow[w] ? porDow[w].reduce((a, b) => a + b, 0) / porDow[w].length : null;
+  const cachePorDia = {}, atrPorDia = {};
+  pags.forEach(x => { cachePorDia[x.data] = (cachePorDia[x.data] || 0) + +x.valor; (atrPorDia[x.data] ??= []).push(x.atracao); });
+
+  // noites do período (com venda ou com cachê), filtradas por dia da semana
+  const todasNoites = [...new Set([...Object.keys(fat), ...Object.keys(cachePorDia)])].filter(d => d >= AT.ini && d <= AT.fim).sort();
+  const noites = todasNoites.filter(d => AT.dows.includes(dow(d))).map(d => {
+    const c = cachePorDia[d] || 0, f = fat[d] || 0, e = entDia[d] || { q: 0, v: 0 }, m = mediaDow(dow(d));
+    return { d, atr: atrPorDia[d] || [], cache: c, fat: f, entQ: e.q, entV: e.v, res: f - c, desv: m && f ? (f - m) / m : null };
+  });
+  // semanas cheias (quarta a domingo)
+  const semanas = {};
+  noites.forEach(n => { const w = dow(n.d); if (![3, 4, 5, 6, 0].includes(w)) return; const k = semanaDe(n.d);
+    const s = semanas[k] ??= { ini: k, noites: 0, atr: [], cache: 0, fat: 0, entQ: 0, entV: 0 };
+    s.noites++; s.atr.push(...n.atr); s.cache += n.cache; s.fat += n.fat; s.entQ += n.entQ; s.entV += n.entV; });
+  const sl = Object.values(semanas).sort((a, b) => a.ini.localeCompare(b.ini)).map(s => ({ ...s, res: s.fat - s.cache }));
+  const linhas = AT.modo === "semana" ? sl : noites;
+  const tot = linhas.reduce((a, l) => ({ cache: a.cache + l.cache, fat: a.fat + l.fat, entV: a.entV + l.entV, entQ: a.entQ + l.entQ }), { cache: 0, fat: 0, entV: 0, entQ: 0 });
+  // ranking (sempre por noite, respeitando o período e os dias escolhidos)
+  const rk = {}; noites.forEach(n => n.atr.forEach(a => { const r = rk[a] ??= { nome: a, n: 0, cache: 0, fat: 0, ent: 0, desv: [] };
+    r.n++; r.fat += n.fat; r.ent += n.entV; if (n.desv != null) r.desv.push(n.desv); }));
+  pags.filter(x => x.data >= AT.ini && x.data <= AT.fim && AT.dows.includes(dow(x.data))).forEach(x => { if (rk[x.atracao]) rk[x.atracao].cache += +x.valor; });
+  const rank = Object.values(rk).map(r => ({ ...r, desvMed: r.desv.length ? r.desv.reduce((a, b) => a + b, 0) / r.desv.length : null })).sort((a, b) => (b.desvMed ?? -9) - (a.desvMed ?? -9));
+
+  const nomeLinha = l => AT.modo === "semana" ? `Qua ${br(l.ini).slice(0, 5)} a Dom ${br(addDias(l.ini, 4)).slice(0, 5)}<small class="sub2">${l.noites} noites</small>` : `${DIAS[dow(l.d)]} ${br(l.d)}`;
+  const atrs = l => [...new Set(l.atr)].map(esc).join(" + ") || `<span style="color:var(--mute)">sem atração paga</span>`;
+  $("#conteudo").innerHTML = `
+  <div class="cab-sec"><div><h2>Atrações</h2><p>Quanto a banda custa × quanto a noite faturou × quanto entrou de entrada</p></div>
+    <div class="filtros"><button class="btn sec peq" onclick="abrir('pagamentos')">Lançar cachês →</button></div></div>
+  <div class="card filtros-at">
+    <div class="segmentos" style="margin:0">${[["noite", "Por noite"], ["semana", "Por semana (qua–dom)"]].map(([k, n]) => `<button class="${AT.modo === k ? "sel" : ""}" data-modo="${k}">${n}</button>`).join("")}</div>
+    <div class="filtros"><input type="date" id="at-ini" value="${AT.ini}"><span style="color:var(--mute)">até</span><input type="date" id="at-fim" value="${AT.fim}">
+      <select id="at-atalho"><option value="">Atalhos…</option><option value="sem">Última semana</option><option value="mes">Último mês com dados</option><option value="90">Últimos 90 dias</option><option value="tudo">Tudo</option></select></div>
+    <div class="chips" id="at-dows">${[3, 4, 5, 6, 0, 1, 2].map(w => `<button class="${AT.dows.includes(w) ? "sel" : ""}" data-dow="${w}">${DIAS[w]}</button>`).join("")}</div>
+  </div>
+  <div class="grade kpis" style="margin-top:14px">
+    <div class="card kpi"><div class="rot">Cachês</div><div class="val">${brl0(tot.cache)}</div><div class="det">${pct(tot.cache / (tot.fat || 1))} do faturamento</div></div>
+    <div class="card kpi"><div class="rot">Faturamento</div><div class="val">${brl0(tot.fat)}</div><div class="det">${noites.length} noites</div></div>
+    <div class="card kpi"><div class="rot">Entradas</div><div class="val">${brl0(tot.entV)}</div><div class="det">${nfmt(tot.entQ)} pagantes · cobre ${pct(tot.entV / (tot.cache || 1))} dos cachês</div></div>
+    <div class="card kpi destaque"><div class="rot">Faturamento − cachês</div><div class="val">${brl0(tot.fat - tot.cache)}</div><div class="det">antes de CMV e equipe</div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>${AT.modo === "semana" ? "Semana a semana" : "Noite a noite"}</h3><div class="sub">Barras: faturamento, cachê e entrada</div><div class="graf alto"><canvas id="g-at"></canvas></div></div>
+  <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><h3>Detalhe</h3><div class="sub">Entrada = produtos marcados como entrada no Epoc</div></div><button class="btn sec peq" id="cfg-ent">Quais produtos são entrada?</button></div>
+    <div class="rolagem" style="max-height:560px"><table><thead><tr><th>${AT.modo === "semana" ? "Semana" : "Noite"}</th><th>Atração</th><th class="n">Cachê</th><th class="n">Faturamento</th><th class="n">Cachê % fat.</th><th class="n">Entrada</th><th class="n">Entrada cobre</th><th class="n">Fat. − cachê</th>${AT.modo === "noite" ? `<th class="n">vs média do dia</th>` : ""}</tr></thead><tbody>
+    ${linhas.map(l => `<tr><td>${nomeLinha(l)}</td><td>${atrs(l)}</td><td class="n">${l.cache ? brl0(l.cache) : "—"}</td><td class="n">${brl0(l.fat)}</td><td class="n">${l.cache && l.fat ? `<span class="tag ${l.cache / l.fat > .2 ? "ruim" : l.cache / l.fat < .1 ? "bom" : "ok"}">${pct(l.cache / l.fat)}</span>` : "—"}</td>
+      <td class="n">${l.entV ? brl0(l.entV) + `<small class="sub2">${nfmt(l.entQ)} pag.</small>` : "—"}</td><td class="n">${l.cache ? pct(l.entV / l.cache) : "—"}</td><td class="n"><b>${brl0(l.res)}</b></td>
+      ${AT.modo === "noite" ? `<td class="n">${l.desv != null ? `<span class="tag ${l.desv > .1 ? "bom" : l.desv < -.1 ? "ruim" : ""}">${l.desv >= 0 ? "+" : ""}${pct(l.desv)}</span>` : "—"}</td>` : ""}</tr>`).join("") || `<tr><td colspan="9" class="vazio">Nada no período</td></tr>`}
+    </tbody><tfoot><tr><td colspan="2"><b>Total</b></td><td class="n"><b>${brl0(tot.cache)}</b></td><td class="n"><b>${brl0(tot.fat)}</b></td><td class="n">${pct(tot.cache / (tot.fat || 1))}</td><td class="n"><b>${brl0(tot.entV)}</b></td><td class="n">${pct(tot.entV / (tot.cache || 1))}</td><td class="n"><b>${brl0(tot.fat - tot.cache)}</b></td>${AT.modo === "noite" ? "<td></td>" : ""}</tr></tfoot></table></div></div>
+  <div class="card" style="margin-top:14px"><h3>Quais atrações valem o cachê</h3><div class="sub">No período e dias escolhidos · comparado com a média do mesmo dia da semana</div>
+    <div class="rolagem"><table><thead><tr><th>Atração</th><th class="n">Noites</th><th class="n">Cachê total</th><th class="n">Faturamento das noites</th><th class="n">Entradas</th><th class="n">vs média do dia</th><th class="n">R$ faturado por R$ 1 de cachê</th></tr></thead><tbody>
+    ${rank.map(r => `<tr><td>${esc(r.nome)}</td><td class="n">${r.n}</td><td class="n">${brl0(r.cache)}</td><td class="n">${brl0(r.fat)}</td><td class="n">${r.ent ? brl0(r.ent) : "—"}</td><td class="n">${r.desvMed != null ? `<span class="tag ${r.desvMed > .1 ? "bom" : r.desvMed < -.1 ? "ruim" : ""}">${r.desvMed >= 0 ? "+" : ""}${pct(r.desvMed)}</span>` : "—"}</td><td class="n">${r.cache ? nfmt(r.fat / r.cache, 1) : "—"}</td></tr>`).join("") || `<tr><td colspan="7" class="vazio">Sem cachês no período</td></tr>`}
+    </tbody></table></div><p class="dica">Quando duas atrações tocam na mesma noite (ex.: banda + DJ), o faturamento da noite conta para as duas.</p></div>`;
+
+  const lbl = AT.modo === "semana" ? sl.map(s => br(s.ini).slice(0, 5)) : noites.map(n => DIAS[dow(n.d)] + " " + br(n.d).slice(0, 5));
+  grafico($("#g-at"), { type: "bar", data: { labels: lbl, datasets: [
+    { label: "Faturamento", data: linhas.map(l => l.fat), backgroundColor: "#f2a63b", borderRadius: 4 },
+    { label: "Cachê", data: linhas.map(l => l.cache), backgroundColor: "#e8607a", borderRadius: 4 },
+    { label: "Entrada", data: linhas.map(l => l.entV), backgroundColor: "#4fc3b0", borderRadius: 4 }] },
+    options: { maintainAspectRatio: false, scales: { y: { ticks: { callback: v => brl0(v) } } } } });
+  const ir = () => abaAtracoes();
+  document.querySelectorAll("[data-modo]").forEach(b => b.onclick = () => { AT.modo = b.dataset.modo; ir(); });
+  document.querySelectorAll("[data-dow]").forEach(b => b.onclick = () => { const w = +b.dataset.dow; AT.dows = AT.dows.includes(w) ? AT.dows.filter(x => x !== w) : [...AT.dows, w]; ir(); });
+  $("#at-ini").onchange = e => { AT.ini = e.target.value; ir(); };
+  $("#at-fim").onchange = e => { AT.fim = e.target.value; ir(); };
+  $("#at-atalho").onchange = e => { const v = e.target.value, mx = p?.max || diaOperacionalHoje();
+    if (v === "sem") { AT.ini = semanaDe(mx); AT.fim = addDias(AT.ini, 4); }
+    if (v === "mes") { AT.ini = mx.slice(0, 8) + "01"; AT.fim = mx; }
+    if (v === "90") { AT.ini = addDias(mx, -89); AT.fim = mx; }
+    if (v === "tudo") { AT.ini = p?.min || mx; AT.fim = mx; }
+    ir(); };
+  $("#cfg-ent").onclick = () => {
+    const d = $("#dlg");
+    d.innerHTML = `<h3>Quais produtos contam como entrada?</h3><input id="ent-busca" placeholder="Buscar produto…" style="margin:8px 0">
+      <div class="rolagem" style="max-height:340px">${(prods || []).map(x => `<label class="linha-check" data-n="${esc(x.nome.toLowerCase())}"><input type="checkbox" value="${x.codigo}" ${codEntrada.includes(x.codigo) ? "checked" : ""}> ${esc(x.nome)} <small style="color:var(--mute)">${esc(x.grupo || "")} · ${x.codigo}</small></label>`).join("")}</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn sec" id="ent-c">Cancelar</button><button class="btn" id="ent-ok">Salvar</button></div>`;
+    d.showModal();
+    $("#ent-busca").oninput = e => { const t = e.target.value.toLowerCase(); d.querySelectorAll(".linha-check").forEach(l => l.style.display = l.dataset.n.includes(t) ? "" : "none"); };
+    $("#ent-c").onclick = () => d.close();
+    $("#ent-ok").onclick = async () => { const cods = [...d.querySelectorAll("input[type=checkbox]:checked")].map(i => i.value);
+      await sb.from("config").upsert({ chave: "entrada", valor: { codigos: cods } }); d.close(); ir(); };
+  };
+}
+
+// ============ ABA: NOTAS E BOLETOS (foto pelo celular + fluxo de pagamento) ============
+const NT = { filtro: "a conferir" };
+const CATEGORIAS = ["Bebidas", "Alimentos", "Descartáveis", "Limpeza", "Gás", "Manutenção", "Serviços", "Outros"];
+async function reduzirImagem(file) {
+  if (!file.type.startsWith("image/") || file.type === "image/heic") return file;
+  const img = await createImageBitmap(file).catch(() => null); if (!img) return file;
+  const max = 1800, k = Math.min(1, max / Math.max(img.width, img.height));
+  const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return await new Promise(ok => c.toBlob(b => ok(b || file), "image/jpeg", 0.82));
+}
+async function enviarFoto(file, prefixo) {
+  const blob = await reduzirImagem(file);
+  const ext = blob.type === "application/pdf" ? "pdf" : blob.type === "image/jpeg" ? "jpg" : (file.name.split(".").pop() || "jpg");
+  const caminho = `${new Date().toISOString().slice(0, 7)}/${prefixo}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+  const { error } = await sb.storage.from("notas").upload(caminho, blob, { contentType: blob.type || file.type });
+  if (error) throw error;
+  return caminho;
+}
+async function verArquivo(caminho) {
+  const { data, error } = await sb.storage.from("notas").createSignedUrl(caminho, 600);
+  if (error) return;
+  const d = $("#dlg");
+  d.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b>Anexo</b><div><a class="btn sec peq" href="${data.signedUrl}" target="_blank" rel="noopener">Abrir em tela cheia</a> <button class="btn sec peq" id="ver-f">Fechar</button></div></div>
+    ${/\.pdf$/i.test(caminho) ? `<p>Arquivo PDF — use “Abrir em tela cheia”.</p>` : `<img src="${data.signedUrl}" style="max-width:100%;border-radius:10px">`}`;
+  d.style.width = "min(760px,94vw)"; d.showModal(); $("#ver-f").onclick = () => { d.close(); d.style.width = ""; };
+}
+function formNota(aoSalvar) {
+  const d = $("#dlg");
+  d.innerHTML = `<h3>Lançar nota ou boleto</h3>
+  <form id="f-nota">
+    <div class="fotos">
+      <label class="foto-btn" id="lb-nota"><input type="file" accept="image/*,application/pdf" capture="environment" name="foto_nota" hidden><span>📷</span><b>Foto da nota</b><small>toque para fotografar</small></label>
+      <label class="foto-btn" id="lb-boleto"><input type="file" accept="image/*,application/pdf" capture="environment" name="foto_boleto" hidden><span>🧾</span><b>Foto do boleto</b><small>opcional</small></label>
+    </div>
+    <label>Fornecedor</label><input name="fornecedor" list="lista-forn" required placeholder="ex.: Ambev, Atacadão…" autocomplete="off"><datalist id="lista-forn"></datalist>
+    <div class="linha-form"><div><label>Valor (R$)</label><input name="valor" inputmode="decimal" required placeholder="0,00"></div><div><label>Vencimento</label><input name="vencimento" type="date"></div></div>
+    <label>Categoria</label><div class="chips" id="cat-chips">${CATEGORIAS.map(c => `<button type="button" data-cat="${c}">${c}</button>`).join("")}</div>
+    <div class="linha-form"><div><label>Nº da nota</label><input name="numero" placeholder="opcional"></div><div><label>Código de barras</label><input name="codigo_barras" inputmode="numeric" placeholder="opcional"></div></div>
+    <label>Observação</label><input name="observacao" placeholder="opcional">
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn sec" type="button" id="nt-c">Cancelar</button><button class="btn" id="nt-ok">Enviar</button></div>
+    <div id="nt-msg"></div></form>`;
+  d.showModal();
+  sb.from("notas").select("fornecedor").limit(500).then(({ data }) => { $("#lista-forn").innerHTML = [...new Set((data || []).map(x => x.fornecedor))].map(f => `<option value="${esc(f)}">`).join(""); });
+  let categoria = null;
+  $("#cat-chips").onclick = e => { const b = e.target.closest("button"); if (!b) return; categoria = b.dataset.cat; $("#cat-chips").querySelectorAll("button").forEach(x => x.classList.toggle("sel", x === b)); };
+  ["nota", "boleto"].forEach(k => { const lb = $("#lb-" + k), inp = lb.querySelector("input");
+    inp.onchange = () => { const f = inp.files[0]; if (!f) return; lb.classList.add("ok");
+      lb.querySelector("small").textContent = f.name.length > 22 ? f.name.slice(0, 20) + "…" : f.name;
+      if (f.type.startsWith("image/")) { const u = URL.createObjectURL(f); lb.style.backgroundImage = `linear-gradient(rgba(20,16,18,.55),rgba(20,16,18,.85)),url(${u})`; } }; });
+  $("#nt-c").onclick = () => d.close();
+  $("#f-nota").onsubmit = async e => {
+    e.preventDefault(); const f = new FormData(e.target), b = $("#nt-ok"); b.disabled = true; b.textContent = "Enviando…";
+    try {
+      const fn = f.get("foto_nota"), fb = f.get("foto_boleto");
+      if (!fn?.size && !fb?.size) throw new Error("Tire a foto da nota ou do boleto.");
+      const reg = { fornecedor: f.get("fornecedor").trim(), valor: numBR(f.get("valor")), vencimento: f.get("vencimento") || null, categoria,
+        numero: f.get("numero").trim() || null, codigo_barras: f.get("codigo_barras").replace(/\D/g, "") || null, observacao: f.get("observacao").trim() || null };
+      if (fn?.size) reg.foto_nota = await enviarFoto(fn, "nota");
+      if (fb?.size) reg.foto_boleto = await enviarFoto(fb, "boleto");
+      const { error } = await sb.from("notas").insert(reg); if (error) throw error;
+      d.close(); aoSalvar && aoSalvar();
+    } catch (err) { $("#nt-msg").innerHTML = `<div class="msg erro">${esc(err.message || err)}</div>`; b.disabled = false; b.textContent = "Enviar"; }
+  };
+}
+async function abaNotas() {
+  const gest = gestor();
+  const { data: notas, error } = await sb.from("notas").select("*").order("vencimento", { ascending: true, nullsFirst: false }).order("criado_em", { ascending: false }).limit(1000);
+  if (error) throw error;
+  const hoje = diaOperacionalHoje(), em7 = addDias(hoje, 7);
+  const abertas = notas.filter(n => n.status !== "pago");
+  const soma = a => a.reduce((s, n) => s + (+n.valor || 0), 0);
+  const atrasadas = abertas.filter(n => n.vencimento && n.vencimento < hoje), semana = abertas.filter(n => n.vencimento && n.vencimento >= hoje && n.vencimento <= em7);
+  const lista = !gest ? notas : NT.filtro === "atrasadas" ? atrasadas : NT.filtro === "7dias" ? semana : notas.filter(n => n.status === NT.filtro);
+  const conta = k => k === "atrasadas" ? atrasadas.length : k === "7dias" ? semana.length : notas.filter(n => n.status === k).length;
+  const venc = n => !n.vencimento ? "—" : `${br(n.vencimento)}${n.status !== "pago" && n.vencimento < hoje ? ` <span class="tag ruim">atrasada</span>` : n.status !== "pago" && n.vencimento === hoje ? ` <span class="tag ok">hoje</span>` : ""}`;
+  $("#conteudo").innerHTML = `
+  <div class="cab-sec"><div><h2>Notas e boletos</h2><p>${gest ? "A equipe fotografa e envia; você confere e marca o pagamento" : "Fotografe a nota e o boleto assim que a mercadoria chegar"}</p></div>
+    <button class="btn" id="nova-nota">📷 Lançar nota ou boleto</button></div>
+  ${gest ? `<div class="grade kpis">
+    <div class="card kpi"><div class="rot">A conferir</div><div class="val">${conta("a conferir")}</div><div class="det">${brl0(soma(notas.filter(n => n.status === "a conferir")))}</div></div>
+    <div class="card kpi ${atrasadas.length ? "destaque" : ""}"><div class="rot">Atrasadas</div><div class="val">${brl0(soma(atrasadas))}</div><div class="det">${atrasadas.length} boleto(s)</div></div>
+    <div class="card kpi"><div class="rot">Vencem em 7 dias</div><div class="val">${brl0(soma(semana))}</div><div class="det">${semana.length} boleto(s)</div></div>
+    <div class="card kpi"><div class="rot">Total em aberto</div><div class="val">${brl0(soma(abertas))}</div><div class="det">${abertas.length} nota(s)</div></div></div>` : ""}
+  <div class="card" style="margin-top:14px">
+    ${gest ? `<div class="segmentos">${[["a conferir", "A conferir"], ["a pagar", "A pagar"], ["atrasadas", "Atrasadas"], ["7dias", "Próximos 7 dias"], ["pago", "Pagas"]].map(([k, n]) => `<button class="${NT.filtro === k ? "sel" : ""}" data-f="${k}">${n} <small>${conta(k)}</small></button>`).join("")}</div>` : `<h3>Enviadas por você</h3>`}
+    <div class="rolagem" style="max-height:none"><table class="pag"><thead><tr><th>Vencimento</th><th>Fornecedor</th><th class="n">Valor</th><th>Categoria</th><th>Anexos</th><th>Situação</th>${gest ? "<th></th>" : ""}</tr></thead><tbody>
+    ${lista.map(n => `<tr><td>${venc(n)}</td><td><b>${esc(n.fornecedor)}</b><small class="sub2">${n.numero ? "NF " + esc(n.numero) + " · " : ""}enviada ${new Date(n.criado_em).toLocaleDateString("pt-BR")}${n.observacao ? " · " + esc(n.observacao) : ""}</small></td>
+      <td class="n"><b>${n.valor != null ? brl(n.valor) : "—"}</b></td><td>${n.categoria ? `<span class="tag">${esc(n.categoria)}</span>` : ""}</td>
+      <td style="white-space:nowrap">${n.foto_nota ? `<button class="btn sec peq" data-ver="${esc(n.foto_nota)}">Nota</button> ` : ""}${n.foto_boleto ? `<button class="btn sec peq" data-ver="${esc(n.foto_boleto)}">Boleto</button>` : ""}${n.codigo_barras ? ` <button class="btn sec peq" data-cod="${esc(n.codigo_barras)}">Cód. barras</button>` : ""}</td>
+      <td><span class="tag ${n.status === "pago" ? "bom" : n.status === "a pagar" ? "ok" : ""}">${n.status}${n.status === "pago" && n.pago_em ? " " + br(n.pago_em).slice(0, 5) : ""}</span></td>
+      ${gest ? `<td style="white-space:nowrap">${n.status === "a conferir" ? `<button class="btn peq" data-conf="${n.id}">Conferir ✓</button> ` : ""}${n.status === "a pagar" ? `<button class="btn peq" data-pg="${n.id}">Marcar paga</button> ` : ""}${n.status === "pago" ? `<button class="btn sec peq" data-volta="${n.id}">Desfazer</button> ` : ""}<button class="x" data-del="${n.id}" title="Apagar">×</button></td>` : ""}</tr>`).join("") || `<tr><td colspan="7" class="vazio">Nada aqui</td></tr>`}
+    </tbody><tfoot><tr><td colspan="2"><b>Total</b></td><td class="n"><b>${brl(soma(lista))}</b></td><td colspan="4"></td></tr></tfoot></table></div></div>`;
+  const ir = () => abaNotas();
+  $("#nova-nota").onclick = () => formNota(() => { NT.filtro = "a conferir"; ir(); });
+  document.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { NT.filtro = b.dataset.f; ir(); });
+  document.querySelectorAll("[data-ver]").forEach(b => b.onclick = () => verArquivo(b.dataset.ver));
+  document.querySelectorAll("[data-cod]").forEach(b => b.onclick = () => copiar(b.dataset.cod, b));
+  document.querySelectorAll("[data-conf]").forEach(b => b.onclick = async () => { await sb.from("notas").update({ status: "a pagar", conferido_por: S.user.id, conferido_em: new Date().toISOString() }).eq("id", b.dataset.conf); ir(); });
+  document.querySelectorAll("[data-volta]").forEach(b => b.onclick = async () => { await sb.from("notas").update({ status: "a pagar", pago_em: null }).eq("id", b.dataset.volta); ir(); });
+  document.querySelectorAll("[data-pg]").forEach(b => b.onclick = () => {
+    const d = $("#dlg");
+    d.innerHTML = `<h3>Marcar como paga</h3><form id="f-pg"><div class="linha-form"><div><label>Data do pagamento</label><input type="date" name="pago_em" value="${iso(new Date())}"></div>
+      <div><label>Forma</label><select name="forma"><option>Pix</option><option>Boleto</option><option>Transferência</option><option>Dinheiro</option><option>Cartão</option></select></div></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn sec" type="button" id="pg-c">Cancelar</button><button class="btn">Confirmar</button></div></form>`;
+    d.showModal(); $("#pg-c").onclick = () => d.close();
+    $("#f-pg").onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target);
+      await sb.from("notas").update({ status: "pago", pago_em: f.get("pago_em"), forma: f.get("forma"), pago_por: S.user.id }).eq("id", b.dataset.pg); d.close(); ir(); };
+  });
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+    const d = $("#dlg"); d.innerHTML = `<h3>Apagar esta nota?</h3><p style="color:var(--mute)">Não dá para desfazer.</p><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn sec" id="c-n">Cancelar</button><button class="btn perigo" id="c-s">Apagar</button></div>`;
+    d.showModal(); $("#c-n").onclick = () => d.close();
+    $("#c-s").onclick = async () => { const n = notas.find(x => x.id == b.dataset.del); const arqs = [n.foto_nota, n.foto_boleto].filter(Boolean);
+      if (arqs.length) await sb.storage.from("notas").remove(arqs); await sb.from("notas").delete().eq("id", n.id); d.close(); ir(); };
   });
 }
 
@@ -1160,6 +1713,7 @@ async function enviar(tipo, r, nome) {
 const ORIGEM_EPOC = "https://cloud.epoc.com.br";
 function abaReceber() {
   document.querySelectorAll("#abas button").forEach(b => b.classList.remove("ativa"));
+  $("#trilha").innerHTML = "Configurações / <b>Importar do Epoc</b>";
   $("#conteudo").innerHTML = `<div class="cab-sec"><div><h2>Importar do Epoc</h2><p>Dados enviados pela aba do Epoc em que você está logada</p></div></div>
     <div class="card"><div id="rec-status" class="sub">Aguardando os dados do Epoc…</div><div id="rec-lista"></div>
     <button class="btn largo hidden" id="rec-ok">Importar tudo</button><div id="rec-msg"></div></div>`;
