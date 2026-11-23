@@ -2487,6 +2487,12 @@ function previaWhatsGeral({ titulo, sub, rotulo, texto, telefone, aoEnviar }) {
 const RQ = { faixa: "2a3", regiao: "todos", soFone: true, pendentes: true, minVis: 0 };
 const RQ_FAIXAS = { "2mais": [60, 730, "2 meses ou mais"], "2a3": [60, 90, "2 a 3 meses"], "3a6": [90, 180, "3 a 6 meses"], "6a12": [180, 365, "6 meses a 1 ano"] };
 const RQ_PADRAO = "Oi {nome}! Aqui é o Vezpa 🐝🧡 Faz um tempinho que você não aparece e a colmeia tá sentindo sua falta! Essa semana tem programação nova, samba, sofrência e aquela energia boa que você conhece. Vem matar a saudade com a gente, chama as amigas e cola! Te esperamos de braços abertos. 🏳️‍🌈";
+const RQ_NIVEIS = [
+  { k: "casa", min: 10, nome: "Vezpa de carteirinha", ico: "👑", padrao: "Oi {nome}! Você já é Vezpa de carteirinha 🐝👑 Foram {visitas} noites com a gente e o balcão tá estranhando sua ausência! Bora voltar pra casa? Essa semana tem programação nova e a gente quer você lá. Chama as amigas e vem! 🧡🏳️‍🌈" },
+  { k: "fiel", min: 5, nome: "Da colmeia", ico: "🐝", padrao: "Oi {nome}! A colmeia sente falta de quem é de casa 🐝🧡 Você já veio {visitas} vezes e faz um tempinho que não aparece… Essa semana tem programação nova, samba e sofrência do jeitinho que você gosta. Vem matar a saudade! 🏳️‍🌈" },
+  { k: "conhecida", min: 3, nome: "Já conhece o caminho", ico: "🧡", padrao: "Oi {nome}! Aqui é o Vezpa 🐝 Você já sabe o caminho, né? Faz um tempinho que não te vemos por aqui e tá fazendo falta! Essa semana tem programação nova, chama as amigas e cola com a gente! 🧡🏳️‍🌈" },
+  { k: "geral", min: 0, nome: "Passou por aqui", ico: "👋", padrao: null }];
+const nivelRQ = c => RQ_NIVEIS.find(n => (c.visitas || 0) >= n.min);
 const RQ_FORA = "Oi {nome}! Aqui é o Vezpa 🐝🧡 Passando só pra dizer que a gente sente sua falta por aqui! Quando vier pra São Paulo, já sabe: a casa é sua. Um abraço apertado e muita energia boa pra você! 🏳️‍🌈";
 async function abaReconquista() {
   const F = RQ_FAIXAS[RQ.faixa];
@@ -2497,7 +2503,9 @@ async function abaReconquista() {
   const C = { mensagem: RQ_PADRAO, mensagem_fora: RQ_FORA, ...(cfg?.valor || {}) };
   const primeiroNome = n => { const p = (n || "").trim().split(/\s+/)[0]; return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase(); };
   const local = c => ["sp", "sem"].includes(regiaoFone(c.telefone));
-  const msg = c => (local(c) ? C.mensagem : C.mensagem_fora).replaceAll("{nome}", primeiroNome(c.nome));
+  C.niveis = { ...Object.fromEntries(RQ_NIVEIS.filter(n => n.padrao).map(n => [n.k, n.padrao])), ...(C.niveis || {}) };
+  const textoNivel = c => { const n = nivelRQ(c); return !local(c) ? C.mensagem_fora : n.k === "geral" ? C.mensagem : C.niveis[n.k]; };
+  const msg = c => textoNivel(c).replaceAll("{nome}", primeiroNome(c.nome)).replaceAll("{visitas}", c.visitas || "");
   const fone = t => t ? `(${t.slice(0, 2)}) ${t.slice(2, -4)}-${t.slice(-4)}` : "";
   const hoje = diaOperacionalHoje(), dias = d => Math.round((new Date(hoje) - new Date(d)) / 864e5);
   let lista = R.lista || [];
@@ -2515,9 +2523,9 @@ async function abaReconquista() {
     <div class="card kpi"><div class="rot">Convites enviados</div><div class="val">${nfmt(R.enviados)}</div><div class="det">nessa faixa</div></div>
     <div class="card kpi"><div class="rot">Voltaram</div><div class="val">${nfmt(R.voltaram)}</div><div class="det">marque na lista quando vierem</div></div>
   </div>
-  <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><h3>Mensagens atuais</h3><div class="sub">O painel escolhe pelo DDD (exemplo com o nome Juliana)</div></div></div>
+  <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><h3>Mensagens atuais</h3><div class="sub">O painel escolhe pelo DDD e pela frequência da cliente (exemplo com o nome Juliana)</div></div></div>
     <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:12px">
-      <div><div class="rot-wa">📍 São Paulo capital (DDD 11)</div><div class="wa-tela"><div class="wa-bolha">${esc(C.mensagem.replaceAll("{nome}", "Juliana")).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
+      ${RQ_NIVEIS.map(n => `<div><div class="rot-wa">📍 SP capital · ${n.ico} ${n.nome} ${n.min ? `(${n.min}+ visitas)` : "(1–2 visitas)"}</div><div class="wa-tela"><div class="wa-bolha">${esc((n.k === "geral" ? C.mensagem : C.niveis[n.k]).replaceAll("{nome}", "Juliana").replaceAll("{visitas}", n.min || 1)).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>`).join("")}
       <div><div class="rot-wa">✈️ Interior e outros estados</div><div class="wa-tela"><div class="wa-bolha">${esc(C.mensagem_fora.replaceAll("{nome}", "Juliana")).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
     </div></div>
   <div class="card" style="margin-top:14px">
@@ -2528,7 +2536,7 @@ async function abaReconquista() {
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="rq-pend" style="width:auto" ${RQ.pendentes ? "checked" : ""}> Esconder quem já recebeu nos últimos 30 dias</label>
     </div>
     <div class="rolagem" style="max-height:640px"><table class="pag"><thead><tr><th>Cliente</th><th>Telefone</th><th>Última visita</th><th class="n">Visitas</th><th>Convite</th><th>Voltou?</th></tr></thead><tbody>
-    ${lista.slice(0, 400).map(c => `<tr><td><b>${esc(c.nome || c.codigo)}</b></td><td>${fone(c.telefone)} ${regiaoFone(c.telefone) === "fora" ? `<span class="tag bom">${UF_DDD[+c.telefone.slice(0, 2)]}</span>` : regiaoFone(c.telefone) === "interior" ? `<span class="tag">Interior SP</span>` : ""}</td>
+    ${lista.slice(0, 400).map(c => `<tr><td><b>${esc(c.nome || c.codigo)}</b>${c.visitas ? `<small class="sub2">${nivelRQ(c).ico} ${nivelRQ(c).nome}</small>` : ""}</td><td>${fone(c.telefone)} ${regiaoFone(c.telefone) === "fora" ? `<span class="tag bom">${UF_DDD[+c.telefone.slice(0, 2)]}</span>` : regiaoFone(c.telefone) === "interior" ? `<span class="tag">Interior SP</span>` : ""}</td>
       <td>${br(c.ultima)}<small class="sub2">há ${dias(c.ultima)} dias</small></td><td class="n">${c.visitas || "—"}</td>
       <td style="white-space:nowrap">${c.telefone && !c.nao_contatar ? `<button class="btn ${c.enviado_em ? "sec" : ""} peq" data-rqw="${c.codigo}">${c.enviado_em ? "Enviar de novo" : "WhatsApp"}</button>` : ""}${c.enviado_em ? `<small class="sub2">enviado ${new Date(c.enviado_em).toLocaleDateString("pt-BR")}</small>` : ""}</td>
       <td>${c.enviado_em ? `<button class="status ${c.veio ? "pago" : ""}" data-rqv="${c.codigo}">${c.veio ? "Voltou ✓" : "Ainda não"}</button>` : ""}</td></tr>`).join("") || `<tr><td colspan="6" class="vazio">Ninguém nessa faixa</td></tr>`}
@@ -2544,27 +2552,29 @@ async function abaReconquista() {
   document.querySelectorAll("[data-rqmv]").forEach(b => b.onclick = () => { RQ.minVis = +b.dataset.rqmv; ir(); });
   document.querySelectorAll("[data-rqw]").forEach(b => b.onclick = () => { const c = porCod[b.dataset.rqw];
     previaWhatsGeral({ titulo: "Prévia do convite", sub: `Para <b>${esc(c.nome)}</b> · ${fone(c.telefone)} · última visita ${br(c.ultima)} (há ${dias(c.ultima)} dias)${c.visitas ? ` · ${c.visitas} visitas` : ""}`,
-      rotulo: local(c) ? "📍 Mensagem de São Paulo capital" : "✈️ Mensagem para interior / outros estados", texto: msg(c), telefone: c.telefone,
+      rotulo: local(c) ? `📍 SP capital · ${nivelRQ(c).ico} ${nivelRQ(c).nome}` : "✈️ Mensagem para interior / outros estados", texto: msg(c), telefone: c.telefone,
       aoEnviar: async () => { await sb.from("reconquista_envios").insert({ cliente_codigo: c.codigo }); setTimeout(ir, 600); } }); });
   document.querySelectorAll("[data-rqv]").forEach(b => b.onclick = async () => { const c = porCod[b.dataset.rqv];
     const { data: ult } = await sb.from("reconquista_envios").select("id").eq("cliente_codigo", c.codigo).order("enviado_em", { ascending: false }).limit(1);
     if (ult?.[0]) await sb.from("reconquista_envios").update({ veio: !c.veio }).eq("id", ult[0].id); ir(); });
   $("#rq-msg").onclick = () => {
-    const d = $("#dlg"); let tipo = "local";
+    const d = $("#dlg"); let tipo = "casa";
     d.innerHTML = `<h3>Mensagens de “sentimos sua falta”</h3><form id="f-rq">
-      <div class="segmentos" id="rq-tipo" style="margin:0 0 12px"><button type="button" class="sel" data-t="local">📍 SP capital (DDD 11)</button><button type="button" data-t="fora">✈️ Interior e outros estados</button></div>
-      <div data-bloco="local"><label>Mensagem para SP capital</label><textarea name="mensagem" rows="6">${esc(C.mensagem)}</textarea></div>
+      <div class="segmentos" id="rq-tipo" style="margin:0 0 12px;flex-wrap:wrap">${RQ_NIVEIS.filter(n => n.padrao).map((n, i) => `<button type="button" class="${i ? "" : "sel"}" data-t="${n.k}">${n.ico} ${n.nome}</button>`).join("")}<button type="button" data-t="local">👋 Passou por aqui</button><button type="button" data-t="fora">✈️ Outros estados</button></div>
+      ${RQ_NIVEIS.filter(n => n.padrao).map((n, i) => `<div data-bloco="${n.k}" class="${i ? "hidden" : ""}"><label>${n.ico} ${n.nome} · SP capital, ${n.min}+ visitas</label><textarea name="n_${n.k}" rows="6">${esc(C.niveis[n.k])}</textarea></div>`).join("")}
+      <div data-bloco="local" class="hidden"><label>👋 Passou por aqui · SP capital, 1–2 visitas</label><textarea name="mensagem" rows="6">${esc(C.mensagem)}</textarea></div>
       <div data-bloco="fora" class="hidden"><label>Mensagem para interior e outros estados</label><textarea name="mensagem_fora" rows="6">${esc(C.mensagem_fora)}</textarea></div>
-      <p class="dica">Use {nome} para o primeiro nome. Dica: cite a programação da semana para dar um motivo concreto para voltar.</p>
+      <p class="dica">Use {nome} para o primeiro nome e {visitas} para o número de visitas. Dica: cite a programação da semana para dar um motivo concreto para voltar.</p>
       <label>Prévia</label><div class="wa-tela"><div class="wa-bolha" id="rq-prev"></div></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn sec" type="button" id="rq-pad">Voltar ao padrão</button><button class="btn sec" type="button" id="rq-c">Cancelar</button><button class="btn">Salvar</button></div></form>`;
     d.showModal();
-    const prev = () => { const f = new FormData($("#f-rq")); $("#rq-prev").innerHTML = esc(f.get(tipo === "local" ? "mensagem" : "mensagem_fora").replaceAll("{nome}", "Juliana")).replace(/\n/g, "<br>") + `<span class="wa-hora">12:00 ✓✓</span>`; };
+    const campo = () => tipo === "local" ? "mensagem" : tipo === "fora" ? "mensagem_fora" : "n_" + tipo;
+    const prev = () => { const f = new FormData($("#f-rq")); $("#rq-prev").innerHTML = esc(f.get(campo()).replaceAll("{nome}", "Juliana").replaceAll("{visitas}", (RQ_NIVEIS.find(n => n.k === tipo) || {}).min || 2)).replace(/\n/g, "<br>") + `<span class="wa-hora">12:00 ✓✓</span>`; };
     $("#rq-tipo").onclick = e => { const b = e.target.closest("button"); if (!b) return; tipo = b.dataset.t; $("#rq-tipo").querySelectorAll("button").forEach(x => x.classList.toggle("sel", x === b)); d.querySelectorAll("[data-bloco]").forEach(x => x.classList.toggle("hidden", x.dataset.bloco !== tipo)); prev(); };
     $("#f-rq").oninput = prev; prev(); $("#rq-c").onclick = () => d.close();
-    $("#rq-pad").onclick = () => { $("#f-rq").mensagem.value = RQ_PADRAO; $("#f-rq").mensagem_fora.value = RQ_FORA; prev(); };
+    $("#rq-pad").onclick = () => { const f = $("#f-rq"); f.mensagem.value = RQ_PADRAO; f.mensagem_fora.value = RQ_FORA; RQ_NIVEIS.filter(n => n.padrao).forEach(n => f["n_" + n.k].value = n.padrao); prev(); };
     $("#f-rq").onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target);
-      await sb.from("config").upsert({ chave: "reconquista", valor: { mensagem: f.get("mensagem"), mensagem_fora: f.get("mensagem_fora") } }); d.close(); ir(); };
+      await sb.from("config").upsert({ chave: "reconquista", valor: { mensagem: f.get("mensagem"), mensagem_fora: f.get("mensagem_fora"), niveis: Object.fromEntries(RQ_NIVEIS.filter(n => n.padrao).map(n => [n.k, f.get("n_" + n.k)])) } }); d.close(); ir(); };
   };
 }
 
