@@ -2484,14 +2484,14 @@ function previaWhatsGeral({ titulo, sub, rotulo, texto, telefone, aoEnviar }) {
 }
 
 // ============ ABA: SENTIMOS SUA FALTA (reconquista) ============
-const RQ = { faixa: "2a3", regiao: "todos", soFone: true, pendentes: true };
-const RQ_FAIXAS = { "2a3": [60, 90, "2 a 3 meses"], "3a6": [90, 180, "3 a 6 meses"], "6a12": [180, 365, "6 meses a 1 ano"] };
+const RQ = { faixa: "2a3", regiao: "todos", soFone: true, pendentes: true, minVis: 0 };
+const RQ_FAIXAS = { "2mais": [60, 730, "2 meses ou mais"], "2a3": [60, 90, "2 a 3 meses"], "3a6": [90, 180, "3 a 6 meses"], "6a12": [180, 365, "6 meses a 1 ano"] };
 const RQ_PADRAO = "Oi {nome}! Aqui é o Vezpa 🐝🧡 Faz um tempinho que você não aparece e a colmeia tá sentindo sua falta! Essa semana tem programação nova, samba, sofrência e aquela energia boa que você conhece. Vem matar a saudade com a gente, chama as amigas e cola! Te esperamos de braços abertos. 🏳️‍🌈";
 const RQ_FORA = "Oi {nome}! Aqui é o Vezpa 🐝🧡 Passando só pra dizer que a gente sente sua falta por aqui! Quando vier pra São Paulo, já sabe: a casa é sua. Um abraço apertado e muita energia boa pra você! 🏳️‍🌈";
 async function abaReconquista() {
   const F = RQ_FAIXAS[RQ.faixa];
   const [{ data: R, error }, { data: cfg }] = await Promise.all([
-    sb.rpc("reconquista_lista", { p_min_dias: F[0], p_max_dias: F[1], p_lim: 600 }),
+    sb.rpc("reconquista_lista", { p_min_dias: F[0], p_max_dias: F[1], p_lim: 600, p_min_vis: RQ.minVis }),
     sb.from("config").select("valor").eq("chave", "reconquista").maybeSingle()]);
   if (error) throw error;
   const C = { mensagem: RQ_PADRAO, mensagem_fora: RQ_FORA, ...(cfg?.valor || {}) };
@@ -2510,7 +2510,7 @@ async function abaReconquista() {
   <div class="cab-sec"><div><h2>Sentimos sua falta</h2><p>Clientes que não voltam há um tempo · mande um convite carinhoso pelo WhatsApp</p></div>
     <div class="filtros"><button class="btn sec" id="rq-msg">✎ Mensagens</button></div></div>
   <div class="grade kpis">
-    <div class="card kpi destaque"><div class="rot">Sem vir há ${F[2]}</div><div class="val">${nfmt(R.total)}</div><div class="det">${nfmt(R.com_fone)} com telefone</div></div>
+    <div class="card kpi destaque"><div class="rot">Sem vir há ${F[2]}${RQ.minVis ? ` · ${RQ.minVis}+ visitas` : ""}</div><div class="val">${nfmt(R.total)}</div><div class="det">${nfmt(R.com_fone)} com telefone</div></div>
     <div class="card kpi"><div class="rot">Na lista agora</div><div class="val">${nfmt(lista.length)}</div><div class="det">ordenadas por quem mais vinha</div></div>
     <div class="card kpi"><div class="rot">Convites enviados</div><div class="val">${nfmt(R.enviados)}</div><div class="det">nessa faixa</div></div>
     <div class="card kpi"><div class="rot">Voltaram</div><div class="val">${nfmt(R.voltaram)}</div><div class="det">marque na lista quando vierem</div></div>
@@ -2524,6 +2524,7 @@ async function abaReconquista() {
     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <div class="segmentos" style="margin:0">${Object.entries(RQ_FAIXAS).map(([k, f]) => `<button class="${RQ.faixa === k ? "sel" : ""}" data-rqf="${k}">${f[2]}</button>`).join("")}</div>
       <div class="segmentos" style="margin:0">${[["todos", "Todos"], ["sp", "SP capital"], ["interior", "Interior SP"], ["fora", "Outros estados"]].map(([k, n]) => `<button class="${RQ.regiao === k ? "sel" : ""}" data-rqr="${k}">${n} <small>${cont[k]}</small></button>`).join("")}</div>
+      <div class="segmentos" style="margin:0">${[[0, "Qualquer frequência"], [3, "Vieram 3+ vezes"], [5, "5+ vezes"], [10, "10+ vezes"]].map(([k, n]) => `<button class="${RQ.minVis === k ? "sel" : ""}" data-rqmv="${k}">${n}</button>`).join("")}</div>
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="rq-pend" style="width:auto" ${RQ.pendentes ? "checked" : ""}> Esconder quem já recebeu nos últimos 30 dias</label>
     </div>
     <div class="rolagem" style="max-height:640px"><table class="pag"><thead><tr><th>Cliente</th><th>Telefone</th><th>Última visita</th><th class="n">Visitas</th><th>Convite</th><th>Voltou?</th></tr></thead><tbody>
@@ -2533,12 +2534,14 @@ async function abaReconquista() {
       <td>${c.enviado_em ? `<button class="status ${c.veio ? "pago" : ""}" data-rqv="${c.codigo}">${c.veio ? "Voltou ✓" : "Ainda não"}</button>` : ""}</td></tr>`).join("") || `<tr><td colspan="6" class="vazio">Ninguém nessa faixa</td></tr>`}
     </tbody></table></div>
     ${lista.length > 400 ? `<p class="dica">Mostrando as 400 que mais vinham, de ${nfmt(lista.length)}.</p>` : ""}
+    ${RQ.minVis && !R.tem_visitas ? `<div class="aviso" style="margin-top:10px">O número de visitas por cliente ainda não foi importado (relatório Fidelidade do Epoc). Assim que entrar, este filtro passa a funcionar.</div>` : ""}
     <p class="dica">A última visita usa o cadastro do Epoc e as visitas importadas do relatório Fidelidade. Quem pediu para não receber mensagens (🚫 em Aniversariantes) não aparece aqui.</p>
   </div>`;
   const ir = () => abaReconquista();
   document.querySelectorAll("[data-rqf]").forEach(b => b.onclick = () => { RQ.faixa = b.dataset.rqf; ir(); });
   document.querySelectorAll("[data-rqr]").forEach(b => b.onclick = () => { RQ.regiao = b.dataset.rqr; ir(); });
   $("#rq-pend").onchange = e => { RQ.pendentes = e.target.checked; ir(); };
+  document.querySelectorAll("[data-rqmv]").forEach(b => b.onclick = () => { RQ.minVis = +b.dataset.rqmv; ir(); });
   document.querySelectorAll("[data-rqw]").forEach(b => b.onclick = () => { const c = porCod[b.dataset.rqw];
     previaWhatsGeral({ titulo: "Prévia do convite", sub: `Para <b>${esc(c.nome)}</b> · ${fone(c.telefone)} · última visita ${br(c.ultima)} (há ${dias(c.ultima)} dias)${c.visitas ? ` · ${c.visitas} visitas` : ""}`,
       rotulo: local(c) ? "📍 Mensagem de São Paulo capital" : "✈️ Mensagem para interior / outros estados", texto: msg(c), telefone: c.telefone,
