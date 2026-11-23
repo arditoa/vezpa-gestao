@@ -1184,7 +1184,8 @@ function abaReceber() {
       b.textContent = "Importado ✔"; S.periodo = null;
     } catch (err) { $("#rec-msg").innerHTML = `<div class="msg erro">Erro: ${esc(err.message || err)}</div>`; b.disabled = false; b.textContent = "Tentar de novo"; }
   };
-  if (window.opener) try { window.opener.postMessage({ tipo: "vezpa-pronto" }, ORIGEM_EPOC); } catch (_) {}
+  const quemAbriu = window.opener || (window.parent !== window ? window.parent : null);
+  if (quemAbriu) try { quemAbriu.postMessage({ tipo: "vezpa-pronto" }, ORIGEM_EPOC); } catch (_) {}
 }
 
 // ============ ABA: USUÁRIOS ============
