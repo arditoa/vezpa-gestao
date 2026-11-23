@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vezpa Gestão</title>
+<link rel="icon" href="logo.jpg"><link rel="apple-touch-icon" href="logo.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -46,6 +47,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--amber)}
 /* app: menu lateral agrupado */
 #app{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:100vh}
 #menu{position:sticky;top:0;height:100vh;overflow-y:auto;background:#100c0e;border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 14px}
+.logo-img{width:40px;height:40px;border-radius:50%;flex:none;display:block;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
 .marca2{display:flex;align-items:center;gap:11px;margin:2px 6px 16px}
 .logo-hex{width:34px;height:34px;flex:none}
 .marca2 b{display:block;font-size:17px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
@@ -235,7 +237,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
 <!-- LOGIN -->
 <section id="tela-login" class="hidden">
   <div class="cartao-login">
-    <div class="marca2" style="margin:0 0 26px"><svg class="logo-hex" style="width:44px;height:44px" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2.5 35.2 11.25v17.5L20 37.5 4.8 28.75v-17.5z" fill="#f2a63b"/><path d="M13 13.5h3.6L20 23.2l3.4-9.7H27l-5.4 14h-3.2z" fill="#1a1208"/></svg><div><b style="font-size:22px">Vezpa</b><span>Gestão · acesso interno</span></div></div>
+    <div class="marca2" style="margin:0 0 26px"><img class="logo-img" src="logo.jpg" alt="Vezpa" style="width:64px;height:64px"><div><b style="font-size:22px">Vezpa</b><span>Gestão · acesso interno</span></div></div>
 
     <form id="form-login">
       <label for="email">E-mail</label>
@@ -261,7 +263,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
 <!-- APP -->
 <div id="app" class="hidden">
   <aside id="menu">
-    <div class="marca2"><svg class="logo-hex" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2.5 35.2 11.25v17.5L20 37.5 4.8 28.75v-17.5z" fill="#f2a63b"/><path d="M13 13.5h3.6L20 23.2l3.4-9.7H27l-5.4 14h-3.2z" fill="#1a1208"/></svg><div><b>Vezpa</b><span>Gestão</span></div></div>
+    <div class="marca2"><img class="logo-img" src="logo.jpg" alt="Vezpa"><div><b>Vezpa</b><span>Gestão</span></div></div>
     <div class="painel-dia" id="painel-dia"><div class="pd-linha"><span class="pd-data" id="pd-data"></span><span class="pd-temp" id="pd-temp"></span></div>
       <div class="pd-noite" id="pd-noite">Carregando previsão…</div><div class="pd-prox" id="pd-prox"></div><div class="pd-atr" id="pd-atr"></div></div>
     <nav id="abas"></nav>
