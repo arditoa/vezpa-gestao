@@ -390,6 +390,7 @@ const ICONE = {
   cadastros: '<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M8 17c1-2 2.5-3 4-3s3 1 4 3"/>',
   importar: '<path d="M12 3v12M7 10l5 5 5-5M4 21h16"/>',
   notas: '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M10 12h6M10 16h6"/>',
+  aniversarios: '<path d="M4 21h16M5 21v-7h14v7M12 14V9M12 6.5c-1-.8-1-2.2 0-3 1 .8 1 2.2 0 3z"/><path d="M5 14c1.2 1.2 2.8 1.2 4 0 1.2 1.2 2.8 1.2 4 0 1.2 1.2 2.8 1.2 4 0 .8.8 1.4 1 2 1"/>',
   usuarios: '<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/>',
 };
 const ABAS = [
@@ -403,6 +404,7 @@ const ABAS = [
   { id: "pedido", nome: "Pedido sugerido", grupo: "Operação", papeis: ["dona", "gerente"], fn: abaPedido },
   { id: "pagamentos", nome: "Pagamentos da semana", grupo: "Financeiro", papeis: ["dona", "gerente", "caixa"], fn: abaPagamentos },
   { id: "notas", nome: "Notas e boletos", grupo: "Financeiro", papeis: ["dona", "gerente", "caixa"], fn: abaNotas },
+  { id: "aniversarios", nome: "Aniversariantes", grupo: "Clientes", papeis: ["dona", "gerente"], fn: abaAniversarios },
   { id: "cadastros", nome: "Freelas e bandas", grupo: "Configurações", papeis: ["dona", "gerente"], fn: abaCadastros },
   { id: "importar", nome: "Importar dados", grupo: "Configurações", papeis: ["dona", "gerente"], fn: abaImportar },
   { id: "usuarios", nome: "Usuários", grupo: "Configurações", papeis: ["dona"], fn: abaUsuarios },
@@ -1949,6 +1951,97 @@ async function resultadoPedido({ hoje, baseIni, baseFim, diasFat, cfg, cq, noite
   };
 }
 
+// ============ ABA: ANIVERSARIANTES ============
+const AN = { filtro: "semana" };
+const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+async function abaAniversarios() {
+  const hoje = diaOperacionalHoje(), [ay, am] = hoje.split("-").map(Number);
+  AN.mes ??= am;
+  // janela de datas (dia/mês) conforme o filtro
+  const dias = [];
+  if (AN.filtro === "hoje") dias.push(hoje);
+  if (AN.filtro === "semana") for (let i = 0; i < 7; i++) dias.push(addDias(hoje, i));
+  const meses = AN.filtro === "mes" ? [AN.mes] : [...new Set(dias.map(d => +d.slice(5, 7)))];
+  const [lista, { data: cfg }, { data: envios }, { count: totalCli }] = await Promise.all([
+    todos(() => sb.from("clientes").select("codigo,nome,nasc_dia,nasc_mes,nasc_ano,telefone,ultima_visita,nao_contatar").in("nasc_mes", meses).order("nasc_mes").order("nasc_dia").order("nome")),
+    sb.from("config").select("valor").eq("chave", "aniversario").maybeSingle(),
+    sb.from("aniversario_envios").select("cliente_codigo,enviado_em,veio").eq("ano", ay),
+    sb.from("clientes").select("codigo", { count: "exact", head: true }),
+  ]);
+  const C2 = { mensagem: "Oi {nome}! 🎉 Feliz aniversário!", presente: "um drink de cortesia", ...(cfg?.valor || {}) };
+  const env = Object.fromEntries((envios || []).map(e => [e.cliente_codigo, e]));
+  const chave = d => +d.slice(5, 7) * 100 + +d.slice(8, 10);
+  const alvo = new Set(dias.map(chave));
+  let itens = lista.filter(c => c.nasc_dia && (AN.filtro === "mes" || alvo.has(c.nasc_mes * 100 + c.nasc_dia)));
+  if (AN.busca) itens = itens.filter(c => c.nome.toLowerCase().includes(AN.busca.toLowerCase()));
+  if (AN.soFone) itens = itens.filter(c => c.telefone && !c.nao_contatar);
+  if (AN.pendentes) itens = itens.filter(c => !env[c.codigo]);
+  // ordena pela proximidade do aniversário a partir de hoje
+  const hojeK = am * 100 + +hoje.slice(8, 10);
+  itens.sort((a, b) => ((a.nasc_mes * 100 + a.nasc_dia - hojeK + 1300) % 1300) - ((b.nasc_mes * 100 + b.nasc_dia - hojeK + 1300) % 1300));
+  const primeiroNome = n => { const p = n.trim().split(/\s+/)[0]; return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase(); };
+  const msg = c => C2.mensagem.replaceAll("{nome}", primeiroNome(c.nome)).replaceAll("{presente}", C2.presente);
+  const fone = t => t ? (t.length === 11 ? `(${t.slice(0, 2)}) ${t.slice(2, 7)}-${t.slice(7)}` : t.length === 10 ? `(${t.slice(0, 2)}) ${t.slice(2, 6)}-${t.slice(6)}` : t) : "";
+  const idade = c => c.nasc_ano && c.nasc_ano > 1900 ? (ay + (c.nasc_mes * 100 + c.nasc_dia < hojeK && AN.filtro === "semana" ? 1 : 0)) - c.nasc_ano : null;
+  const quando = c => { const k = c.nasc_mes * 100 + c.nasc_dia; return k === hojeK ? `<span class="tag ok">hoje 🎂</span>` : ""; };
+  const enviados = itens.filter(c => env[c.codigo]).length;
+  const nHoje = lista.filter(c => c.nasc_mes * 100 + c.nasc_dia === hojeK).length;
+
+  $("#conteudo").innerHTML = `
+  <div class="cab-sec"><div><h2>Aniversariantes</h2><p>Mande parabéns pelo WhatsApp e convide para comemorar no Vezpa</p></div>
+    <div class="filtros"><button class="btn sec" id="an-msg">✎ Mensagem e presente</button></div></div>
+  ${!totalCli ? `<div class="aviso">Nenhum cliente no sistema ainda. Importe o cadastro de clientes do Epoc em <a href="#importar" onclick="abrir('importar');return false">Importar dados</a>.</div>` : ""}
+  <div class="grade kpis">
+    <div class="card kpi destaque"><div class="rot">Hoje</div><div class="val">${nHoje}</div><div class="det">aniversariantes</div></div>
+    <div class="card kpi"><div class="rot">Na lista</div><div class="val">${nfmt(itens.length)}</div><div class="det">${AN.filtro === "mes" ? MESES[AN.mes - 1] : AN.filtro === "hoje" ? "hoje" : "próximos 7 dias"}</div></div>
+    <div class="card kpi"><div class="rot">Mensagens enviadas</div><div class="val">${enviados}</div><div class="det">${itens.length ? pct(enviados / itens.length) + " da lista" : ""}</div></div>
+    <div class="card kpi"><div class="rot">Vieram comemorar</div><div class="val">${(envios || []).filter(e => e.veio).length}</div><div class="det">em ${ay} · marque na lista</div></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+      <div class="segmentos" style="margin:0">${[["hoje", "Hoje"], ["semana", "Próximos 7 dias"], ["mes", "Mês"]].map(([k, n]) => `<button class="${AN.filtro === k ? "sel" : ""}" data-anf="${k}">${n}</button>`).join("")}</div>
+      ${AN.filtro === "mes" ? `<select id="an-mes" style="width:auto">${MESES.map((m, i) => `<option value="${i + 1}" ${i + 1 === AN.mes ? "selected" : ""}>${m}</option>`).join("")}</select>` : ""}
+      <input id="an-busca" placeholder="Buscar nome…" value="${esc(AN.busca || "")}" style="max-width:220px">
+      <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-fone" style="width:auto" ${AN.soFone ? "checked" : ""}> Só com telefone</label>
+      <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-pend" style="width:auto" ${AN.pendentes ? "checked" : ""}> Só quem falta mandar</label>
+    </div>
+    <div class="rolagem" style="max-height:640px"><table class="pag"><thead><tr><th>Aniversário</th><th>Cliente</th><th>Telefone</th><th>Última visita</th><th>Mensagem</th><th>Veio?</th></tr></thead><tbody>
+    ${itens.slice(0, 600).map(c => { const e = env[c.codigo], id = idade(c);
+      return `<tr><td><b>${String(c.nasc_dia).padStart(2, "0")}/${String(c.nasc_mes).padStart(2, "0")}</b> ${quando(c)}${id ? `<small class="sub2">faz ${id} anos</small>` : ""}</td>
+      <td><b>${esc(c.nome)}</b> <button class="x" style="font-size:13px" data-nc="${c.codigo}" title="${c.nao_contatar ? "Liberar contato" : "Marcar: não quer receber mensagens"}">${c.nao_contatar ? "↺" : "🚫"}</button>${c.nao_contatar ? `<small class="sub2">não quer contato</small>` : ""}</td><td>${fone(c.telefone) || "<span class='tag'>sem telefone</span>"}</td>
+      <td>${c.ultima_visita ? br(c.ultima_visita) : "—"}</td>
+      <td style="white-space:nowrap">${c.telefone && !c.nao_contatar ? `<a class="btn ${e ? "sec" : ""} peq" target="_blank" rel="noopener" data-wa="${c.codigo}" href="https://wa.me/55${c.telefone}?text=${encodeURIComponent(msg(c))}">${e ? "Enviar de novo" : "WhatsApp"}</a>` : ""} <button class="btn sec peq" data-copmsg="${c.codigo}">Copiar texto</button>${e ? `<small class="sub2">enviado ${new Date(e.enviado_em).toLocaleDateString("pt-BR")}</small>` : ""}</td>
+      <td>${e ? `<button class="status ${e.veio ? "pago" : ""}" data-veio="${c.codigo}">${e.veio ? "Veio ✓" : "Ainda não"}</button>` : ""}</td></tr>`; }).join("") || `<tr><td colspan="6" class="vazio">Ninguém nesse filtro</td></tr>`}
+    </tbody></table></div>
+    ${itens.length > 600 ? `<p class="dica">Mostrando os 600 primeiros de ${nfmt(itens.length)} — use a busca ou “Só quem falta mandar”.</p>` : ""}
+    <p class="dica">O botão WhatsApp abre a conversa com a mensagem pronta; você confere e envia. Mande só para quem deixou o telefone para contato e respeite quem pedir para não receber: toque em 🚫 ao lado do nome.</p>
+  </div>`;
+  const porCod = Object.fromEntries(itens.map(c => [c.codigo, c]));
+  const ir = () => abaAniversarios();
+  document.querySelectorAll("[data-anf]").forEach(b => b.onclick = () => { AN.filtro = b.dataset.anf; ir(); });
+  if ($("#an-mes")) $("#an-mes").onchange = e => { AN.mes = +e.target.value; ir(); };
+  let tb; $("#an-busca").oninput = e => { clearTimeout(tb); tb = setTimeout(() => { AN.busca = e.target.value; ir(); }, 350); };
+  $("#an-fone").onchange = e => { AN.soFone = e.target.checked; ir(); };
+  $("#an-pend").onchange = e => { AN.pendentes = e.target.checked; ir(); };
+  document.querySelectorAll("[data-wa]").forEach(a => a.addEventListener("click", () => { sb.from("aniversario_envios").upsert({ cliente_codigo: a.dataset.wa, ano: ay, enviado_em: new Date().toISOString() }, { onConflict: "cliente_codigo,ano" }).then(() => setTimeout(ir, 800)); }));
+  document.querySelectorAll("[data-nc]").forEach(b => b.onclick = async () => { const c = porCod[b.dataset.nc]; await sb.from("clientes").update({ nao_contatar: !c.nao_contatar }).eq("codigo", c.codigo); ir(); });
+  document.querySelectorAll("[data-copmsg]").forEach(b => b.onclick = () => copiar(msg(porCod[b.dataset.copmsg]), b));
+  document.querySelectorAll("[data-veio]").forEach(b => b.onclick = async () => { const e = env[b.dataset.veio]; await sb.from("aniversario_envios").update({ veio: !e.veio }).eq("cliente_codigo", b.dataset.veio).eq("ano", ay); ir(); });
+  $("#an-msg").onclick = () => {
+    const d = $("#dlg");
+    d.innerHTML = `<h3>Mensagem de aniversário</h3><form id="f-an"><label>Presente / convite</label><input name="presente" value="${esc(C2.presente)}" placeholder="ex.: um drink de cortesia">
+      <label>Mensagem</label><textarea name="mensagem" rows="6">${esc(C2.mensagem)}</textarea>
+      <p class="dica">Use {nome} para o primeiro nome e {presente} para o presente.</p>
+      <div class="msg" id="an-prev" style="white-space:pre-wrap"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn sec" type="button" id="an-c">Cancelar</button><button class="btn">Salvar</button></div></form>`;
+    d.showModal();
+    const prev = () => { const f = new FormData($("#f-an")); $("#an-prev").textContent = "Prévia: " + f.get("mensagem").replaceAll("{nome}", "Juliana").replaceAll("{presente}", f.get("presente")); };
+    $("#f-an").oninput = prev; prev(); $("#an-c").onclick = () => d.close();
+    $("#f-an").onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target);
+      await sb.from("config").upsert({ chave: "aniversario", valor: { mensagem: f.get("mensagem"), presente: f.get("presente") } }); d.close(); ir(); };
+  };
+}
+
 // ============ ABA: IMPORTAR ============
 function lerCSV(texto, sep) {
   const linhas = []; let campo = "", linha = [], aspas = false;
@@ -1976,12 +2069,13 @@ async function lerArquivo(f) {
 function detectar(texto) {
   const h = texto.slice(0, 300).toLowerCase();
   if (h.includes('"data";"hora"') || /^data;hora/.test(h)) return "hora";
+  if (h.includes("dt. de nasc") || /^"?codigo"?;"?nome"?;"?dia"?;"?mes"?/.test(h)) return "clientes";
   if (h.includes("total recebido") || (h.includes("codigo") && h.includes("grupo"))) return "produtos";
   if (h.includes("funcionario")) return "funcionario";
   if (/dias?\s*,/.test(h)) return "freelas";
   return "";
 }
-const TIPOS = { hora: "Venda de produtos por hora (Epoc)", produtos: "Relatório de venda de produtos — atualiza os grupos (Epoc)", funcionario: "Vendas por funcionário (Epoc)", freelas: "Pagamento de freelancers da semana" };
+const TIPOS = { clientes: "Cadastro de clientes (Epoc)", hora: "Venda de produtos por hora (Epoc)", produtos: "Relatório de venda de produtos — atualiza os grupos (Epoc)", funcionario: "Vendas por funcionário (Epoc)", freelas: "Pagamento de freelancers da semana" };
 
 async function abaImportar() {
   const { data: log } = await sb.from("importacoes").select("*").order("feito_em", { ascending: false }).limit(30);
@@ -2042,6 +2136,23 @@ function analisar(tipo, texto) {
     const total = itens.reduce((s, i) => s + i.valor, 0);
     return { itens, resumo: `${nfmt(itens.length)} lançamentos de ${br(datas[0])} a ${br(datas[datas.length - 1])} · total ${brl(total)}` };
   }
+  if (tipo === "clientes") {
+    const sep = (texto.split("\n")[0].match(/;/g) || []).length > (texto.split("\n")[0].match(/,/g) || []).length ? ";" : ",";
+    const todas = lerCSV(texto, sep); const cab = todas[0].map(c => c.toLowerCase());
+    const so = v => String(v || "").replace(/\D/g, "");
+    const data = v => { const m = String(v || "").match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? { d: +m[1], m: +m[2], a: +m[3] } : null; };
+    let itens;
+    if (cab[0] === "codigo") {
+      itens = todas.slice(1).filter(l => l[0]).map(l => ({ codigo: l[0], nome: l[1], dia: l[2], mes: l[3], ano: l[4], telefone: l[5], sexo: l[6], primeira: l[7], ultima: l[8] }));
+    } else { // exportação de clientes do Epoc (colunas deslocadas: cód, nome, reg, cpf, nascimento, cidade, uf, telefone, email, sexo, última visita)
+      itens = todas.slice(1).filter(l => /^\d+$/.test((l[0] || "").trim())).map(l => {
+        const n = data(l[4]), u = data(l[10]); const tel = so(l[7]);
+        return { codigo: l[0].trim(), nome: (l[1] || "").trim(), dia: n?.d ?? "", mes: n?.m ?? "", ano: n && n.a > 1900 ? n.a : "", telefone: tel.length >= 10 && !/^0+$/.test(tel) ? tel : "", sexo: l[9] || "", primeira: "", ultima: u ? `${u.a}-${String(u.m).padStart(2, "0")}-${String(u.d).padStart(2, "0")}` : "" };
+      });
+    }
+    if (!itens.length) throw new Error("Não encontrei clientes.");
+    return { itens, resumo: `${nfmt(itens.length)} clientes · ${nfmt(itens.filter(i => i.mes).length)} com aniversário · ${nfmt(itens.filter(i => i.telefone).length)} com telefone` };
+  }
   if (tipo === "produtos") {
     const ls = lerCSV(texto, ";").slice(1).filter(l => l.length >= 13 && /^\d+$/.test((l[0] || "").trim()));
     if (!ls.length) throw new Error("Não encontrei produtos com código e grupo.");
@@ -2077,6 +2188,8 @@ async function enviar(tipo, r, nome) {
         if (error) throw error; lote = [];
       }
     }
+  } else if (tipo === "clientes") {
+    for (let i = 0; i < r.itens.length; i += 2000) { const { error } = await sb.rpc("importar_clientes", { p_linhas: r.itens.slice(i, i + 2000) }); if (error) throw error; }
   } else if (tipo === "produtos") {
     const { error } = await sb.rpc("importar_produtos", { p_linhas: r.itens }); if (error) throw error;
   } else if (tipo === "funcionario") {
