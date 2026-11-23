@@ -2489,7 +2489,7 @@ async function enviar(tipo, r, nome) {
 // ============ RECEBER DO EPOC (ponte entre abas) ============
 // A aba do Epoc (logada) abre esta página e envia os CSVs por postMessage.
 // Só aceita mensagens vindas do Epoc e só importa depois do clique em "Importar".
-const ORIGEM_EPOC = "https://cloud.epoc.com.br";
+const ORIGENS_EPOC = ["https://cloud.epoc.com.br", "https://api.epoc.com.br"];
 function abaReceber() {
   document.querySelectorAll("#abas button").forEach(b => b.classList.remove("ativa"));
   $("#trilha").innerHTML = "Configurações / <b>Importar do Epoc</b>";
@@ -2498,7 +2498,7 @@ function abaReceber() {
     <button class="btn largo hidden" id="rec-ok">Importar tudo</button><div id="rec-msg"></div></div>`;
   let pacotes = [];
   window.addEventListener("message", e => {
-    if (e.origin !== ORIGEM_EPOC || e.data?.tipo !== "vezpa-import") return;
+    if (!ORIGENS_EPOC.includes(e.origin) || e.data?.tipo !== "vezpa-import") return;
     pacotes = (e.data.arquivos || []).map(a => {
       const tipo = a.tipoRel || detectar(a.texto);
       try { return { ...a, tipo, r: analisar(tipo, a.texto) }; } catch (err) { return { ...a, tipo, erro: err.message }; }
@@ -2506,7 +2506,7 @@ function abaReceber() {
     $("#rec-status").textContent = `${pacotes.length} relatório(s) recebido(s) do Epoc:`;
     $("#rec-lista").innerHTML = pacotes.map(p => `<div class="msg ${p.erro ? "erro" : "ok"}"><b>${esc(TIPOS[p.tipo] || p.nome)}</b><br>${p.erro ? esc(p.erro) : p.r.resumo}</div>`).join("");
     $("#rec-ok").classList.toggle("hidden", !pacotes.some(p => !p.erro));
-    e.source?.postMessage({ tipo: "vezpa-recebido", n: pacotes.length }, ORIGEM_EPOC);
+    e.source?.postMessage({ tipo: "vezpa-recebido", n: pacotes.length }, e.origin);
   });
   $("#rec-ok").onclick = async () => {
     const b = $("#rec-ok"); b.disabled = true; b.textContent = "Importando…";
@@ -2518,7 +2518,7 @@ function abaReceber() {
     } catch (err) { $("#rec-msg").innerHTML = `<div class="msg erro">Erro: ${esc(err.message || err)}</div>`; b.disabled = false; b.textContent = "Tentar de novo"; }
   };
   const quemAbriu = window.opener || (window.parent !== window ? window.parent : null);
-  if (quemAbriu) try { quemAbriu.postMessage({ tipo: "vezpa-pronto" }, ORIGEM_EPOC); } catch (_) {}
+  if (quemAbriu) ORIGENS_EPOC.forEach(o => { try { quemAbriu.postMessage({ tipo: "vezpa-pronto" }, o); } catch (_) {} });
 }
 
 // ============ ABA: USUÁRIOS ============
