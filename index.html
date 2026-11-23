@@ -2550,8 +2550,8 @@ const RQ = { faixa: "2a3", regiao: "todos", soFone: true, pendentes: true, minVi
 const RQ_FAIXAS = { "2mais": [60, 730, "2 meses ou mais"], "2a3": [60, 90, "2 a 3 meses"], "3a6": [90, 180, "3 a 6 meses"], "6a12": [180, 365, "6 meses a 1 ano"] };
 const RQ_PADRAO = "Oi {nome}! Aqui é o Vezpa 🐝🧡 Faz um tempinho que você não aparece e a colmeia tá sentindo sua falta! Essa semana tem programação nova, samba, sofrência e aquela energia boa que você conhece. Vem matar a saudade com a gente, chama as amigas e cola! Te esperamos de braços abertos. 🏳️‍🌈";
 const RQ_NIVEIS = [
-  { k: "casa", min: 10, nome: "Vezpa de carteirinha", ico: "👑", padrao: "Oi {nome}! Você já é Vezpa de carteirinha 🐝👑 Foram {visitas} noites com a gente e o balcão tá estranhando sua ausência! Bora voltar pra casa? Essa semana tem programação nova e a gente quer você lá. Chama as amigas e vem! 🧡🏳️‍🌈" },
-  { k: "fiel", min: 5, nome: "Da colmeia", ico: "🐝", padrao: "Oi {nome}! A colmeia sente falta de quem é de casa 🐝🧡 Você já veio {visitas} vezes e faz um tempinho que não aparece… Essa semana tem programação nova, samba e sofrência do jeitinho que você gosta. Vem matar a saudade! 🏳️‍🌈" },
+  { k: "casa", min: 10, nome: "Vezpa de carteirinha", ico: "👑", padrao: "Oi {nome}! Aqui é a Andrea, do Vezpa 🧡 Foram {visitas} noites com você por aqui e o balcão sente sua falta de verdade. Passei só pra saber: tá tudo bem? Se precisar de qualquer coisa ou só quiser conversar, tô aqui. E quando der vontade, a casa é sua. Beijo grande! 🐝" },
+  { k: "fiel", min: 5, nome: "Da colmeia", ico: "🐝", padrao: "Oi {nome}, tudo bem? Aqui é a Andrea, do Vezpa 🐝🧡 Faz um tempinho que não te vemos por aqui e bateu saudade, você é daquelas que fazem a casa ser casa! Passando só pra saber se tá tudo bem com você. Se quiser contar como andam as coisas (ou se teve algo que não curtiu na última vez), vou adorar ouvir. Um abraço apertado!" },
   { k: "conhecida", min: 3, nome: "Já conhece o caminho", ico: "🧡", padrao: "Oi {nome}! Aqui é o Vezpa 🐝 Você já sabe o caminho, né? Faz um tempinho que não te vemos por aqui e tá fazendo falta! Essa semana tem programação nova, chama as amigas e cola com a gente! 🧡🏳️‍🌈" },
   { k: "geral", min: 0, nome: "Passou por aqui", ico: "👋", padrao: null }];
 const nivelRQ = c => RQ_NIVEIS.find(n => (c.visitas || 0) >= n.min);
@@ -2566,7 +2566,8 @@ async function abaReconquista() {
   const primeiroNome = n => { const p = (n || "").trim().split(/\s+/)[0]; return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase(); };
   const local = c => ["sp", "sem"].includes(regiaoFone(c.telefone));
   C.niveis = { ...Object.fromEntries(RQ_NIVEIS.filter(n => n.padrao).map(n => [n.k, n.padrao])), ...(C.niveis || {}) };
-  const textoNivel = c => { const n = nivelRQ(c); return !local(c) ? C.mensagem_fora : n.k === "geral" ? C.mensagem : C.niveis[n.k]; };
+  // 5+ visitas: mensagem de cuidado ("tá tudo bem?") para qualquer DDD; abaixo disso, convite (SP) ou abraço (fora)
+  const textoNivel = c => { const n = nivelRQ(c); return ["casa", "fiel"].includes(n.k) ? C.niveis[n.k] : n.k === "conhecida" && local(c) ? C.niveis[n.k] : local(c) ? C.mensagem : C.mensagem_fora; };
   const msg = c => generoMsg(c, textoNivel(c).replaceAll("{nome}", primeiroNome(c.nome)).replaceAll("{visitas}", c.visitas || ""));
   const fone = t => t ? `(${t.slice(0, 2)}) ${t.slice(2, -4)}-${t.slice(-4)}` : "";
   const hoje = diaOperacionalHoje(), dias = d => Math.round((new Date(hoje) - new Date(d)) / 864e5);
@@ -2589,7 +2590,7 @@ async function abaReconquista() {
   </div>
   <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><h3>Mensagens atuais</h3><div class="sub">O painel escolhe pelo DDD e pela frequência da cliente (exemplo com o nome Juliana)</div></div></div>
     <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:12px">
-      ${RQ_NIVEIS.map(n => `<div><div class="rot-wa">📍 SP capital · ${n.ico} ${n.nome} ${n.min ? `(${n.min}+ visitas)` : "(1–2 visitas)"}</div><div class="wa-tela"><div class="wa-bolha">${esc((n.k === "geral" ? C.mensagem : C.niveis[n.k]).replaceAll("{nome}", "Juliana").replaceAll("{visitas}", n.min || 1)).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>`).join("")}
+      ${RQ_NIVEIS.map(n => `<div><div class="rot-wa">${["casa", "fiel"].includes(n.k) ? "💬 Qualquer DDD" : "📍 SP capital"} · ${n.ico} ${n.nome} ${n.min ? `(${n.min}+ visitas)` : "(1–2 visitas)"}</div><div class="wa-tela"><div class="wa-bolha">${esc((n.k === "geral" ? C.mensagem : C.niveis[n.k]).replaceAll("{nome}", "Juliana").replaceAll("{visitas}", n.min || 1)).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>`).join("")}
       <div><div class="rot-wa">✈️ Interior e outros estados</div><div class="wa-tela"><div class="wa-bolha">${esc(C.mensagem_fora.replaceAll("{nome}", "Juliana")).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
     </div></div>
   <div class="card" style="margin-top:14px">
@@ -2618,7 +2619,7 @@ async function abaReconquista() {
   document.querySelectorAll("[data-rqmv]").forEach(b => b.onclick = () => { RQ.minVis = +b.dataset.rqmv; ir(); });
   document.querySelectorAll("[data-rqw]").forEach(b => b.onclick = () => { const c = porCod[b.dataset.rqw];
     previaWhatsGeral({ titulo: "Prévia do convite", sub: `Para <b>${esc(c.nome)}</b> · ${fone(c.telefone)} · última visita ${br(c.ultima)} (há ${dias(c.ultima)} dias)${c.visitas ? ` · ${c.visitas} visitas` : ""}`,
-      rotulo: (ehHomem(c) ? "♂ No masculino (pelo nome) · " : "") + (local(c) ? `📍 SP capital · ${nivelRQ(c).ico} ${nivelRQ(c).nome}` : "✈️ Mensagem para interior / outros estados"), texto: msg(c), telefone: c.telefone,
+      rotulo: (ehHomem(c) ? "♂ No masculino (pelo nome) · " : "") + (["casa", "fiel"].includes(nivelRQ(c).k) ? `${nivelRQ(c).ico} ${nivelRQ(c).nome} · mensagem de cuidado (“tá tudo bem?”)` : local(c) ? `📍 SP capital · ${nivelRQ(c).ico} ${nivelRQ(c).nome}` : "✈️ Mensagem para interior / outros estados"), texto: msg(c), telefone: c.telefone,
       aoEnviar: async () => { await sb.from("reconquista_envios").insert({ cliente_codigo: c.codigo }); setTimeout(ir, 600); } }); });
   document.querySelectorAll("[data-rqv]").forEach(b => b.onclick = async () => { const c = porCod[b.dataset.rqv];
     const { data: ult } = await sb.from("reconquista_envios").select("id").eq("cliente_codigo", c.codigo).order("enviado_em", { ascending: false }).limit(1);
