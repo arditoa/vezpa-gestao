@@ -2336,7 +2336,7 @@ async function abaAniversarios() {
     sb.from("aniversario_envios").select("cliente_codigo,enviado_em,veio").eq("ano", ay),
     sb.from("clientes").select("codigo", { count: "exact", head: true }),
   ]);
-  const C2 = { mensagem: "Oi {nome}! 🎉 Feliz aniversário!", presente: "um drink de cortesia", mensagem_fora: MSG_FORA_PADRAO, ...(cfg?.valor || {}) };
+  const C2 = { mensagem: "Oi {nome}! 🎂 Hoje o dia é todo seu e a gente do Vezpa não podia deixar passar: feliz aniversário! 🐝🧡 Que esse novo ciclo venha cheio de amor, saúde, risada e gente boa por perto. E pra celebrar do jeito que você merece, no mês do seu aniversário você ganha {presente} aqui no Vezpa. Chama as amigas, a crush (ou as duas 👀) e vem colar velcro com a gente! É só mostrar esta mensagem. 🏳️‍🌈", presente: "um drink de cortesia", mensagem_fora: MSG_FORA_PADRAO, ...(cfg?.valor || {}) };
   C2.mensagem_fora ||= MSG_FORA_PADRAO;
   const env = Object.fromEntries((envios || []).map(e => [e.cliente_codigo, e]));
   const chave = d => +d.slice(5, 7) * 100 + +d.slice(8, 10);
@@ -2429,6 +2429,7 @@ async function abaAniversarios() {
   $("#an-msg").onclick = () => {
     const d = $("#dlg");
     const MODELOS = [
+      ["Caloroso", "Oi {nome}! 🎂 Hoje o dia é todo seu e a gente do Vezpa não podia deixar passar: feliz aniversário! 🐝🧡 Que esse novo ciclo venha cheio de amor, saúde, risada e gente boa por perto. E pra celebrar do jeito que você merece, no mês do seu aniversário você ganha {presente} aqui no Vezpa. Chama as amigas, a crush (ou as duas 👀) e vem colar velcro com a gente! É só mostrar esta mensagem. 🏳️‍🌈"],
       ["Colar velcro", "Oi {nome}! 🎂 Feliz aniversário! Aqui é o Vezpa 🐝 Tá na hora de colar velcro com a gente pra comemorar: no mês do seu aniversário você ganha {presente}. Chama as amigas, a crush (ou as duas 👀) e vem! É só mostrar esta mensagem. 🏳️‍🌈"],
       ["Pesado", "Parabéns, {nome}! 🎉 Aniversário de respeito pede comemoração pesada no Vezpa 🐝 No mês do seu aniversário, {presente} é por nossa conta. Traz o bonde e vem colar! Mostra esta mensagem na entrada. 💛"],
       ["Curta", "{nome}, feliz aniversário! 🐝 Vem colar velcro no Vezpa esse mês: {presente} é presente nosso. Te esperamos! 🏳️‍🌈"],
