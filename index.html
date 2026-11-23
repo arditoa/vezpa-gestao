@@ -2238,7 +2238,7 @@ async function rankingClientes() {
   const ops = RK.modo === "mes" ? meses.map(x => [x, MESES[+x.slice(5, 7) - 1] + " " + x.slice(0, 4)]) : RK.modo === "tri" ? tris.map(x => [x, `${x.slice(-1)}º tri ${x.slice(0, 4)}`]) : anos.map(x => [x, x]);
   const atual = RK.ref || ops[ops.length - 1]?.[0];
   const fone = t => t ? `(${t.slice(0, 2)}) ${t.slice(2, -4)}-${t.slice(-4)}` : "";
-  const wa = (c, txt) => c.telefone ? `<a class="btn sec peq" target="_blank" rel="noopener" href="https://wa.me/55${c.telefone}?text=${encodeURIComponent(txt.replace("{nome}", (c.nome || "").split(" ")[0]))}">WhatsApp</a>` : "";
+  const wa = (c, txt) => c.telefone ? `<a class="btn sec peq" target="_blank" rel="noopener" href="${esc(linkWhats(c.telefone, txt.replace("{nome}", (c.nome || "").split(" ")[0])))}">WhatsApp</a>` : "";
   const fr = R.freq || {};
   const linhaTop = (c, i) => `<tr><td class="n" style="color:var(--mute)">${i + 1}</td><td><b>${esc(c.nome || "cliente " + c.codigo)}</b><small class="sub2">${fone(c.telefone)}</small></td><td class="n"><b>${c.visitas}</b></td><td class="n">${c.visitas_total}</td><td>${br(c.ultima)}</td><td class="n">${c.maior_conta ? brl0(+c.maior_conta) : "—"}</td></tr>`;
   el.innerHTML = `
@@ -2434,7 +2434,7 @@ async function abaAniversarios() {
     $("#wa-c").onclick = () => d.close();
     $("#wa-cop").onclick = () => copiar(t.value, $("#wa-cop"));
     $("#wa-ok").onclick = () => {
-      window.open(`https://wa.me/55${c.telefone}?text=${encodeURIComponent(t.value)}`, "_blank", "noopener");
+      window.open(`${linkWhats(c.telefone, t.value)}`, "_blank", "noopener");
       sb.from("aniversario_envios").upsert({ cliente_codigo: c.codigo, ano: ay, enviado_em: new Date().toISOString() }, { onConflict: "cliente_codigo,ano" }).then(() => { d.close(); ir(); });
     };
   }
@@ -2481,6 +2481,9 @@ async function abaAniversarios() {
   };
 }
 
+// link do WhatsApp que preserva emojis: no computador vai direto ao WhatsApp Web (o wa.me estraga emojis no desktop); no celular abre o app
+const linkWhats = (tel, texto) => { const t = encodeURIComponent(texto), n = "55" + String(tel).replace(/\D/g, "");
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ? `https://api.whatsapp.com/send?phone=${n}&text=${t}` : `https://web.whatsapp.com/send?phone=${n}&text=${t}`; };
 // ============ Prévia de WhatsApp reutilizável ============
 function previaWhatsGeral({ titulo, sub, rotulo, texto, telefone, aoEnviar }) {
   const d = $("#dlg");
@@ -2493,7 +2496,7 @@ function previaWhatsGeral({ titulo, sub, rotulo, texto, telefone, aoEnviar }) {
   t.oninput = at; at();
   $("#wg-c").onclick = () => d.close();
   $("#wg-cop").onclick = () => copiar(t.value, $("#wg-cop"));
-  $("#wg-ok").onclick = async () => { window.open(`https://wa.me/55${telefone}?text=${encodeURIComponent(t.value)}`, "_blank", "noopener"); await aoEnviar?.(); d.close(); };
+  $("#wg-ok").onclick = async () => { window.open(linkWhats(telefone, t.value), "_blank", "noopener"); await aoEnviar?.(); d.close(); };
 }
 
 // ============ ABA: SENTIMOS SUA FALTA (reconquista) ============
