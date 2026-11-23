@@ -766,36 +766,43 @@ async function abaProdutos() {
 // ============ ABA: EQUIPE ============
 async function abaEquipe() {
   const p = await periodoPadrao(); if (!p) return semDados();
-  const [{ data: fr }, { data: vf }, dias] = await Promise.all([
-    sb.from("freelas").select("*").order("semana_inicio"),
-    sb.from("vendas_funcionario").select("*").order("valor", { ascending: false }),
-    todos(() => sb.from("vw_resumo_diario").select("dia,faturamento")),
+  let [{ data: fr }, { data: vf }, dias] = await Promise.all([
+    sb.from("freelas").select("*").gte("semana_inicio", addDias(p.ini, -6)).lte("semana_inicio", p.fim).order("semana_inicio"),
+    sb.from("vendas_funcionario").select("*").lte("periodo_inicio", p.fim).gte("periodo_fim", p.ini).order("valor", { ascending: false }),
+    todos(() => sb.from("vw_resumo_diario").select("dia,faturamento").gte("dia", addDias(p.ini, -6)).lte("dia", addDias(p.fim, 6))),
   ]);
   const semanas = {};
   (fr || []).forEach(f => { const s = semanas[f.semana_inicio] ??= { ini: f.semana_inicio, pessoas: 0, diarias: 0, custo: 0, temCusto: false, lista: [] }; s.pessoas++; s.diarias += +f.dias || 0; if (f.valor != null) { s.custo += +f.valor; s.temCusto = true; } s.lista.push(f); });
   const sl = Object.values(semanas).sort((a, b) => a.ini.localeCompare(b.ini));
   sl.forEach(s => { const fim = addDias(s.ini, 6); s.fat = dias.filter(d => d.dia >= s.ini && d.dia <= fim).reduce((t, d) => t + +d.faturamento, 0); s.noites = dias.filter(d => d.dia >= s.ini && d.dia <= fim).length; });
-  const ultima = sl[sl.length - 1];
+  // totais do período (semanas que começam dentro do período ou o cruzam)
+  const tot = sl.reduce((a, s) => ({ fat: a.fat + s.fat, diarias: a.diarias + s.diarias, noites: a.noites + s.noites, custo: a.custo + (s.temCusto ? s.custo : 0), fatComCusto: a.fatComCusto + (s.temCusto ? s.fat : 0), diariasComCusto: a.diariasComCusto + (s.temCusto ? s.diarias : 0) }), { fat: 0, diarias: 0, noites: 0, custo: 0, fatComCusto: 0, diariasComCusto: 0 });
+  const pessoasPeriodo = new Set((fr || []).map(f => (f.pessoa_id || f.nome.toLowerCase()))).size;
+  // vendas por funcionário: soma os relatórios que cruzam o período
+  const vfAg = {}; (vf || []).forEach(x => { const k = x.funcionario.toLowerCase(); const a = vfAg[k] ??= { funcionario: x.funcionario, qtd: 0, valor: 0, ini: x.periodo_inicio, fim: x.periodo_fim };
+    a.qtd += +x.qtd; a.valor += +x.valor; if (x.periodo_inicio < a.ini) a.ini = x.periodo_inicio; if (x.periodo_fim > a.fim) a.fim = x.periodo_fim; });
+  vf = Object.values(vfAg).sort((a, b) => b.valor - a.valor);
   const totVF = (vf || []).reduce((s, x) => s + +x.valor, 0);
   const custoMedioDiaria = sl.filter(s => s.temCusto).reduce((a, s) => a + s.custo, 0) / Math.max(1, sl.filter(s => s.temCusto).reduce((a, s) => a + s.diarias, 0));
 
   $("#conteudo").innerHTML = `
-  <div class="cab-sec"><div><h2>Equipe</h2><p>Freelas por semana e vendas por funcionário</p></div></div>
+  <div class="cab-sec"><div><h2>Equipe</h2><p>Freelas por semana e vendas por funcionário · ${br(p.ini)} a ${br(p.fim)}</p></div>${htmlFiltro(p)}</div>
   <div class="grade kpis">
-    <div class="card kpi destaque"><div class="rot">Faturamento por diária de freela</div><div class="val">${ultima ? brl0(ultima.fat / ultima.diarias) : "—"}</div><div class="det">semana de ${ultima ? br(ultima.ini) : ""} · quanto mais alto, mais enxuta a escala</div></div>
-    <div class="card kpi"><div class="rot">Diárias na última semana</div><div class="val">${ultima ? nfmt(ultima.diarias, 1) : "—"}</div><div class="det">${ultima?.pessoas || 0} pessoas · ${ultima?.noites || 0} noites</div></div>
-    <div class="card kpi"><div class="rot">Custo de freelas (última semana)</div><div class="val">${ultima?.temCusto ? brl0(ultima.custo) : "—"}</div><div class="det">${ultima?.temCusto ? pct(ultima.custo / ultima.fat) + " do faturamento da semana" : "sem valores informados"}</div></div>
-    <div class="card kpi"><div class="rot">Custo médio da diária</div><div class="val">${isFinite(custoMedioDiaria) && custoMedioDiaria ? brl0(custoMedioDiaria) : "—"}</div></div>
+    <div class="card kpi destaque"><div class="rot">Faturamento por diária de freela</div><div class="val">${tot.diarias ? brl0(tot.fat / tot.diarias) : "—"}</div><div class="det">no período · quanto mais alto, mais enxuta a escala</div></div>
+    <div class="card kpi"><div class="rot">Diárias no período</div><div class="val">${nfmt(tot.diarias, 1)}</div><div class="det">${pessoasPeriodo} pessoas · ${sl.length} ${sl.length === 1 ? "semana" : "semanas"} · ${tot.noites} noites</div></div>
+    <div class="card kpi"><div class="rot">Custo de freelas no período</div><div class="val">${tot.custo ? brl0(tot.custo) : "—"}</div><div class="det">${tot.custo ? pct(tot.custo / tot.fatComCusto) + " do faturamento" + (tot.fatComCusto < tot.fat ? " (semanas com valor lançado)" : "") : "sem valores lançados no período"}</div></div>
+    <div class="card kpi"><div class="rot">Custo médio da diária</div><div class="val">${tot.diariasComCusto ? brl0(tot.custo / tot.diariasComCusto) : "—"}</div></div>
   </div>
   <div class="grade dois" style="margin-top:14px">
     <div class="card"><h3>Faturamento × diárias de freela por semana</h3><div class="sub">Barras: faturamento · linha: diárias</div><div class="graf"><canvas id="g-sem"></canvas></div></div>
-    <div class="card"><h3>Vendas por funcionário</h3><div class="sub">${vf?.length ? "Período " + br(vf[0].periodo_inicio) + " a " + br(vf[0].periodo_fim) : "Sem relatório importado"}</div>
+    <div class="card"><h3>Vendas por funcionário</h3><div class="sub">${vf?.length ? "Relatórios de " + br(vf.reduce((m, x) => x.ini < m ? x.ini : m, vf[0].ini)) + " a " + br(vf.reduce((m, x) => x.fim > m ? x.fim : m, vf[0].fim)) : "Nenhum relatório de vendas por funcionário neste período"}</div>
       <div class="rolagem"><table><thead><tr><th>Funcionário</th><th class="n">Itens</th><th class="n">Média/item</th><th class="n">Total</th></tr></thead><tbody>${(vf || []).map(x => `<tr><td>${esc(x.funcionario)}<div class="barra-mini"><i style="width:${x.valor / (vf[0].valor || 1) * 100}%"></i></div></td><td class="n">${nfmt(x.qtd)}</td><td class="n">${brl(x.valor / x.qtd)}</td><td class="n">${brl0(x.valor)}</td></tr>`).join("")}</tbody></table></div></div>
   </div>
   <div class="card" style="margin-top:14px"><h3>Escala por semana</h3><div class="sub">Semanas começam na quarta</div>
     <div class="rolagem"><table><thead><tr><th>Semana</th><th class="n">Pessoas</th><th class="n">Diárias</th><th class="n">Custo</th><th class="n">Faturamento</th><th class="n">Fat./diária</th><th>Quem</th></tr></thead><tbody>
     ${sl.map(s => `<tr><td>${br(s.ini)}</td><td class="n">${s.pessoas}</td><td class="n">${nfmt(s.diarias, 1)}</td><td class="n">${s.temCusto ? brl0(s.custo) : "—"}</td><td class="n">${brl0(s.fat)}</td><td class="n">${s.diarias ? brl0(s.fat / s.diarias) : "—"}</td><td style="font-size:12.5px;color:var(--mute)">${s.lista.map(f => esc(f.nome) + (f.funcao ? " (" + esc(f.funcao) + ")" : "")).join(", ")}</td></tr>`).join("")}
     </tbody></table></div></div>`;
+  ligarFiltro();
   grafico($("#g-sem"), { type: "bar", data: { labels: sl.map(s => br(s.ini).slice(0, 5)), datasets: [
     { label: "Faturamento", data: sl.map(s => s.fat), backgroundColor: "#f2a63b", borderRadius: 6, yAxisID: "y" },
     { label: "Diárias", type: "line", data: sl.map(s => s.diarias), borderColor: "#4fc3b0", backgroundColor: "#4fc3b0", yAxisID: "y2", _fmt: "n", tension: .3 }] },
