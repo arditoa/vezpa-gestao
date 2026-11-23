@@ -1719,7 +1719,7 @@ async function abaAtracoes() {
   const entValor = codEntrada.length ? await todos(() => sb.from("vw_vendas_produto_dia").select("dia,produto,qtd,faturamento").in("produto", (prods || []).filter(x => codEntrada.includes(x.codigo)).map(x => x.nome))) : [];
   const entDia = {}; entValor.forEach(r => { const e = entDia[r.dia] ??= { q: 0, v: 0 }; e.q += +r.qtd; e.v += +r.faturamento; });
   // entrada cobrada como SERVIÇO no Epoc (ENTRADA, ENTRADA 15,00…), que não aparece na venda de produtos
-  const { data: entServ } = await sb.from("servicos_noite").select("dia,qtd,total").ilike("servico", "entrada%");
+  const { data: entServ } = await sb.from("servicos_noite").select("dia,qtd,total").or("servico.ilike.entrada*,servico.ilike.ingresso*");
   (entServ || []).forEach(r => { const e = entDia[r.dia] ??= { q: 0, v: 0 }; e.q += +r.qtd; e.v += +r.total; });
   if (!entValor.length) ent.forEach(r => { const e = entDia[r.dia] ??= { q: 0, v: 0 }; e.q += +r.qtd; });
   const fat = Object.fromEntries(dias.map(d => [d.dia, +d.faturamento]));
@@ -2776,7 +2776,7 @@ function analisar(tipo, texto) {
   }
   if (tipo === "servicos") {
     const itens = JSON.parse(texto); if (!itens.length) throw new Error("Nada recebido.");
-    const ds = [...new Set(itens.map(i => i.dia))].sort(), ent = itens.filter(i => /^entrada/i.test(i.servico));
+    const ds = [...new Set(itens.map(i => i.dia))].sort(), ent = itens.filter(i => /^(entrada|ingresso)/i.test(i.servico));
     return { itens, resumo: `${ds.length} noites (${br(ds[0])} a ${br(ds[ds.length - 1])}) · entradas: ${nfmt(ent.reduce((a, i) => a + i.qtd, 0))} pagantes, ${brl(ent.reduce((a, i) => a + i.total, 0))}` };
   }
   if (tipo === "visitas") {
