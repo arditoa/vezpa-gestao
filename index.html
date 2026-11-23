@@ -50,6 +50,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--amber)}
 .logo-img{width:40px;height:40px;border-radius:50%;flex:none;display:block;box-shadow:0 0 0 1px rgba(255,255,255,.08)}
 .wa-tela{background:#0b141a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='2' cy='2' r='1' fill='%23ffffff10'/%3E%3C/svg%3E");border-radius:12px;padding:16px 14px;display:flex}
 .wa-bolha{background:#005c4b;color:#e9edef;border-radius:10px 2px 10px 10px;padding:8px 10px 6px;max-width:92%;margin-left:auto;font:14px/1.45 -apple-system,"Segoe UI",Roboto,sans-serif;white-space:normal;word-wrap:break-word;box-shadow:0 1px 1px rgba(0,0,0,.25)}
+.rot-wa{font-size:12px;color:var(--mute);margin:0 0 6px}
 .wa-hora{display:block;text-align:right;font-size:11px;color:#8fbfb2;margin-top:3px}
 .marca2{display:flex;align-items:center;gap:11px;margin:2px 6px 16px}
 .logo-hex{width:34px;height:34px;flex:none}
@@ -955,6 +956,7 @@ async function abaCruzamentos() {
     todos(() => sb.from("vw_vendas_produto_dia").select("dia,grupo,faturamento").gte("dia", p.ini).lte("dia", p.fim)),
     sb.from("pagamentos_bandas").select("data,atracao,valor").gte("data", p.ini).lte("data", p.fim),
   ]);
+  const clima = await climaDias(p.ini, p.fim < diaOperacionalHoje() ? p.fim : diaOperacionalHoje());
   const info = Object.fromEntries((infos || []).map(i => [i.data, { ...i }]));
   (pags || []).forEach(pg => {
     const i = info[pg.data] ??= { data: pg.data };
@@ -969,7 +971,8 @@ async function abaCruzamentos() {
     const i = info[d.dia] || {}; const m = mediaDow(dow(d.dia)); const desvio = (d.faturamento - m) / m;
     return { ...d, i, m, desvio, liq: d.faturamento - (+i.cache_valor || 0), comida: (comida[d.dia] || 0) / d.faturamento };
   });
-  const comChuva = linhas.filter(l => l.i.chuva === true), semChuva = linhas.filter(l => l.i.chuva === false);
+  linhas.forEach(l => { const c = clima[l.dia]; l.cl = c; l.mm = c ? (c.mmNoite ?? c.mm ?? 0) : null; l.choveu = l.i.chuva != null ? l.i.chuva : l.mm != null ? l.mm >= 1 : null; });
+  const comChuva = linhas.filter(l => l.choveu === true), semChuva = linhas.filter(l => l.choveu === false);
   const md = a => a.length ? a.reduce((s, l) => s + l.desvio, 0) / a.length : null;
   const ins = [];
   const acima = linhas.filter(l => l.i.atracao).sort((a, b) => b.desvio - a.desvio);
@@ -985,9 +988,10 @@ async function abaCruzamentos() {
   <div class="card"><h3>Padrões encontrados</h3><div class="sub">Quanto mais dias você preencher, mais confiáveis ficam</div><ul class="insights">${ins.map(i => `<li>${i}</li>`).join("")}</ul></div>
   <div class="card" style="margin-top:14px"><h3>Desempenho de cada noite vs. a média do seu dia da semana</h3><div class="sub">Assim uma quarta não é comparada com um sábado</div><div class="graf"><canvas id="g-desvio"></canvas></div></div>
   <div class="card" style="margin-top:14px"><h3>Noite a noite</h3><div class="sub">${podeEditar ? "Clique em “Editar” para lançar atração, cachê, clima ou jogo" : ""}</div>
-    <div class="rolagem" style="max-height:600px"><table><thead><tr><th>Data</th><th>Atração</th><th>Clima</th><th>Jogo / obs.</th><th class="n">Faturamento</th><th class="n">vs média</th><th class="n">Cachê</th><th class="n">Fat. − cachê</th><th class="n">% comida</th>${podeEditar ? "<th></th>" : ""}</tr></thead><tbody>
+    <div class="rolagem" style="max-height:600px"><table><thead><tr><th>Data</th><th>Atração</th><th>Choveu?</th><th>Clima</th><th>Jogo / obs.</th><th class="n">Faturamento</th><th class="n">vs média</th><th class="n">Cachê</th><th class="n">Fat. − cachê</th><th class="n">% comida</th>${podeEditar ? "<th></th>" : ""}</tr></thead><tbody>
     ${linhas.map(l => `<tr><td>${DIAS[dow(l.dia)]} ${br(l.dia)}</td><td>${esc(l.i.atracao || "")}${l.i.genero ? ` <span class="tag">${esc(l.i.genero)}</span>` : ""}</td>
-      <td>${[l.i.clima, l.i.temp_min != null ? nfmt(+l.i.temp_min) + "–" + nfmt(+l.i.temp_max) + "°C" : "", l.i.chuva ? "chuva" : ""].filter(Boolean).map(esc).join(" · ")}</td>
+      <td style="white-space:nowrap">${l.choveu == null ? "—" : l.choveu ? `🌧️ sim${l.mm >= .2 ? ` <small class="sub2">${nfmt(l.mm, 1)} mm à noite</small>` : ""}` : `${iconeClima(l.cl)} não`}</td>
+      <td>${l.i.clima || l.i.temp_min != null ? [l.i.clima, l.i.temp_min != null ? nfmt(+l.i.temp_min) + "–" + nfmt(+l.i.temp_max) + "°C" : ""].filter(Boolean).map(esc).join(" · ") : l.cl ? `${nfmt(l.cl.tmin)}°–${nfmt(l.cl.tmax)}°` : ""}</td>
       <td style="font-size:13px">${esc([l.i.jogo, l.i.observacao].filter(Boolean).join(" · "))}</td>
       <td class="n">${brl0(l.faturamento)}</td><td class="n"><span class="tag ${l.desvio > .1 ? "bom" : l.desvio < -.1 ? "ruim" : ""}">${l.desvio >= 0 ? "+" : ""}${pct(l.desvio)}</span></td>
       <td class="n">${l.i.cache_valor != null ? brl0(+l.i.cache_valor) : "—"}</td><td class="n">${l.i.cache_valor != null ? brl0(l.liq) : "—"}</td><td class="n">${pct(l.comida)}</td>
@@ -1581,11 +1585,13 @@ async function abaAtracoes() {
   const p = await periodoPadrao();
   AT.ini ??= p ? p.ini : diaOperacionalHoje().slice(0, 8) + "01";
   AT.fim ??= p ? p.fim : diaOperacionalHoje();
-  const [{ data: pags }, dias, { data: cfg }, { data: prods }] = await Promise.all([
+  const [{ data: pags }, dias, { data: cfg }, { data: prods }, { data: prog }, clima] = await Promise.all([
     sb.from("pagamentos_bandas").select("*").order("data"),
     todos(() => sb.from("vw_resumo_diario").select("dia,faturamento")),
     sb.from("config").select("valor").eq("chave", "entrada").maybeSingle(),
     sb.from("produtos").select("codigo,nome,grupo").order("nome"),
+    sb.from("dias").select("data,atracao").not("atracao", "is", null),
+    climaDias(AT.ini, AT.fim < diaOperacionalHoje() ? AT.fim : diaOperacionalHoje()),
   ]);
   const codEntrada = cfg?.valor?.codigos || ENTRADA_PADRAO;
   const ent = codEntrada.length ? await todos(() => sb.from("vw_vendas_codigo_dia").select("*").in("codigo", codEntrada)) : [];
@@ -1598,18 +1604,22 @@ async function abaAtracoes() {
   const mediaDow = w => porDow[w] ? porDow[w].reduce((a, b) => a + b, 0) / porDow[w].length : null;
   const cachePorDia = {}, atrPorDia = {};
   pags.forEach(x => { cachePorDia[x.data] = (cachePorDia[x.data] || 0) + +x.valor; (atrPorDia[x.data] ??= []).push(x.atracao); });
+  // programação lançada (ou vinda do Instagram) para noites sem cachê lançado
+  (prog || []).forEach(x => { if (!atrPorDia[x.data]) atrPorDia[x.data] = [x.atracao]; });
+  const mmNoite = d => { const c = clima[d]; return c ? (c.mmNoite ?? c.mm ?? 0) : null; };
+  const celChuva = d => { const c = clima[d], mm = mmNoite(d); return c == null ? "—" : `<span title="${esc(textoClima(c))}">${iconeClima(c)} ${mm >= .2 ? nfmt(mm, 1) + " mm" : "não"}</span>`; };
 
   // noites do período (com venda ou com cachê), filtradas por dia da semana
   const todasNoites = [...new Set([...Object.keys(fat), ...Object.keys(cachePorDia)])].filter(d => d >= AT.ini && d <= AT.fim).sort();
   const noites = todasNoites.filter(d => AT.dows.includes(dow(d))).map(d => {
     const c = cachePorDia[d] || 0, f = fat[d] || 0, e = entDia[d] || { q: 0, v: 0 }, m = mediaDow(dow(d));
-    return { d, atr: atrPorDia[d] || [], cache: c, fat: f, entQ: e.q, entV: e.v, res: f - c, desv: m && f ? (f - m) / m : null };
+    return { d, atr: atrPorDia[d] || [], cache: c, fat: f, entQ: e.q, entV: e.v, res: f - c, desv: m && f ? (f - m) / m : null, mm: mmNoite(d) };
   });
   // semanas cheias (quarta a domingo)
   const semanas = {};
   noites.forEach(n => { const w = dow(n.d); if (![3, 4, 5, 6, 0].includes(w)) return; const k = semanaDe(n.d);
-    const s = semanas[k] ??= { ini: k, noites: 0, atr: [], cache: 0, fat: 0, entQ: 0, entV: 0 };
-    s.noites++; s.atr.push(...n.atr); s.cache += n.cache; s.fat += n.fat; s.entQ += n.entQ; s.entV += n.entV; });
+    const s = semanas[k] ??= { ini: k, noites: 0, atr: [], cache: 0, fat: 0, entQ: 0, entV: 0, chuvosas: 0, comClima: 0 };
+    s.noites++; if (n.mm != null) { s.comClima++; if (n.mm >= 1) s.chuvosas++; } s.atr.push(...n.atr); s.cache += n.cache; s.fat += n.fat; s.entQ += n.entQ; s.entV += n.entV; });
   const sl = Object.values(semanas).sort((a, b) => a.ini.localeCompare(b.ini)).map(s => ({ ...s, res: s.fat - s.cache }));
   const linhas = AT.modo === "semana" ? sl : noites;
   const tot = linhas.reduce((a, l) => ({ cache: a.cache + l.cache, fat: a.fat + l.fat, entV: a.entV + l.entV, entQ: a.entQ + l.entQ }), { cache: 0, fat: 0, entV: 0, entQ: 0 });
@@ -1620,7 +1630,7 @@ async function abaAtracoes() {
   const rank = Object.values(rk).map(r => ({ ...r, desvMed: r.desv.length ? r.desv.reduce((a, b) => a + b, 0) / r.desv.length : null })).sort((a, b) => (b.desvMed ?? -9) - (a.desvMed ?? -9));
 
   const nomeLinha = l => AT.modo === "semana" ? `Qua ${br(l.ini).slice(0, 5)} a Dom ${br(addDias(l.ini, 4)).slice(0, 5)}<small class="sub2">${l.noites} noites</small>` : `${DIAS[dow(l.d)]} ${br(l.d)}`;
-  const atrs = l => [...new Set(l.atr)].map(esc).join(" + ") || `<span style="color:var(--mute)">sem atração paga</span>`;
+  const atrs = l => [...new Set(l.atr)].map(esc).join(" + ") || `<span style="color:var(--mute)">sem atração lançada</span>`;
   $("#conteudo").innerHTML = `
   <div class="cab-sec"><div><h2>Atrações</h2><p>Quanto a banda custa × quanto a noite faturou × quanto entrou de entrada</p></div>
     <div class="filtros"><button class="btn sec peq" onclick="abrir('pagamentos')">Lançar cachês →</button></div></div>
@@ -1638,11 +1648,11 @@ async function abaAtracoes() {
   </div>
   <div class="card" style="margin-top:14px"><h3>${AT.modo === "semana" ? "Semana a semana" : "Noite a noite"}</h3><div class="sub">Barras: faturamento, cachê e entrada</div><div class="graf alto"><canvas id="g-at"></canvas></div></div>
   <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><h3>Detalhe</h3><div class="sub">Entrada = produtos marcados como entrada no Epoc</div></div><button class="btn sec peq" id="cfg-ent">Quais produtos são entrada?</button></div>
-    <div class="rolagem" style="max-height:560px"><table><thead><tr><th>${AT.modo === "semana" ? "Semana" : "Noite"}</th><th>Atração</th><th class="n">Cachê</th><th class="n">Faturamento</th><th class="n">Cachê % fat.</th><th class="n">Entrada</th><th class="n">Entrada cobre</th><th class="n">Fat. − cachê</th>${AT.modo === "noite" ? `<th class="n">vs média do dia</th>` : ""}</tr></thead><tbody>
-    ${linhas.map(l => `<tr><td>${nomeLinha(l)}</td><td>${atrs(l)}</td><td class="n">${l.cache ? brl0(l.cache) : "—"}</td><td class="n">${brl0(l.fat)}</td><td class="n">${l.cache && l.fat ? `<span class="tag ${l.cache / l.fat > .2 ? "ruim" : l.cache / l.fat < .1 ? "bom" : "ok"}">${pct(l.cache / l.fat)}</span>` : "—"}</td>
+    <div class="rolagem" style="max-height:560px"><table><thead><tr><th>${AT.modo === "semana" ? "Semana" : "Noite"}</th><th>Atração</th><th>Choveu?</th><th class="n">Cachê</th><th class="n">Faturamento</th><th class="n">Cachê % fat.</th><th class="n">Entrada</th><th class="n">Entrada cobre</th><th class="n">Fat. − cachê</th>${AT.modo === "noite" ? `<th class="n">vs média do dia</th>` : ""}</tr></thead><tbody>
+    ${linhas.map(l => `<tr><td>${nomeLinha(l)}</td><td>${atrs(l)}</td><td style="white-space:nowrap">${AT.modo === "semana" ? (l.comClima ? (l.chuvosas ? `🌧️ ${l.chuvosas} de ${l.noites} noites` : "☀️ nenhuma") : "—") : celChuva(l.d)}</td><td class="n">${l.cache ? brl0(l.cache) : "—"}</td><td class="n">${brl0(l.fat)}</td><td class="n">${l.cache && l.fat ? `<span class="tag ${l.cache / l.fat > .2 ? "ruim" : l.cache / l.fat < .1 ? "bom" : "ok"}">${pct(l.cache / l.fat)}</span>` : "—"}</td>
       <td class="n">${l.entV ? brl0(l.entV) + `<small class="sub2">${nfmt(l.entQ)} pag.</small>` : "—"}</td><td class="n">${l.cache ? pct(l.entV / l.cache) : "—"}</td><td class="n"><b>${brl0(l.res)}</b></td>
-      ${AT.modo === "noite" ? `<td class="n">${l.desv != null ? `<span class="tag ${l.desv > .1 ? "bom" : l.desv < -.1 ? "ruim" : ""}">${l.desv >= 0 ? "+" : ""}${pct(l.desv)}</span>` : "—"}</td>` : ""}</tr>`).join("") || `<tr><td colspan="9" class="vazio">Nada no período</td></tr>`}
-    </tbody><tfoot><tr><td colspan="2"><b>Total</b></td><td class="n"><b>${brl0(tot.cache)}</b></td><td class="n"><b>${brl0(tot.fat)}</b></td><td class="n">${pct(tot.cache / (tot.fat || 1))}</td><td class="n"><b>${brl0(tot.entV)}</b></td><td class="n">${pct(tot.entV / (tot.cache || 1))}</td><td class="n"><b>${brl0(tot.fat - tot.cache)}</b></td>${AT.modo === "noite" ? "<td></td>" : ""}</tr></tfoot></table></div></div>
+      ${AT.modo === "noite" ? `<td class="n">${l.desv != null ? `<span class="tag ${l.desv > .1 ? "bom" : l.desv < -.1 ? "ruim" : ""}">${l.desv >= 0 ? "+" : ""}${pct(l.desv)}</span>` : "—"}</td>` : ""}</tr>`).join("") || `<tr><td colspan="10" class="vazio">Nada no período</td></tr>`}
+    </tbody><tfoot><tr><td colspan="3"><b>Total</b></td><td class="n"><b>${brl0(tot.cache)}</b></td><td class="n"><b>${brl0(tot.fat)}</b></td><td class="n">${pct(tot.cache / (tot.fat || 1))}</td><td class="n"><b>${brl0(tot.entV)}</b></td><td class="n">${pct(tot.entV / (tot.cache || 1))}</td><td class="n"><b>${brl0(tot.fat - tot.cache)}</b></td>${AT.modo === "noite" ? "<td></td>" : ""}</tr></tfoot></table></div></div>
   <div class="card" style="margin-top:14px"><h3>Quais atrações valem o cachê</h3><div class="sub">No período e dias escolhidos · comparado com a média do mesmo dia da semana</div>
     <div class="rolagem"><table><thead><tr><th>Atração</th><th class="n">Noites</th><th class="n">Cachê total</th><th class="n">Faturamento das noites</th><th class="n">Entradas</th><th class="n">vs média do dia</th><th class="n">R$ faturado por R$ 1 de cachê</th></tr></thead><tbody>
     ${rank.map(r => `<tr><td>${esc(r.nome)}</td><td class="n">${r.n}</td><td class="n">${brl0(r.cache)}</td><td class="n">${brl0(r.fat)}</td><td class="n">${r.ent ? brl0(r.ent) : "—"}</td><td class="n">${r.desvMed != null ? `<span class="tag ${r.desvMed > .1 ? "bom" : r.desvMed < -.1 ? "ruim" : ""}">${r.desvMed >= 0 ? "+" : ""}${pct(r.desvMed)}</span>` : "—"}</td><td class="n">${r.cache ? nfmt(r.fat / r.cache, 1) : "—"}</td></tr>`).join("") || `<tr><td colspan="7" class="vazio">Sem cachês no período</td></tr>`}
@@ -2160,7 +2170,10 @@ async function abaPerfil() {
 }
 
 // ============ ABA: ANIVERSARIANTES ============
-const AN = { filtro: "semana" };
+const AN = { filtro: "semana", regiao: "todos" };
+const UF_DDD = { 11:"SP",12:"SP",13:"SP",14:"SP",15:"SP",16:"SP",17:"SP",18:"SP",19:"SP",21:"RJ",22:"RJ",24:"RJ",27:"ES",28:"ES",31:"MG",32:"MG",33:"MG",34:"MG",35:"MG",37:"MG",38:"MG",41:"PR",42:"PR",43:"PR",44:"PR",45:"PR",46:"PR",47:"SC",48:"SC",49:"SC",51:"RS",53:"RS",54:"RS",55:"RS",61:"DF",62:"GO",64:"GO",63:"TO",65:"MT",66:"MT",67:"MS",68:"AC",69:"RO",71:"BA",73:"BA",74:"BA",75:"BA",77:"BA",79:"SE",81:"PE",87:"PE",82:"AL",83:"PB",84:"RN",85:"CE",88:"CE",86:"PI",89:"PI",91:"PA",93:"PA",94:"PA",92:"AM",97:"AM",95:"RR",96:"AP",98:"MA",99:"MA" };
+const regiaoFone = t => { if (!t) return "sem"; const d = +String(t).slice(0, 2); return d === 11 ? "sp" : UF_DDD[d] === "SP" ? "interior" : UF_DDD[d] ? "fora" : "sem"; };
+const MSG_FORA_PADRAO = "Oi {nome}! 🎂 Hoje o dia é todo seu e o Vezpa não podia deixar passar: feliz aniversário! 🐝🧡 Que esse novo ciclo venha cheio de amor, saúde, gente boa por perto e muita energia bonita. Você merece tudo de melhor! E quando passar por São Paulo, a casa é sua: vem comemorar com a gente. 🏳️‍🌈";
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 async function abaAniversarios() {
   const hoje = diaOperacionalHoje(), [ay, am] = hoje.split("-").map(Number);
@@ -2176,7 +2189,8 @@ async function abaAniversarios() {
     sb.from("aniversario_envios").select("cliente_codigo,enviado_em,veio").eq("ano", ay),
     sb.from("clientes").select("codigo", { count: "exact", head: true }),
   ]);
-  const C2 = { mensagem: "Oi {nome}! 🎉 Feliz aniversário!", presente: "um drink de cortesia", ...(cfg?.valor || {}) };
+  const C2 = { mensagem: "Oi {nome}! 🎉 Feliz aniversário!", presente: "um drink de cortesia", mensagem_fora: MSG_FORA_PADRAO, ...(cfg?.valor || {}) };
+  C2.mensagem_fora ||= MSG_FORA_PADRAO;
   const env = Object.fromEntries((envios || []).map(e => [e.cliente_codigo, e]));
   const chave = d => +d.slice(5, 7) * 100 + +d.slice(8, 10);
   const alvo = new Set(dias.map(chave));
@@ -2184,11 +2198,15 @@ async function abaAniversarios() {
   if (AN.busca) itens = itens.filter(c => c.nome.toLowerCase().includes(AN.busca.toLowerCase()));
   if (AN.soFone) itens = itens.filter(c => c.telefone && !c.nao_contatar);
   if (AN.pendentes) itens = itens.filter(c => !env[c.codigo]);
+  const contReg = { todos: itens.length, sp: 0, interior: 0, fora: 0, sem: 0 }; itens.forEach(c => contReg[regiaoFone(c.telefone)]++);
+  if (AN.regiao !== "todos") itens = itens.filter(c => regiaoFone(c.telefone) === AN.regiao);
   // ordena pela proximidade do aniversário a partir de hoje
   const hojeK = am * 100 + +hoje.slice(8, 10);
   itens.sort((a, b) => ((a.nasc_mes * 100 + a.nasc_dia - hojeK + 1300) % 1300) - ((b.nasc_mes * 100 + b.nasc_dia - hojeK + 1300) % 1300));
   const primeiroNome = n => { const p = n.trim().split(/\s+/)[0]; return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase(); };
-  const msg = c => C2.mensagem.replaceAll("{nome}", primeiroNome(c.nome)).replaceAll("{presente}", C2.presente);
+  const ehLocal = c => ["sp", "sem"].includes(regiaoFone(c.telefone));
+  const msg = c => (ehLocal(c) ? C2.mensagem : C2.mensagem_fora).replaceAll("{nome}", primeiroNome(c.nome)).replaceAll("{presente}", C2.presente);
+  const tagReg = c => { const r = regiaoFone(c.telefone), uf = UF_DDD[+String(c.telefone || "").slice(0, 2)]; return r === "sp" ? `<span class="tag ok">SP capital</span>` : r === "interior" ? `<span class="tag">Interior SP</span>` : r === "fora" ? `<span class="tag bom">${uf}</span>` : ""; };
   const fone = t => t ? (t.length === 11 ? `(${t.slice(0, 2)}) ${t.slice(2, 7)}-${t.slice(7)}` : t.length === 10 ? `(${t.slice(0, 2)}) ${t.slice(2, 6)}-${t.slice(6)}` : t) : "";
   const idade = c => c.nasc_ano && c.nasc_ano > 1900 ? (ay + (c.nasc_mes * 100 + c.nasc_dia < hojeK && AN.filtro === "semana" ? 1 : 0)) - c.nasc_ano : null;
   const quando = c => { const k = c.nasc_mes * 100 + c.nasc_dia; return k === hojeK ? `<span class="tag ok">hoje 🎂</span>` : ""; };
@@ -2205,12 +2223,16 @@ async function abaAniversarios() {
     <div class="card kpi"><div class="rot">Mensagens enviadas</div><div class="val">${enviados}</div><div class="det">${itens.length ? pct(enviados / itens.length) + " da lista" : ""}</div></div>
     <div class="card kpi"><div class="rot">Vieram comemorar</div><div class="val">${(envios || []).filter(e => e.veio).length}</div><div class="det">em ${ay} · marque na lista</div></div>
   </div>
-  <div class="card" style="margin-top:14px;display:flex;gap:18px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:220px"><h3>Mensagem atual</h3><div class="sub">Assim ela chega no WhatsApp (exemplo com o nome Juliana). Presente: <b>${esc(C2.presente)}</b></div><button class="btn sec peq" style="margin-top:10px" id="an-msg2">✎ Trocar mensagem</button></div>
-    <div class="wa-tela" style="flex:1.4;min-width:260px"><div class="wa-bolha">${esc(C2.mensagem.replaceAll("{nome}", "Juliana").replaceAll("{presente}", C2.presente)).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
+  <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><h3>Mensagens atuais</h3><div class="sub">Assim elas chegam no WhatsApp (exemplo com o nome Juliana). O painel escolhe pelo DDD do telefone.</div></div><button class="btn sec peq" id="an-msg2">✎ Trocar mensagens</button></div>
+    <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:12px">
+      <div><div class="rot-wa">📍 São Paulo capital (DDD 11): convite com ${esc(C2.presente)}</div><div class="wa-tela"><div class="wa-bolha">${esc(C2.mensagem.replaceAll("{nome}", "Juliana").replaceAll("{presente}", C2.presente)).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
+      <div><div class="rot-wa">✈️ Interior e outros estados: parabéns caloroso</div><div class="wa-tela"><div class="wa-bolha">${esc(C2.mensagem_fora.replaceAll("{nome}", "Juliana").replaceAll("{presente}", C2.presente)).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
+    </div></div>
   <div class="card" style="margin-top:14px">
     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <div class="segmentos" style="margin:0">${[["hoje", "Hoje"], ["semana", "Próximos 7 dias"], ["mes", "Mês"]].map(([k, n]) => `<button class="${AN.filtro === k ? "sel" : ""}" data-anf="${k}">${n}</button>`).join("")}</div>
       ${AN.filtro === "mes" ? `<select id="an-mes" style="width:auto">${MESES.map((m, i) => `<option value="${i + 1}" ${i + 1 === AN.mes ? "selected" : ""}>${m}</option>`).join("")}</select>` : ""}
+      <div class="segmentos" style="margin:0">${[["todos", "Todos"], ["sp", "SP capital"], ["interior", "Interior SP"], ["fora", "Outros estados"]].map(([k, n]) => `<button class="${AN.regiao === k ? "sel" : ""}" data-anr="${k}">${n} <small>${contReg[k]}</small></button>`).join("")}</div>
       <input id="an-busca" placeholder="Buscar nome…" value="${esc(AN.busca || "")}" style="max-width:220px">
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-fone" style="width:auto" ${AN.soFone ? "checked" : ""}> Só com telefone</label>
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-pend" style="width:auto" ${AN.pendentes ? "checked" : ""}> Só quem falta mandar</label>
@@ -2218,7 +2240,7 @@ async function abaAniversarios() {
     <div class="rolagem" style="max-height:640px"><table class="pag"><thead><tr><th>Aniversário</th><th>Cliente</th><th>Telefone</th><th>Última visita</th><th>Mensagem</th><th>Veio?</th></tr></thead><tbody>
     ${itens.slice(0, 600).map(c => { const e = env[c.codigo], id = idade(c);
       return `<tr><td><b>${String(c.nasc_dia).padStart(2, "0")}/${String(c.nasc_mes).padStart(2, "0")}</b> ${quando(c)}${id ? `<small class="sub2">faz ${id} anos</small>` : ""}</td>
-      <td><b>${esc(c.nome)}</b> <button class="x" style="font-size:13px" data-nc="${c.codigo}" title="${c.nao_contatar ? "Liberar contato" : "Marcar: não quer receber mensagens"}">${c.nao_contatar ? "↺" : "🚫"}</button>${c.nao_contatar ? `<small class="sub2">não quer contato</small>` : ""}</td><td>${fone(c.telefone) || "<span class='tag'>sem telefone</span>"}</td>
+      <td><b>${esc(c.nome)}</b> <button class="x" style="font-size:13px" data-nc="${c.codigo}" title="${c.nao_contatar ? "Liberar contato" : "Marcar: não quer receber mensagens"}">${c.nao_contatar ? "↺" : "🚫"}</button>${c.nao_contatar ? `<small class="sub2">não quer contato</small>` : ""}</td><td>${fone(c.telefone) || "<span class='tag'>sem telefone</span>"} ${tagReg(c)}</td>
       <td>${c.ultima_visita ? br(c.ultima_visita) : "—"}</td>
       <td style="white-space:nowrap">${c.telefone && !c.nao_contatar ? `<button class="btn ${e ? "sec" : ""} peq" data-wa="${c.codigo}">${e ? "Enviar de novo" : "WhatsApp"}</button>` : ""} <button class="btn sec peq" data-copmsg="${c.codigo}">Copiar texto</button>${e ? `<small class="sub2">enviado ${new Date(e.enviado_em).toLocaleDateString("pt-BR")}</small>` : ""}</td>
       <td>${e ? `<button class="status ${e.veio ? "pago" : ""}" data-veio="${c.codigo}">${e.veio ? "Veio ✓" : "Ainda não"}</button>` : ""}</td></tr>`; }).join("") || `<tr><td colspan="6" class="vazio">Ninguém nesse filtro</td></tr>`}
@@ -2229,6 +2251,7 @@ async function abaAniversarios() {
   const porCod = Object.fromEntries(itens.map(c => [c.codigo, c]));
   const ir = () => abaAniversarios();
   document.querySelectorAll("[data-anf]").forEach(b => b.onclick = () => { AN.filtro = b.dataset.anf; ir(); });
+  document.querySelectorAll("[data-anr]").forEach(b => b.onclick = () => { AN.regiao = b.dataset.anr; ir(); });
   if ($("#an-mes")) $("#an-mes").onchange = e => { AN.mes = +e.target.value; ir(); };
   let tb; $("#an-busca").oninput = e => { clearTimeout(tb); tb = setTimeout(() => { AN.busca = e.target.value; ir(); }, 350); };
   $("#an-fone").onchange = e => { AN.soFone = e.target.checked; ir(); };
@@ -2238,6 +2261,7 @@ async function abaAniversarios() {
     const d = $("#dlg"), id = idade(c);
     d.innerHTML = `<h3>Prévia da mensagem</h3>
       <div class="sub" style="margin-bottom:10px">Para <b>${esc(c.nome)}</b> · ${fone(c.telefone)} · aniversário ${String(c.nasc_dia).padStart(2, "0")}/${String(c.nasc_mes).padStart(2, "0")}${id ? ` · faz ${id} anos` : ""}</div>
+      <div class="rot-wa">${ehLocal(c) ? "📍 Mensagem de São Paulo capital (convite)" : "✈️ Mensagem para interior / outros estados (parabéns caloroso)"}</div>
       <div class="wa-tela"><div class="wa-bolha" id="wa-bolha"></div></div>
       <label style="margin-top:12px">Ajustar só para esta pessoa</label><textarea id="wa-txt" rows="5">${esc(msg(c))}</textarea>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap"><button class="btn sec" type="button" id="wa-c">Cancelar</button><button class="btn sec" type="button" id="wa-cop">Copiar texto</button><button class="btn" type="button" id="wa-ok">Abrir no WhatsApp</button></div>`;
@@ -2262,18 +2286,30 @@ async function abaAniversarios() {
       ["Pesado", "Parabéns, {nome}! 🎉 Aniversário de respeito pede comemoração pesada no Vezpa 🐝 No mês do seu aniversário, {presente} é por nossa conta. Traz o bonde e vem colar! Mostra esta mensagem na entrada. 💛"],
       ["Curta", "{nome}, feliz aniversário! 🐝 Vem colar velcro no Vezpa esse mês: {presente} é presente nosso. Te esperamos! 🏳️‍🌈"],
       ["Clássica", "Oi {nome}! O Vezpa deseja um feliz aniversário 🎂 Venha comemorar com a gente: no mês do seu aniversário você ganha {presente}. Te esperamos!"]];
-    d.innerHTML = `<h3>Mensagem de aniversário</h3><form id="f-an"><label>Modelos prontos</label><div class="chips" id="an-mod">${MODELOS.map((m, i) => `<button type="button" data-mod="${i}">${m[0]}</button>`).join("")}</div>
+    const MODELOS_FORA = [
+      ["Caloroso", MSG_FORA_PADRAO],
+      ["Energia boa", "Feliz aniversário, {nome}! 🎉🐝 Daqui do Vezpa a gente manda um abraço apertado e toda a energia boa do mundo pra você. Que o seu novo ano seja leve, cheio de risada, amor e conquistas. Celebra muito, você merece! E se vier pra SP, já sabe onde comemorar. 🧡🏳️‍🌈"],
+      ["Carinho", "{nome}, hoje é dia de celebrar você! 🎂 O Vezpa deseja um aniversário lindo, cercado de quem você ama, e um ano inteiro de felicidade, saúde e muitos motivos pra sorrir. Um beijo enorme da nossa colmeia! 🐝🧡"],
+      ["Curta", "Feliz aniversário, {nome}! 🎂 Muita felicidade, amor e energia boa no seu novo ciclo. Um abraço de todas nós do Vezpa! 🐝🏳️‍🌈"]];
+    d.innerHTML = `<h3>Mensagens de aniversário</h3><form id="f-an">
+      <div class="segmentos" id="an-tipo" style="margin:0 0 12px"><button type="button" class="sel" data-t="local">📍 SP capital (DDD 11)</button><button type="button" data-t="fora">✈️ Interior e outros estados</button></div>
+      <div data-bloco="local"><label>Modelos prontos</label><div class="chips" id="an-mod">${MODELOS.map((m, i) => `<button type="button" data-mod="${i}">${m[0]}</button>`).join("")}</div>
       <label>Presente / convite</label><input name="presente" value="${esc(C2.presente)}" placeholder="ex.: um drink de cortesia">
-      <label>Mensagem</label><textarea name="mensagem" rows="6">${esc(C2.mensagem)}</textarea>
+      <label>Mensagem para SP capital</label><textarea name="mensagem" rows="6">${esc(C2.mensagem)}</textarea></div>
+      <div data-bloco="fora" class="hidden"><label>Modelos prontos</label><div class="chips" id="an-mod2">${MODELOS_FORA.map((m, i) => `<button type="button" data-mod="${i}">${m[0]}</button>`).join("")}</div>
+      <label>Mensagem para interior e outros estados</label><textarea name="mensagem_fora" rows="7">${esc(C2.mensagem_fora)}</textarea></div>
       <p class="dica">Use {nome} para o primeiro nome e {presente} para o presente.</p>
       <label>Prévia (como chega no WhatsApp)</label><div class="wa-tela"><div class="wa-bolha" id="an-prev"></div></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn sec" type="button" id="an-c">Cancelar</button><button class="btn">Salvar</button></div></form>`;
     d.showModal();
-    const prev = () => { const f = new FormData($("#f-an")); $("#an-prev").innerHTML = esc(f.get("mensagem").replaceAll("{nome}", "Juliana").replaceAll("{presente}", f.get("presente"))).replace(/\n/g, "<br>") + `<span class="wa-hora">12:00 ✓✓</span>`; };
+    let tipo = "local";
+    $("#an-tipo").onclick = e => { const b = e.target.closest("button"); if (!b) return; tipo = b.dataset.t; $("#an-tipo").querySelectorAll("button").forEach(x => x.classList.toggle("sel", x === b)); d.querySelectorAll("[data-bloco]").forEach(x => x.classList.toggle("hidden", x.dataset.bloco !== tipo)); prev(); };
+    $("#an-mod2").onclick = e => { const b = e.target.closest("button"); if (!b) return; $("#f-an").mensagem_fora.value = MODELOS_FORA[b.dataset.mod][1]; prev(); };
+    const prev = () => { const f = new FormData($("#f-an")); $("#an-prev").innerHTML = esc(f.get(tipo === "local" ? "mensagem" : "mensagem_fora").replaceAll("{nome}", "Juliana").replaceAll("{presente}", f.get("presente"))).replace(/\n/g, "<br>") + `<span class="wa-hora">12:00 ✓✓</span>`; };
     $("#f-an").oninput = prev; prev(); $("#an-c").onclick = () => d.close();
     $("#an-mod").onclick = e => { const b = e.target.closest("button"); if (!b) return; $("#f-an").mensagem.value = MODELOS[b.dataset.mod][1]; prev(); };
     $("#f-an").onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target);
-      await sb.from("config").upsert({ chave: "aniversario", valor: { mensagem: f.get("mensagem"), presente: f.get("presente") } }); d.close(); ir(); };
+      await sb.from("config").upsert({ chave: "aniversario", valor: { mensagem: f.get("mensagem"), presente: f.get("presente"), mensagem_fora: f.get("mensagem_fora") } }); d.close(); ir(); };
   };
 }
 
