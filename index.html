@@ -46,7 +46,23 @@ input:focus,select:focus,textarea:focus{border-color:var(--amber)}
 /* app: menu lateral agrupado */
 #app{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:100vh}
 #menu{position:sticky;top:0;height:100vh;overflow-y:auto;background:#100c0e;border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 14px}
-#menu .marca{margin:0 6px 20px}#menu .marca .logo{width:36px;height:36px;font-size:18px}#menu .marca h1{font-size:19px}
+.marca2{display:flex;align-items:center;gap:11px;margin:2px 6px 16px}
+.logo-hex{width:34px;height:34px;flex:none}
+.marca2 b{display:block;font-size:17px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.marca2 span{display:block;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--mute);margin-top:2px}
+.painel-dia{margin:0 4px 18px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(160deg,#1c1518,#141012);font-size:12.5px}
+.pd-linha{display:flex;justify-content:space-between;align-items:baseline}
+.pd-data{color:var(--mute)}
+.pd-temp{font-size:20px;font-weight:650;letter-spacing:-.02em}
+.pd-noite{margin-top:6px;color:var(--ink)}
+.pd-prox{display:flex;justify-content:space-between;margin-top:9px;padding-top:9px;border-top:1px solid var(--line)}
+.pd-prox div{text-align:center;color:var(--mute);font-size:11px;line-height:1.35}
+.pd-prox b{display:block;color:var(--ink);font-weight:600;font-size:11px}
+.pd-atr{margin-top:8px;color:var(--amber2);font-size:12px}
+.pd-atr:empty,.pd-prox:empty{display:none}
+#abas button .selo-n{margin-left:auto;background:var(--amber);color:#1a1208;border-radius:99px;font-size:11px;font-weight:700;padding:1px 7px}
+#abas button .selo-n.alerta{background:var(--red);color:#fff}
+#abas button:focus{outline:none}#abas button:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
 .grupo{margin-bottom:16px}
 .grupo-tit{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:#7d7069;margin:0 10px 6px;font-weight:700}
 #abas button{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;color:var(--mute);padding:8px 10px;border-radius:9px;cursor:pointer;font-weight:500;text-align:left;font-size:14px;position:relative}
@@ -210,7 +226,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
 <!-- LOGIN -->
 <section id="tela-login" class="hidden">
   <div class="cartao-login">
-    <div class="marca"><div class="logo">V</div><div><h1>Vezpa Gestão</h1><small>Painel interno do Vezpa Bar</small></div></div>
+    <div class="marca2" style="margin:0 0 26px"><svg class="logo-hex" style="width:44px;height:44px" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2.5 35.2 11.25v17.5L20 37.5 4.8 28.75v-17.5z" fill="#f2a63b"/><path d="M13 13.5h3.6L20 23.2l3.4-9.7H27l-5.4 14h-3.2z" fill="#1a1208"/></svg><div><b style="font-size:22px">Vezpa</b><span>Gestão · acesso interno</span></div></div>
 
     <form id="form-login">
       <label for="email">E-mail</label>
@@ -236,7 +252,9 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
 <!-- APP -->
 <div id="app" class="hidden">
   <aside id="menu">
-    <div class="marca"><div class="logo">V</div><div><h1>Vezpa Gestão</h1><small>Rua Augusta · SP</small></div></div>
+    <div class="marca2"><svg class="logo-hex" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2.5 35.2 11.25v17.5L20 37.5 4.8 28.75v-17.5z" fill="#f2a63b"/><path d="M13 13.5h3.6L20 23.2l3.4-9.7H27l-5.4 14h-3.2z" fill="#1a1208"/></svg><div><b>Vezpa</b><span>Gestão</span></div></div>
+    <div class="painel-dia" id="painel-dia"><div class="pd-linha"><span class="pd-data" id="pd-data"></span><span class="pd-temp" id="pd-temp"></span></div>
+      <div class="pd-noite" id="pd-noite">Carregando previsão…</div><div class="pd-prox" id="pd-prox"></div><div class="pd-atr" id="pd-atr"></div></div>
     <nav id="abas"></nav>
     <div class="menu-rodape"><div class="quem-av" id="quem-av"></div><div style="flex:1;min-width:0"><b id="quem-nome"></b><small id="quem-papel"></small></div><button class="link-btn" style="margin:0" id="btn-sair">Sair</button></div>
   </aside>
@@ -395,6 +413,7 @@ function montarAbas() {
   $("#abas").innerHTML = grupos.map(g => `<div class="grupo"><div class="grupo-tit">${g}</div>${minhas.filter(a => a.grupo === g).map(a =>
     `<button data-aba="${a.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONE[a.id] || ""}</svg>${a.nome}</button>`).join("")}</div>`).join("");
   $("#abas").onclick = e => { const b = e.target.closest("button"); if (b) abrir(b.dataset.aba); };
+  painelDoDia().catch(() => {}); atualizarSelos().catch(() => {});
   $("#btn-menu").onclick = () => $("#app").classList.toggle("menu-aberto");
   $("#veu").onclick = () => $("#app").classList.remove("menu-aberto");
   const h = location.hash.slice(1);
@@ -412,10 +431,47 @@ function abrir(id) {
   $("#app").classList.remove("menu-aberto");
   window.scrollTo(0, 0);
   $("#conteudo").innerHTML = `<div class="vazio">Carregando…</div>`;
-  aba.fn().catch(err => {
+  aba.fn().then(() => atualizarSelos().catch(() => {})).catch(err => {
     console.error(err);
     $("#conteudo").innerHTML = `<div class="msg erro">Erro ao carregar: ${esc(err.message || err)}</div>`;
   });
+}
+
+// ============ MENU: previsão do tempo, atração da noite e alertas ============
+async function painelDoDia() {
+  const hoje = diaOperacionalHoje();
+  { const t = new Date(hoje + "T12:00").toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "short" }).replace(/\./g, "").replace("-feira", ""); $("#pd-data").textContent = t.charAt(0).toUpperCase() + t.slice(1); }
+  try {
+    const j = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LOCAL.lat}&longitude=${LOCAL.lon}&current=temperature_2m,precipitation&hourly=precipitation_probability&daily=precipitation_probability_max,temperature_2m_max,temperature_2m_min&forecast_days=7&timezone=America%2FSao_Paulo`)).json();
+    $("#pd-temp").textContent = Math.round(j.current.temperature_2m) + "°";
+    const horas = j.hourly.time.map((t, k) => ({ t, p: j.hourly.precipitation_probability[k] }))
+      .filter(x => (x.t.slice(0, 10) === hoje && +x.t.slice(11, 13) >= 17) || (x.t.slice(0, 10) === addDias(hoje, 1) && +x.t.slice(11, 13) <= 2));
+    const pmax = Math.max(0, ...horas.map(x => x.p || 0)), chuva = horas.filter(x => x.p >= 50);
+    const faixa = chuva.length ? ` (${chuva[0].t.slice(11, 13)}h–${String((+chuva[chuva.length - 1].t.slice(11, 13) + 1) % 24).padStart(2, "0")}h)` : "";
+    $("#pd-noite").innerHTML = `${pmax >= 60 ? "🌧️" : pmax >= 30 ? "🌦️" : "🌙"} Hoje à noite: <b>${pmax}%</b> de chuva${faixa}`;
+    const abre = [3, 4, 5, 6, 0];
+    $("#pd-prox").innerHTML = j.daily.time.slice(1).filter(d => abre.includes(dow(d))).slice(0, 4).map(d => { const i = j.daily.time.indexOf(d), pr = j.daily.precipitation_probability_max[i];
+      return `<div><b>${DIAS[dow(d)]}</b>${pr >= 60 ? "🌧️" : pr >= 30 ? "🌦️" : j.daily.temperature_2m_max[i] >= 28 ? "☀️" : "⛅"}<br>${pr}%</div>`; }).join("");
+  } catch (_) { $("#pd-noite").textContent = "Previsão indisponível no momento"; }
+  try {
+    const { data } = await sb.from("pagamentos_bandas").select("atracao").eq("data", hoje);
+    const ats = [...new Set((data || []).map(x => x.atracao))];
+    $("#pd-atr").textContent = ats.length ? "🎵 Hoje: " + ats.join(" + ") : "";
+  } catch (_) {}
+}
+async function atualizarSelos() {
+  if (!gestor()) return;
+  const hoje = diaOperacionalHoje(), ini = addDias(semanaDe(addDias(hoje, -1)), -7);
+  const [{ data: notas }, { data: fr }, { data: bd }] = await Promise.all([
+    sb.from("notas").select("status,vencimento").neq("status", "pago"),
+    sb.from("freelas").select("id,valor").eq("status", "a pagar").gte("semana_inicio", ini),
+    sb.from("pagamentos_bandas").select("id").eq("status", "a pagar").gte("data", ini).lte("data", hoje),
+  ]);
+  const atras = (notas || []).filter(n => n.vencimento && n.vencimento < hoje).length, conferir = (notas || []).filter(n => n.status === "a conferir").length;
+  const pend = (fr || []).filter(f => +f.valor > 0).length + (bd || []).length;
+  const marcar = (id, n, alerta, titulo) => { const b = $(`#abas [data-aba="${id}"]`); if (!b) return; b.querySelector(".selo-n")?.remove(); if (n) b.insertAdjacentHTML("beforeend", `<span class="selo-n ${alerta ? "alerta" : ""}" title="${titulo}">${n}</span>`); };
+  marcar("notas", atras || conferir, !!atras, atras ? "boletos atrasados" : "notas a conferir");
+  marcar("pagamentos", pend, false, "pagamentos a fazer (semana atual e anterior)");
 }
 
 // ============ DADOS ============
