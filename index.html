@@ -2182,6 +2182,58 @@ async function resultadoPedido({ hoje, baseIni, baseFim, diasFat, cfg, cq, noite
 }
 
 // ============ ABA: PERFIL DOS CLIENTES ============
+// ============ Ranking de clientes (visitas do relatório Fidelidade do Epoc) ============
+const RK = { modo: "mes", ref: null };
+function periodoRK() {
+  const hoje = diaOperacionalHoje(), [a, m] = hoje.split("-").map(Number);
+  if (RK.modo === "mes") { const r = RK.ref || hoje.slice(0, 7); const [y, mm] = r.split("-").map(Number); const fim = new Date(y, mm, 0).getDate(); return { ini: `${r}-01`, fim: `${r}-${String(fim).padStart(2, "0")}`, nome: MESES[mm - 1] + " " + y }; }
+  if (RK.modo === "tri") { const r = RK.ref || `${a}-T${Math.ceil(m / 3)}`; const [y, t] = [+r.slice(0, 4), +r.slice(-1)]; const m1 = (t - 1) * 3 + 1, m3 = m1 + 2; return { ini: `${y}-${String(m1).padStart(2, "0")}-01`, fim: `${y}-${String(m3).padStart(2, "0")}-${new Date(y, m3, 0).getDate()}`, nome: `${t}º trimestre de ${y}` }; }
+  const y = RK.ref || String(a); return { ini: `${y}-01-01`, fim: `${y}-12-31`, nome: y };
+}
+async function rankingClientes() {
+  const el = $("#rk-clientes"); if (!el) return;
+  const { data: lim } = await sb.from("clientes_visitas").select("dia").order("dia").limit(1);
+  if (!lim?.length) { el.innerHTML = `<div class="card"><h3>Quem mais vem</h3><div class="sub">Ainda sem visitas importadas. Elas vêm do relatório <b>Fidelidade</b> do Epoc, pela ponte de importação.</div></div>`; return; }
+  const primeiro = lim[0].dia, hoje = diaOperacionalHoje();
+  const P = periodoRK();
+  const { data: R, error } = await sb.rpc("ranking_clientes", { p_ini: P.ini, p_fim: P.fim < hoje ? P.fim : hoje, p_lim: 60 });
+  if (error) { el.innerHTML = `<div class="aviso">${esc(error.message)}</div>`; return; }
+  // opções de período
+  const meses = []; for (let d = primeiro.slice(0, 7); d <= hoje.slice(0, 7); d = addDias(d + "-01", 32).slice(0, 7)) meses.push(d);
+  const tris = [...new Set(meses.map(x => `${x.slice(0, 4)}-T${Math.ceil(+x.slice(5, 7) / 3)}`))], anos = [...new Set(meses.map(x => x.slice(0, 4)))];
+  const ops = RK.modo === "mes" ? meses.map(x => [x, MESES[+x.slice(5, 7) - 1] + " " + x.slice(0, 4)]) : RK.modo === "tri" ? tris.map(x => [x, `${x.slice(-1)}º tri ${x.slice(0, 4)}`]) : anos.map(x => [x, x]);
+  const atual = RK.ref || ops[ops.length - 1]?.[0];
+  const fone = t => t ? `(${t.slice(0, 2)}) ${t.slice(2, -4)}-${t.slice(-4)}` : "";
+  const wa = (c, txt) => c.telefone ? `<a class="btn sec peq" target="_blank" rel="noopener" href="https://wa.me/55${c.telefone}?text=${encodeURIComponent(txt.replace("{nome}", (c.nome || "").split(" ")[0]))}">WhatsApp</a>` : "";
+  const fr = R.freq || {};
+  const linhaTop = (c, i) => `<tr><td class="n" style="color:var(--mute)">${i + 1}</td><td><b>${esc(c.nome || "cliente " + c.codigo)}</b><small class="sub2">${fone(c.telefone)}</small></td><td class="n"><b>${c.visitas}</b></td><td class="n">${c.visitas_total}</td><td>${br(c.ultima)}</td><td class="n">${c.maior_conta ? brl0(+c.maior_conta) : "—"}</td></tr>`;
+  el.innerHTML = `
+  <div class="card"><div style="display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap">
+    <div><h3>Quem mais vem · ${esc(P.nome)}</h3><div class="sub">Visitas registradas no Epoc (cliente que deu entrada na noite) · dados desde ${br(primeiro)}</div></div>
+    <div class="filtros"><div class="segmentos" style="margin:0">${[["mes", "Mês"], ["tri", "Trimestre"], ["ano", "Ano"]].map(([k, n]) => `<button class="${RK.modo === k ? "sel" : ""}" data-rkm="${k}">${n}</button>`).join("")}</div>
+      <select id="rk-ref" style="width:auto">${ops.map(([v, n]) => `<option value="${v}" ${v === atual ? "selected" : ""}>${n}</option>`).join("")}</select></div></div>
+    <div class="grade kpis" style="margin-top:12px">
+      <div class="card kpi"><div class="rot">Clientes diferentes</div><div class="val">${nfmt(R.unicos)}</div><div class="det">${nfmt(R.visitas)} visitas no período</div></div>
+      <div class="card kpi destaque"><div class="rot">Vieram 2 vezes ou mais</div><div class="val">${nfmt(R.recorrentes)}</div><div class="det">${R.unicos ? pct(R.recorrentes / R.unicos) : "—"} das clientes</div></div>
+      <div class="card kpi"><div class="rot">Visitas por cliente</div><div class="val">${R.unicos ? nfmt(R.visitas / R.unicos, 2) : "—"}</div><div class="det">média do período</div></div>
+      <div class="card kpi"><div class="rot">Frequência</div><div class="val" style="font-size:15px;line-height:1.5">${[1, 2, 3, 4, 5, 6].filter(k => fr[k]).map(k => `${k}${k === 6 ? "+" : ""}×: <b>${nfmt(fr[k])}</b>`).join(" · ")}</div></div>
+    </div>
+  </div>
+  <div class="grade dois" style="margin-top:14px">
+    <div class="card"><h3>Ranking de visitas</h3><div class="sub">Quem mais veio no período · desempate pela maior conta</div>
+      <div class="rolagem" style="max-height:520px"><table><thead><tr><th class="n">#</th><th>Cliente</th><th class="n">Visitas</th><th class="n">Total histórico</th><th>Última</th><th class="n">Maior conta</th></tr></thead><tbody>
+      ${(R.top || []).map(linhaTop).join("") || `<tr><td colspan="6" class="vazio">Ninguém no período</td></tr>`}</tbody></table></div></div>
+    <div class="card"><h3>Maiores contas</h3><div class="sub">Entre quem veio no período · maior valor já gasto numa visita (o Epoc não separa o gasto por período)</div>
+      <div class="rolagem" style="max-height:520px"><table><thead><tr><th class="n">#</th><th>Cliente</th><th class="n">Maior conta</th><th class="n">Visitas no período</th></tr></thead><tbody>
+      ${(R.maiores_contas || []).map((c, i) => `<tr><td class="n" style="color:var(--mute)">${i + 1}</td><td><b>${esc(c.nome || c.codigo)}</b><small class="sub2">${fone(c.telefone)}</small></td><td class="n"><b>${brl0(+c.maior_conta)}</b></td><td class="n">${c.visitas}</td></tr>`).join("") || `<tr><td colspan="4" class="vazio">—</td></tr>`}</tbody></table></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>Frequentes que sumiram</h3><div class="sub">Vieram 4 vezes ou mais e não aparecem há mais de 45 dias (até o fim do período) · bom público para um convite</div>
+    <div class="rolagem" style="max-height:420px"><table><thead><tr><th>Cliente</th><th class="n">Visitas</th><th>Última visita</th><th></th></tr></thead><tbody>
+    ${(R.sumidas || []).map(c => `<tr><td><b>${esc(c.nome || c.codigo)}</b><small class="sub2">${fone(c.telefone)}</small></td><td class="n">${c.visitas}</td><td>${br(c.ultima)}</td><td>${wa(c, "Oi {nome}! Aqui é o Vezpa 🐝 Tá fazendo falta por aqui! Essa semana tem programação nova, vem matar a saudade com a gente? 🧡")}</td></tr>`).join("") || `<tr><td colspan="4" class="vazio">Ninguém nessa situação 🎉</td></tr>`}</tbody></table></div></div>`;
+  el.querySelectorAll("[data-rkm]").forEach(b => b.onclick = () => { RK.modo = b.dataset.rkm; RK.ref = null; rankingClientes(); });
+  $("#rk-ref").onchange = e => { RK.ref = e.target.value; rankingClientes(); };
+}
+
 async function abaPerfil() {
   const [{ data: P2, error }, dias] = await Promise.all([sb.rpc("perfil_clientes"), todos(() => sb.from("vw_resumo_diario").select("dia,faturamento"))]);
   if (error) throw error;
@@ -2215,7 +2267,7 @@ async function abaPerfil() {
     <div class="card"><h3>Novos clientes por mês</h3><div class="sub">Primeira visita registrada</div><div class="graf"><canvas id="g-novos"></canvas></div></div>
     <div class="card"><h3>Gasto médio por cliente</h3><div class="sub">Estimativa</div>
       <div class="val" style="font:650 32px Inter;margin:10px 0">${gastoEst ? brl0(gastoEst) : "—"}</div>
-      <p class="dica" style="margin-top:0">${ultimoMesCompleto ? `Faturamento de ${nomeMes(ultimoMesCompleto.mes)} (${brl0(fatMes[ultimoMesCompleto.mes] || 0)}) ÷ ${nfmt(ultimoMesCompleto.n)} clientes cuja última visita foi nesse mês.` : ""} É uma conta aproximada: quem voltou depois conta só no último mês, e nem todo mundo se cadastra na entrada. Para o gasto exato por pessoa, o Epoc precisa ligar a comanda ao cliente — dá para ver com o suporte se essa informação sai no relatório.</p>
+      <p class="dica" style="margin-top:0">${ultimoMesCompleto ? `Faturamento de ${nomeMes(ultimoMesCompleto.mes)} (${brl0(fatMes[ultimoMesCompleto.mes] || 0)}) ÷ ${nfmt(ultimoMesCompleto.n)} clientes cuja última visita foi nesse mês.` : ""} É uma conta aproximada: quem voltou depois conta só no último mês, e nem todo mundo se cadastra na entrada. O Epoc informa por cliente a <b>maior conta</b> já feita numa visita (veja o ranking abaixo), mas não o total gasto por período.</p>
       <h3 style="margin-top:14px">Aniversários por mês</h3><div class="graf" style="height:170px"><canvas id="g-aniv"></canvas></div></div>
   </div>`;
   const cores = { Mulheres: "#e8607a", Homens: "#4fc3b0", "Não informado": "#9b8cf2" };
@@ -2228,6 +2280,8 @@ async function abaPerfil() {
   const av = P2.aniv_mes || {};
   grafico($("#g-aniv"), { type: "bar", data: { labels: MESES.map(m => m.slice(0, 3)), datasets: [{ data: MESES.map((_, i) => av[i + 1] || 0), backgroundColor: "#9b8cf2", borderRadius: 4, _fmt: "n" }] },
     options: { maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+  $("#conteudo").insertAdjacentHTML("beforeend", `<div id="rk-clientes" style="margin-top:14px"></div>`);
+  rankingClientes();
 }
 
 // ============ ABA: ANIVERSARIANTES ============
@@ -2407,7 +2461,7 @@ function detectar(texto) {
   if (/dias?\s*,/.test(h)) return "freelas";
   return "";
 }
-const TIPOS = { fechamento: "Descontos e fechamento por noite (Epoc)", func_noites: "Vendas por funcionário, noite a noite (Epoc)", clientes: "Cadastro de clientes (Epoc)", hora: "Venda de produtos por hora (Epoc)", produtos: "Relatório de venda de produtos — atualiza os grupos (Epoc)", funcionario: "Vendas por funcionário (Epoc)", freelas: "Pagamento de freelancers da semana" };
+const TIPOS = { visitas: "Visitas de clientes por noite — relatório Fidelidade (Epoc)", fechamento: "Descontos e fechamento por noite (Epoc)", func_noites: "Vendas por funcionário, noite a noite (Epoc)", clientes: "Cadastro de clientes (Epoc)", hora: "Venda de produtos por hora (Epoc)", produtos: "Relatório de venda de produtos — atualiza os grupos (Epoc)", funcionario: "Vendas por funcionário (Epoc)", freelas: "Pagamento de freelancers da semana" };
 
 async function abaImportar() {
   const { data: log } = await sb.from("importacoes").select("*").order("feito_em", { ascending: false }).limit(30);
@@ -2467,6 +2521,11 @@ function analisar(tipo, texto) {
     const datas = [...new Set(itens.map(i => i.data))].sort();
     const total = itens.reduce((s, i) => s + i.valor, 0);
     return { itens, resumo: `${nfmt(itens.length)} lançamentos de ${br(datas[0])} a ${br(datas[datas.length - 1])} · total ${brl(total)}` };
+  }
+  if (tipo === "visitas") {
+    const j = JSON.parse(texto), pares = j.pares || []; if (!pares.length) throw new Error("Nenhuma visita recebida.");
+    const ds = pares.map(p => p[1]).sort();
+    return { itens: pares, maior: j.maior || {}, resumo: `${nfmt(pares.length)} visitas de ${nfmt(new Set(pares.map(p => p[0])).size)} clientes · ${br(ds[0])} a ${br(ds[ds.length - 1])}` };
   }
   if (tipo === "fechamento") {
     const itens = JSON.parse(texto); if (!itens.length) throw new Error("Nada recebido.");
@@ -2530,6 +2589,8 @@ async function enviar(tipo, r, nome) {
         if (error) throw error; lote = [];
       }
     }
+  } else if (tipo === "visitas") {
+    for (let i = 0; i < r.itens.length; i += 5000) { const { error } = await sb.rpc("importar_visitas", { p_pares: r.itens.slice(i, i + 5000), p_maior: i === 0 ? r.maior : {} }); if (error) throw error; }
   } else if (tipo === "fechamento") {
     const { error } = await sb.rpc("importar_fechamento", { p_linhas: r.itens }); if (error) throw error;
   } else if (tipo === "func_noites") {
