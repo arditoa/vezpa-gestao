@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vezpa Gestão</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
@@ -15,8 +15,8 @@
   --r:14px;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "DM Sans",system-ui,sans-serif}
-h1,h2,h3{font-family:Fraunces,Georgia,serif;margin:0;letter-spacing:-.01em}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Inter",system-ui,-apple-system,sans-serif}
+h1,h2,h3{font-family:"Inter",system-ui,sans-serif;font-weight:650;margin:0;letter-spacing:-.02em}
 button,input,select,textarea{font:inherit}
 .hidden{display:none!important}
 a{color:var(--amber2)}
@@ -26,7 +26,7 @@ a{color:var(--amber2)}
   background:radial-gradient(1200px 600px at 20% 0%,#3b2418 0%,transparent 60%),radial-gradient(900px 500px at 100% 100%,#2c1830 0%,transparent 60%),var(--bg)}
 .cartao-login{width:min(400px,100%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:32px}
 .marca{display:flex;align-items:center;gap:12px;margin-bottom:24px}
-.marca .logo{width:44px;height:44px;border-radius:12px;background:var(--amber);color:#1a1208;display:grid;place-items:center;font:800 22px Fraunces,serif}
+.marca .logo{width:44px;height:44px;border-radius:12px;background:var(--amber);color:#1a1208;display:grid;place-items:center;font:700 20px "Inter",sans-serif}
 .marca h1{font-size:26px}.marca small{display:block;color:var(--mute);font-size:13px}
 label{display:block;font-size:13px;color:var(--mute);margin:14px 0 6px}
 input,select,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 12px;outline:none}
@@ -56,7 +56,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--amber)}
 #abas button.ativa:before{content:"";position:absolute;left:-14px;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--amber)}
 #abas button.ativa svg{color:var(--amber);opacity:1}
 .menu-rodape{margin-top:auto;border-top:1px solid var(--line);padding:14px 6px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px}
-.menu-rodape b{display:block;font-weight:600}
+.menu-rodape b{display:block;font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-rodape small{display:block;color:var(--mute);font-size:12px}
+.quem-av{width:32px;height:32px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;font-weight:600;font-size:13px;color:var(--amber2);flex:none}
 .selo{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--amber2)}
 .barra{position:sticky;top:0;z-index:5;background:rgba(20,16,18,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:12px 28px;min-height:56px}
 .trilha{color:var(--mute);font-size:13px}.trilha b{color:var(--ink);font-weight:600}
@@ -75,7 +77,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--amber)}
 }
 main{max-width:1280px;margin:0 auto;padding:26px 28px 60px}
 .cab-sec{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
-.cab-sec h2{font-size:28px}.cab-sec p{margin:4px 0 0;color:var(--mute)}
+.cab-sec h2{font-size:24px}.cab-sec p{margin:4px 0 0;color:var(--mute)}
 .filtros{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .filtros input,.filtros select{width:auto;padding:8px 10px}
 .grade{display:grid;gap:14px}
@@ -86,7 +88,8 @@ main{max-width:1280px;margin:0 auto;padding:26px 28px 60px}
 .card h3{font-size:17px;margin-bottom:4px}
 .card .sub{color:var(--mute);font-size:13px;margin-bottom:12px}
 .kpi .rot{color:var(--mute);font-size:12px;text-transform:uppercase;letter-spacing:.07em}
-.kpi .val{font:700 28px "DM Sans";margin-top:6px;font-variant-numeric:tabular-nums}
+.kpi .val{font:650 26px "Inter";letter-spacing:-.02em;margin-top:6px;font-variant-numeric:tabular-nums}
+body{font-feature-settings:"cv11","ss01";-webkit-font-smoothing:antialiased}
 .kpi .det{color:var(--mute);font-size:12.5px;margin-top:4px}
 .kpi.destaque{background:linear-gradient(135deg,#3a2612,#2a1d14);border-color:#5c3f1c}
 .kpi.destaque .val{color:var(--amber2)}
@@ -172,6 +175,32 @@ input.val-banda{width:110px;text-align:right;font-weight:700;padding:8px}
 .foto-btn span{font-size:30px}.foto-btn small{color:var(--mute);font-size:12px}
 .foto-btn.ok{border-style:solid;border-color:var(--green)}
 tfoot td{border-top:1px solid var(--line);border-bottom:0}
+.quiz h3{font-size:22px;margin:6px 0 12px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:14px}
+.cal-h{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);text-align:center;padding:4px 0}
+.cal-dia{min-height:104px;border:1px solid var(--line);border-radius:10px;padding:7px;background:var(--panel2);cursor:pointer;display:flex;flex-direction:column;gap:3px;overflow:hidden}
+.cal-dia.com{background:rgba(242,166,59,var(--t));border-color:#5c3f1c}
+.cal-dia.futuro{border-style:dashed;background:transparent}
+.cal-dia.hoje{outline:2px solid var(--amber)}
+.cal-dia.vazio-d{background:none;border:0;cursor:default}
+.cal-dia:hover{border-color:var(--amber)}
+.cal-top{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.cal-top small{font-size:10.5px;color:var(--mute);margin-left:2px}
+.cal-n{font-weight:700;color:var(--mute)}
+.cal-f{font:700 17px "Inter";color:var(--ink)}.cal-f.prog{font-size:11px;color:var(--amber2);font-weight:600}
+.cal-b{font-size:11px;line-height:1.25;color:#f4ede6;opacity:.9;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dia-nav .btn{white-space:nowrap}
+@media(max-width:700px){.cal-dia{min-height:74px;padding:4px}.cal-b{display:none}.cal-f{font-size:13px}.cal-top{font-size:11px}.cal-top small{display:none}}
+.sim-nao{display:flex;gap:10px;margin:8px 0 14px}
+.sim-nao button{flex:0 1 160px;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:17px;font-weight:700;cursor:pointer}
+.sim-nao button.sel{background:var(--amber);color:#1a1208;border-color:var(--amber)}
+.ev-linha{grid-template-columns:1fr 1fr 2fr auto!important}
+.clima-grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.clima{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:4px}
+.clima.chuva{border-color:#3b5d8a;background:#16202d}
+.clima .ic{font-size:30px}.clima .prob{font:700 26px "Inter"}.clima .prob small,.clima small{display:block;font-size:12px;color:var(--mute);font-weight:400}
+.pedido-txt{white-space:pre-wrap;background:var(--panel2);padding:10px;border-radius:10px;font:13px/1.5 "Inter"}
+code{background:var(--panel2);padding:1px 5px;border-radius:5px}
 dialog{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:22px;width:min(480px,92vw)}
 dialog::backdrop{background:rgba(0,0,0,.6)}
 </style>
@@ -209,7 +238,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
   <aside id="menu">
     <div class="marca"><div class="logo">V</div><div><h1>Vezpa Gestão</h1><small>Rua Augusta · SP</small></div></div>
     <nav id="abas"></nav>
-    <div class="menu-rodape"><div><b id="quem-nome"></b><span class="selo" id="quem-papel"></span></div><button class="btn sec peq" id="btn-sair">Sair</button></div>
+    <div class="menu-rodape"><div class="quem-av" id="quem-av"></div><div style="flex:1;min-width:0"><b id="quem-nome"></b><small id="quem-papel"></small></div><button class="link-btn" style="margin:0" id="btn-sair">Sair</button></div>
   </aside>
   <div class="area">
     <header class="barra"><button id="btn-menu" aria-label="Abrir menu">☰</button><div class="trilha" id="trilha"></div></header>
@@ -251,7 +280,7 @@ const COR_CAT = { "Cerveja": "#f2a63b", "Drinks e outras bebidas": "#e8607a", "C
 
 Chart.defaults.color = "#a99c94";
 Chart.defaults.borderColor = "#3a3035";
-Chart.defaults.font.family = "DM Sans";
+Chart.defaults.font.family = "Inter";
 Chart.defaults.plugins.tooltip.callbacks.label = ctx => {
   const v = ctx.parsed.y ?? ctx.parsed;
   return `${ctx.dataset.label ? ctx.dataset.label + ": " : ""}${ctx.dataset._fmt === "n" ? nfmt(v) : brl(v)}`;
@@ -323,11 +352,13 @@ async function iniciar() {
   S.perfil = perfil;
   $("#tela-login").classList.add("hidden"); $("#app").classList.remove("hidden");
   $("#quem-nome").textContent = perfil.nome;
-  $("#quem-papel").textContent = { dona: "Dona", gerente: "Gerente", caixa: "Caixa" }[perfil.papel];
+  $("#quem-papel").textContent = NOME_PAPEL[perfil.papel];
+  $("#quem-av").textContent = (perfil.nome || "?").trim().charAt(0).toUpperCase();
   montarAbas();
 }
 
 // ============ NAVEGAÇÃO ============
+const NOME_PAPEL = { dona: "Visão geral", gerente: "Gerência", caixa: "Equipe" };
 const ICONE = {
   hoje: '<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/>',
   geral: '<path d="M4 19V5M4 19h16M8 15l3-4 3 2 5-6"/>',
@@ -434,12 +465,62 @@ function semDados() {
 }
 
 // ============ ABA: HOJE ============
+// clima de dias passados e futuros (Open-Meteo), com cache
+const CLIMA = {};
+async function climaDias(ini, fim) {
+  const hoje = diaOperacionalHoje(), out = {};
+  const faltam = []; for (let d = ini; d <= fim; d = addDias(d, 1)) { if (CLIMA[d]) out[d] = CLIMA[d]; else faltam.push(d); }
+  if (!faltam.length) return out;
+  const a = faltam[0], b = faltam[faltam.length - 1];
+  const pedidos = [];
+  const corte = addDias(hoje, -6);
+  if (a <= corte) pedidos.push(`https://archive-api.open-meteo.com/v1/archive?latitude=${LOCAL.lat}&longitude=${LOCAL.lon}&start_date=${a}&end_date=${addDias(b < corte ? b : corte, 1)}&daily=precipitation_sum,temperature_2m_max,temperature_2m_min&hourly=precipitation&timezone=America%2FSao_Paulo`);
+  if (b > corte) pedidos.push(`https://api.open-meteo.com/v1/forecast?latitude=${LOCAL.lat}&longitude=${LOCAL.lon}&past_days=10&forecast_days=16&daily=precipitation_sum,precipitation_probability_max,temperature_2m_max,temperature_2m_min&hourly=precipitation,precipitation_probability&timezone=America%2FSao_Paulo`);
+  for (const u of pedidos) {
+    try {
+      const j = await (await fetch(u)).json();
+      const noite = {}, probN = {}, horasChuva = {};
+      j.hourly.time.forEach((t, k) => { const dia = t.slice(0, 10), h = +t.slice(11, 13); if (h > 2 && h < 17) return; const op = h <= 2 ? addDias(dia, -1) : dia;
+        noite[op] = (noite[op] || 0) + (j.hourly.precipitation[k] || 0);
+        const pr = j.hourly.precipitation_probability?.[k]; if (pr != null) probN[op] = Math.max(probN[op] || 0, pr);
+        if ((j.hourly.precipitation[k] || 0) >= .3 || (pr ?? 0) >= 50) (horasChuva[op] ??= []).push(h); });
+      j.daily.time.forEach((d, k) => { if (d < ini || d > fim || (CLIMA[d] && u.includes("archive"))) return;
+        const hs = (horasChuva[d] || []).sort((x, y) => (x < 6 ? x + 24 : x) - (y < 6 ? y + 24 : y));
+        CLIMA[d] = { mm: j.daily.precipitation_sum[k], mmNoite: noite[d] ?? null, prob: d >= hoje ? (probN[d] ?? j.daily.precipitation_probability_max?.[k]) : null,
+          tmin: j.daily.temperature_2m_min[k], tmax: j.daily.temperature_2m_max[k], faixa: hs.length ? `${String(hs[0]).padStart(2, "0")}h–${String((hs[hs.length - 1] + 1) % 24).padStart(2, "0")}h` : null, futuro: d >= hoje };
+        out[d] = CLIMA[d]; });
+    } catch (_) {}
+  }
+  return out;
+}
+function iconeClima(c) {
+  if (!c) return "";
+  const chuva = c.futuro ? (c.prob ?? 0) >= 60 : (c.mmNoite ?? c.mm ?? 0) >= 1;
+  const garoa = c.futuro ? (c.prob ?? 0) >= 30 : (c.mmNoite ?? c.mm ?? 0) > .2;
+  return chuva ? "🌧️" : garoa ? "🌦️" : (c.tmax ?? 0) >= 28 ? "☀️" : (c.tmax ?? 30) <= 18 ? "🧥" : "⛅";
+}
+function textoClima(c) {
+  if (!c) return "";
+  const t = `${nfmt(c.tmin)}°–${nfmt(c.tmax)}°`;
+  if (c.futuro) return `${t} · ${c.prob ?? 0}% de chuva${c.faixa ? " (" + c.faixa + ")" : ""}`;
+  const mm = c.mmNoite ?? c.mm ?? 0;
+  return `${t} · ${mm >= .2 ? "choveu " + nfmt(mm, 1) + " mm à noite" + (c.faixa ? " (" + c.faixa + ")" : "") : "noite sem chuva"}`;
+}
+
+const H = { dia: null };
 async function abaHoje() {
   const render = async () => {
     const { max } = await limitesDados();
     if (!max) return semDados();
     const hojeSP = diaOperacionalHoje(); // dia operacional vira às 06h
-    const dia = max;
+    H.lista ??= (await todos(() => sb.from("vw_resumo_diario").select("dia").order("dia"))).map(x => x.dia);
+    if (!H.lista.includes(max)) H.lista.push(max);
+    const dia = H.dia && H.lista.includes(H.dia) ? H.dia : max;
+    const idx = H.lista.indexOf(dia);
+    const [{ data: bandasDia }, climaD] = await Promise.all([
+      S.perfil.papel === "caixa" ? Promise.resolve({ data: [] }) : sb.from("pagamentos_bandas").select("atracao").eq("data", dia),
+      climaDias(dia, dia),
+    ]);
     const [{ data: res }, { data: horas }, prods, { data: ultimas }, { data: info }] = await Promise.all([
       sb.from("vw_resumo_diario").select("*").eq("dia", dia).maybeSingle(),
       sb.from("vw_vendas_hora").select("*").eq("dia", dia).order("hora"),
@@ -453,7 +534,9 @@ async function abaHoje() {
       const { data: c } = await sb.from("vw_resumo_diario").select("*").eq("dia", addDias(dia, -7)).maybeSingle();
       comp = c;
     }
-    const ehHoje = dia === hojeSP;
+    const ehHoje = dia === hojeSP, ehUltimo = dia === max;
+    const atracoes = [...new Set([...(bandasDia || []).map(b => b.atracao), ...(info?.atracao && !(bandasDia || []).length ? [info.atracao] : [])])];
+    const cl = climaD[dia];
     const ordenaH = h => (h < 6 ? h + 24 : h);
     const hs = (horas || []).sort((a, b) => ordenaH(a.hora) - ordenaH(b.hora));
     const top = prods.slice(0, 10);
@@ -462,10 +545,13 @@ async function abaHoje() {
     const varia = comp ? (res.faturamento - comp.faturamento) / comp.faturamento : null;
 
     $("#conteudo").innerHTML = `
-    <div class="cab-sec"><div><h2>${ehHoje ? "Hoje" : "Último dia com vendas"}: ${DIAS_LONGO[dow(dia)]}, ${br(dia)}</h2>
-      <p>${info?.atracao ? "Atração: <b>" + esc(info.atracao) + "</b> · " : ""}${info?.jogo ? "Jogo: " + esc(info.jogo) + " · " : ""}Primeira venda ${res.primeira_venda?.slice(11, 16)} · última ${res.ultima_venda?.slice(11, 16)}</p></div>
-      <span class="ao-vivo">Atualiza sozinho a cada minuto</span></div>
-    ${!ehHoje ? `<div class="aviso">Os dados vêm da última importação do Epoc. Quando a integração automática com a API do Epoc for liberada, esta tela vai mostrar o movimento da noite em tempo real.</div>` : ""}
+    <div class="cab-sec"><div><h2>${ehHoje ? "Hoje" : ehUltimo ? "Último dia com vendas" : "Noite de"}: ${DIAS_LONGO[dow(dia)]}, ${br(dia)}</h2>
+      <p>${atracoes.length ? "🎵 <b>" + atracoes.map(esc).join(" + ") + "</b> · " : ""}${cl ? iconeClima(cl) + " " + textoClima(cl) + " · " : ""}${info?.jogo ? "⚽ " + esc(info.jogo) + " · " : ""}Primeira venda ${res.primeira_venda?.slice(11, 16)} · última ${res.ultima_venda?.slice(11, 16)}</p></div>
+      <div class="filtros dia-nav"><button class="btn sec" id="d-ant" ${idx <= 0 ? "disabled" : ""} title="Noite anterior">‹ ${idx > 0 ? DIAS[dow(H.lista[idx - 1])] + " " + br(H.lista[idx - 1]).slice(0, 5) : ""}</button>
+        <label class="cal-btn" title="Escolher o dia">📅<input type="date" id="d-cal" value="${dia}" min="${H.lista[0]}" max="${max}"></label>
+        <button class="btn sec" id="d-prox" ${ehUltimo ? "disabled" : ""} title="Próxima noite">${!ehUltimo ? DIAS[dow(H.lista[idx + 1])] + " " + br(H.lista[idx + 1]).slice(0, 5) + " " : ""}›</button>
+        ${!ehUltimo ? `<button class="btn sec peq" id="d-ult">Última</button>` : `<span class="ao-vivo">Atualiza sozinho</span>`}</div></div>
+    ${ehUltimo && !ehHoje ? `<div class="aviso">Os dados vêm da última importação do Epoc. Quando a integração automática com a API do Epoc for liberada, esta tela vai mostrar o movimento da noite em tempo real.</div>` : ""}
     <div class="grade kpis">
       <div class="card kpi destaque"><div class="rot">Faturamento</div><div class="val">${brl(res.faturamento)}</div>
         <div class="det">${varia !== null ? `${varia >= 0 ? "▲" : "▼"} ${pct(Math.abs(varia))} vs ${DIAS[dow(dia)]} anterior (${brl0(comp.faturamento)})` : ""}</div></div>
@@ -489,8 +575,16 @@ async function abaHoje() {
     grafico($("#g-hora"), { type: "bar", data: { labels: hs.map(h => String(h.hora).padStart(2, "0") + "h"), datasets: [{ data: hs.map(h => h.faturamento), backgroundColor: "#f2a63b", borderRadius: 6 }] },
       options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => brl0(v) } } } } });
   };
-  await render();
-  S.timer = setInterval(() => { if (S.aba === "hoje") render().catch(console.error); }, 60000);
+  const ligar = () => {
+    const ir = d => { H.dia = d; render().then(ligar).catch(console.error); };
+    const i = H.lista.indexOf(H.dia && H.lista.includes(H.dia) ? H.dia : H.lista[H.lista.length - 1]);
+    if ($("#d-ant")) $("#d-ant").onclick = () => i > 0 && ir(H.lista[i - 1]);
+    if ($("#d-prox")) $("#d-prox").onclick = () => i < H.lista.length - 1 && ir(H.lista[i + 1]);
+    if ($("#d-ult")) $("#d-ult").onclick = () => ir(null);
+    if ($("#d-cal")) $("#d-cal").onchange = e => { const v = e.target.value; const alvo = [...H.lista].reverse().find(d => d <= v) || H.lista[0]; ir(alvo); };
+  };
+  await render(); ligar();
+  S.timer = setInterval(() => { if (S.aba === "hoje" && !H.dia) render().then(ligar).catch(console.error); }, 60000);
 }
 
 // ============ ABA: FATURAMENTO ============
@@ -539,6 +633,7 @@ async function abaGeral() {
     <div class="card kpi"><div class="rot">Melhor noite</div><div class="val">${brl0(melhor.faturamento)}</div><div class="det">${DIAS[dow(melhor.dia)]} ${br(melhor.dia)}</div></div>
   </div>
   <div class="card" style="margin-top:14px"><h3>O que os números dizem</h3><div class="sub">Gerado automaticamente a partir do período escolhido</div><ul class="insights">${ins.map(i => `<li>${i}</li>`).join("")}</ul></div>
+  <div class="card" style="margin-top:14px" id="cal-fat"><div class="vazio">Carregando calendário…</div></div>
   <div class="card" style="margin-top:14px"><h3>Faturamento por noite</h3><div class="sub">Cor da barra = dia da semana</div><div class="graf alto"><canvas id="g-dias"></canvas></div></div>
   <div class="grade dois" style="margin-top:14px">
     <div class="card"><h3>Média por dia da semana</h3><div class="sub">Faturamento médio por noite aberta</div><div class="graf"><canvas id="g-dow"></canvas></div></div>
@@ -556,8 +651,68 @@ async function abaGeral() {
   grafico($("#g-dow"), { type: "bar", data: { labels: ordemDow.map(w => DIAS[w] + ` (${porDow[w].n})`), datasets: [{ data: ordemDow.map(w => porDow[w].soma / porDow[w].n), backgroundColor: ordemDow.map(w => coresDow[w]), borderRadius: 6 }] },
     options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => brl0(v) } } } } });
   const cats = Object.entries(porCat).sort((a, b) => b[1] - a[1]);
+  calendarioFaturamento($("#cal-fat"), p.fim.slice(0, 7)).catch(e => $("#cal-fat").innerHTML = `<div class="msg erro">${esc(e.message)}</div>`);
   grafico($("#g-cat"), { type: "bar", data: { labels: cats.map(c => c[0]), datasets: [{ data: cats.map(c => c[1]), backgroundColor: cats.map(c => COR_CAT[c[0]]), borderRadius: 6 }] },
     options: { indexAxis: "y", maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${brl0(ctx.parsed.x)} (${pct(ctx.parsed.x / total)})` } } }, scales: { x: { ticks: { callback: v => brl0(v) } } } } });
+}
+
+// ============ CALENDÁRIO DE FATURAMENTO (banda + clima + programação) ============
+const CAL = {};
+async function calendarioFaturamento(el, mesPadrao) {
+  CAL.mes ??= mesPadrao;
+  const [y, m] = CAL.mes.split("-").map(Number);
+  const ini = `${CAL.mes}-01`, fim = iso(new Date(y, m, 0));
+  const [dias, { data: pags }, { data: infos }, clima, { data: pessoas }] = await Promise.all([
+    todos(() => sb.from("vw_resumo_diario").select("dia,faturamento").gte("dia", ini).lte("dia", fim)),
+    sb.from("pagamentos_bandas").select("id,data,atracao,valor,pessoa_id").gte("data", ini).lte("data", fim),
+    sb.from("dias").select("data,jogo,atracao").gte("data", ini).lte("data", fim),
+    climaDias(ini, fim < addDias(diaOperacionalHoje(), 15) ? fim : addDias(diaOperacionalHoje(), 15)),
+    gestor() ? sb.from("pessoas").select("id,nome,valor_padrao,observacao").eq("tipo", "banda").eq("ativo", true).order("nome") : Promise.resolve({ data: [] }),
+  ]);
+  const fat = Object.fromEntries(dias.map(d => [d.dia, +d.faturamento]));
+  const bandas = {}; (pags || []).forEach(p => (bandas[p.data] ??= []).push(p));
+  const info = Object.fromEntries((infos || []).map(i => [i.data, i]));
+  const maxF = Math.max(...Object.values(fat), 1);
+  const total = Object.values(fat).reduce((a, b) => a + b, 0);
+  const cache = (pags || []).filter(p => fat[p.data] != null).reduce((a, p) => a + +p.valor, 0);
+  const hoje = diaOperacionalHoje();
+  const primeiro = (new Date(y, m - 1, 1).getDay() + 6) % 7; // segunda = 0
+  const celulas = [];
+  for (let i = 0; i < primeiro; i++) celulas.push(`<div class="cal-dia vazio-d"></div>`);
+  for (let d = ini; d <= fim; d = addDias(d, 1)) {
+    const f = fat[d], bs = bandas[d] || [], c = clima[d], fut = d > hoje;
+    const nomes = bs.length ? bs.map(b => b.atracao) : info[d]?.atracao ? [info[d].atracao] : [];
+    const t = f ? f / maxF : 0;
+    celulas.push(`<div class="cal-dia ${fut ? "futuro" : ""} ${f ? "com" : ""} ${d === hoje ? "hoje" : ""}" data-cal="${d}" style="${f ? `--t:${(0.12 + t * 0.6).toFixed(2)}` : ""}">
+      <div class="cal-top"><span class="cal-n">${+d.slice(8)}</span><span title="${esc(textoClima(c))}">${iconeClima(c)}${c ? `<small>${c.futuro ? (c.prob ?? 0) + "%" : nfmt(c.tmax) + "°"}</small>` : ""}</span></div>
+      ${f ? `<div class="cal-f">${f >= 1000 ? nfmt(f / 1000, 1) + "k" : nfmt(f)}</div>` : fut && nomes.length ? `<div class="cal-f prog">programado</div>` : ""}
+      ${nomes.length ? `<div class="cal-b">🎵 ${nomes.map(esc).join(" + ")}</div>` : ""}${info[d]?.jogo ? `<div class="cal-b">⚽ ${esc(info[d].jogo)}</div>` : ""}</div>`);
+  }
+  el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap"><div><h3>Calendário do mês</h3>
+      <div class="sub">Faturamento, atração e clima de cada noite · ${brl0(total)} no mês${cache ? ` · cachês ${brl0(cache)} (${pct(cache / total)})` : ""}${gestor() ? " · toque num dia futuro para lançar a programação" : ""}</div></div>
+    <div class="filtros"><button class="btn sec peq" id="cal-ant">‹</button><b style="min-width:130px;text-align:center">${["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"][m - 1]} ${y}</b><button class="btn sec peq" id="cal-prox">›</button></div></div>
+    <div class="cal">${["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map(d => `<div class="cal-h">${d}</div>`).join("")}${celulas.join("")}</div>
+    <p class="dica">🌧️ choveu à noite · 🌦️ garoa · ☀️ calor · 🧥 frio · nos dias futuros, % = chance de chuva à noite (previsão de até 16 dias).</p>`;
+  const mover = k => { const dt2 = new Date(y, m - 1 + k, 1); CAL.mes = `${dt2.getFullYear()}-${String(dt2.getMonth() + 1).padStart(2, "0")}`; calendarioFaturamento(el); };
+  $("#cal-ant").onclick = () => mover(-1); $("#cal-prox").onclick = () => mover(1);
+  el.querySelectorAll("[data-cal]").forEach(c => c.onclick = () => {
+    const d = c.dataset.cal;
+    if (fat[d] != null && d <= hoje) { H.dia = d; abrir("hoje"); return; }
+    if (!gestor()) return;
+    const ja = bandas[d] || [];
+    const dlg = $("#dlg");
+    dlg.innerHTML = `<h3>Programação · ${DIAS_LONGO[dow(d)]} ${br(d)}</h3>
+      ${clima[d] ? `<p class="dica" style="margin-top:0">${iconeClima(clima[d])} ${esc(textoClima(clima[d]))}</p>` : ""}
+      ${ja.length ? `<table style="margin-bottom:10px"><tbody>${ja.map(b => `<tr><td>${esc(b.atracao)}</td><td class="n">${brl0(+b.valor)}</td><td><button class="x" data-rm="${b.id}">×</button></td></tr>`).join("")}</tbody></table>` : `<p style="color:var(--mute)">Nenhuma atração lançada.</p>`}
+      <label>Toque na banda para programar (cachê e Pix vêm do cadastro)</label><div class="chips">${(pessoas || []).map(p => `<button data-pb="${p.id}">${esc(p.nome)}${p.valor_padrao ? ` <small>${brl0(+p.valor_padrao)}</small>` : ""}</button>`).join("") || `<span class="dica">Cadastre as bandas em Configurações → Freelas e bandas.</span>`}</div>
+      <div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn" id="pb-ok">Pronto</button></div>`;
+    dlg.showModal();
+    const reabrir = () => { dlg.close(); calendarioFaturamento(el); };
+    $("#pb-ok").onclick = reabrir;
+    dlg.querySelectorAll("[data-pb]").forEach(b => b.onclick = async () => { const p = pessoas.find(x => x.id == b.dataset.pb);
+      await sb.from("pagamentos_bandas").insert({ data: d, atracao: p.nome, pessoa_id: p.id, valor: +(p.valor_padrao || 0), status: "a pagar", observacao: p.observacao || null }); reabrir(); });
+    dlg.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { await sb.from("pagamentos_bandas").delete().eq("id", b.dataset.rm); reabrir(); });
+  });
 }
 
 // ============ ABA: PRODUTOS ============
@@ -766,8 +921,9 @@ function desenharContagem() {
     const total = C.itens.length, feitos = C.itens.filter(i => C.valores[i.id] != null).length;
     html += `<div class="card">${passos}<h3>${MOMENTOS[C.momento].nome} · ${DIAS_LONGO[dow(C.data)]}, ${br(C.data)}</h3>
       <div class="sub">${feitos} de ${total} itens lançados · escolha uma categoria</div>
-      <div class="escolhas">${cats.map(c => { const its = C.itens.filter(i => i.categoria === c); const f = its.filter(i => C.valores[i.id] != null).length;
-        return `<button class="escolha" data-cat="${esc(c)}"><b>${esc(c)}</b><small>${f} de ${its.length} lançados ${f === its.length ? "✔" : ""}</small><div class="barra-mini prog"><i style="width:${f / its.length * 100}%"></i></div></button>`; }).join("")}</div>
+      ${[["Bar", cats.filter(c => !/^cozinha/i.test(c))], ["Cozinha", cats.filter(c => /^cozinha/i.test(c))]].filter(([, cs]) => cs.length).map(([area, cs]) => `<h3 style="font-size:15px;margin:16px 0 8px;color:var(--mute)">${area}</h3>
+      <div class="escolhas">${cs.map(c => { const its = C.itens.filter(i => i.categoria === c); const f = its.filter(i => C.valores[i.id] != null).length;
+        return `<button class="escolha" data-cat="${esc(c)}"><b>${esc(c.replace(/^cozinha\s*·\s*/i, ""))}</b><small>${f} de ${its.length} lançados ${f === its.length ? "✔" : ""}</small><div class="barra-mini prog"><i style="width:${f / its.length * 100}%"></i></div></button>`; }).join("")}</div>`).join("")}
       <div class="rodape-passos"><button class="btn sec" data-ir="1">← Trocar contagem</button><button class="btn" data-ir="4">Ver resumo →</button></div></div>`;
   }
   if (C.passo === 3) {
@@ -794,7 +950,8 @@ function desenharContagem() {
   document.querySelectorAll("[data-qtd]").forEach(inp => inp.oninput = () => agendarSalvar(+inp.dataset.qtd, inp.value));
   document.querySelectorAll("[data-mais],[data-menos]").forEach(b => b.onclick = () => {
     const id = +(b.dataset.mais || b.dataset.menos); const inp = $(`[data-qtd="${id}"]`);
-    const v = Math.max(0, (numQtd(inp.value) || 0) + (b.dataset.mais ? 1 : -1)); inp.value = nfmt(v, v % 1 ? 1 : 0); agendarSalvar(id, inp.value);
+    const it = C.itens.find(x => x.id === id), passo = /^(kg|l|litro)s?$/i.test(it?.unidade || "") ? .5 : 1;
+    const v = Math.max(0, (numQtd(inp.value) || 0) + (b.dataset.mais ? passo : -passo)); inp.value = nfmt(v, v % 1 ? 1 : 0); agendarSalvar(id, inp.value);
   });
   if ($("#btn-itens")) $("#btn-itens").onclick = editarItens;
   if (C.passo === 4) resumoContagem();
@@ -862,15 +1019,18 @@ async function editarItens() {
   $("#conteudo").innerHTML = `<div class="cab-sec"><div><h2>Itens da contagem</h2><p>O que a equipe conta e qual produto do Epoc baixa cada item</p></div><button class="btn sec" id="voltar-c">← Voltar à contagem</button></div>
   <div class="card"><div class="rolagem" style="max-height:none"><table><thead><tr><th>Ordem</th><th>Nome</th><th>Categoria</th><th>Unidade</th><th>Códigos Epoc</th><th>Fator</th><th>Ativo</th><th></th></tr></thead><tbody>
   ${todosItens.map(i => `<tr data-id="${i.id}"><td><input name="ordem" type="number" value="${i.ordem}" style="width:64px;padding:6px"></td><td><input name="nome" value="${esc(i.nome)}" style="padding:6px"></td><td><input name="categoria" value="${esc(i.categoria)}" style="padding:6px"></td><td><input name="unidade" value="${esc(i.unidade)}" style="width:80px;padding:6px"></td>
-    <td><input name="codigos" value="${i.codigos.join(", ")}" style="width:110px;padding:6px" title="${esc(i.codigos.map(c => nomeProd[c] || c).join(", "))}"><div style="font-size:11.5px;color:var(--mute)">${esc(i.codigos.map(c => nomeProd[c] || "?").join(", "))}</div></td>
+    <td><input name="codigos" value="${Object.keys(i.consumo || {}).length ? Object.entries(i.consumo).map(([c, k]) => c + ":" + k).join(", ") : i.codigos.join(", ")}" style="width:150px;padding:6px"><div style="font-size:11.5px;color:var(--mute)">${esc(Object.keys(i.consumo || {}).length ? Object.entries(i.consumo).map(([c, k]) => `${nomeProd[c] || "?"} ${k} ${i.unidade}`).join(", ") : i.codigos.map(c => nomeProd[c] || "?").join(", "))}</div></td>
     <td><input name="fator" type="number" step="0.001" value="${i.fator}" style="width:70px;padding:6px"></td><td><input name="ativo" type="checkbox" ${i.ativo ? "checked" : ""} style="width:auto"></td><td><button class="btn peq" data-salvar>Salvar</button></td></tr>`).join("")}
   <tr data-id=""><td><input name="ordem" type="number" value="99" style="width:64px;padding:6px"></td><td><input name="nome" placeholder="Novo item" style="padding:6px"></td><td><input name="categoria" placeholder="Categoria" style="padding:6px"></td><td><input name="unidade" value="un" style="width:80px;padding:6px"></td><td><input name="codigos" placeholder="ex.: 51" style="width:110px;padding:6px"></td><td><input name="fator" type="number" value="1" style="width:70px;padding:6px"></td><td><input name="ativo" type="checkbox" checked style="width:auto"></td><td><button class="btn peq" data-salvar>Adicionar</button></td></tr>
   </tbody></table></div>
-  <p style="font-size:13px;color:var(--mute)">Códigos Epoc: o código do produto no Epoc (aparece no relatório de vendas). Pode ter mais de um, separados por vírgula. Fator: quantas unidades contadas cada venda consome (ex.: um balde com 4 garrafas = código do balde com fator 4, num item separado). Destilados sem código ficam só na contagem, sem comparação.</p></div>`;
+  <p style="font-size:13px;color:var(--mute)">Códigos Epoc: o código do produto no Epoc. Pode ter mais de um, separados por vírgula. <b>Cozinha (ficha técnica):</b> use código:quantidade por porção — ex.: <code>93:0.35, 91:0.3</code> = 0,35 kg de batata na Batata Costela e 0,3 kg na Batata Tradicional. Fator: quantas unidades contadas cada venda consome (ex.: um balde com 4 garrafas = código do balde com fator 4, num item separado). Destilados sem código ficam só na contagem, sem comparação.</p></div>`;
   $("#voltar-c").onclick = () => abrir("contagem");
   document.querySelectorAll("[data-salvar]").forEach(b => b.onclick = async () => {
     const tr = b.closest("tr"), g = n => tr.querySelector(`[name=${n}]`);
-    const reg = { nome: g("nome").value.trim(), categoria: g("categoria").value.trim(), unidade: g("unidade").value.trim() || "un", ordem: +g("ordem").value || 0, fator: +g("fator").value || 1, ativo: g("ativo").checked, codigos: g("codigos").value.split(/[,;\s]+/).filter(Boolean) };
+    const partes = g("codigos").value.split(/[,;]+|\s+(?=\d)/).map(x => x.trim()).filter(Boolean);
+    const consumo = {}; partes.forEach(x => { const m = x.match(/^(\d+)\s*[:=]\s*([\d.,]+)$/); if (m) consumo[m[1]] = parseFloat(m[2].replace(",", ".")); });
+    const reg = { nome: g("nome").value.trim(), categoria: g("categoria").value.trim(), unidade: g("unidade").value.trim() || "un", ordem: +g("ordem").value || 0, fator: +g("fator").value || 1, ativo: g("ativo").checked,
+      codigos: partes.map(x => x.split(/[:=]/)[0].trim()).filter(x => /^\d+$/.test(x)), consumo };
     if (!reg.nome || !reg.categoria) return (b.textContent = "Preencha nome e categoria");
     const q = tr.dataset.id ? sb.from("itens_estoque").update(reg).eq("id", tr.dataset.id) : sb.from("itens_estoque").insert(reg);
     const { error } = await q; b.textContent = error ? "Erro" : "Salvo ✔"; if (error) b.title = error.message;
@@ -886,10 +1046,12 @@ function detectarPix(v) {
   if (!s || /^(pg|dh|-)$/i.test(s)) return null;
   if (/@/.test(s)) return { tipo: "email", chave: s.toLowerCase() };
   const d = s.replace(/\D/g, "");
-  if (/^\(?\d{2}\)?\s?9/.test(s) && d.length === 11) return { tipo: "celular", chave: d };
+  if (/^\(?\d{2}\)?\s?9/.test(s) && d.length === 11 && !/^\d{11}$/.test(s)) return { tipo: "celular", chave: d };
   if (d.length === 14) return { tipo: "cnpj", chave: d };
   if (/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(s)) return { tipo: "cpf", chave: d };
-  if (d.length === 11) return { tipo: /^[1-9]{2}9/.test(d) ? "celular" : "cpf", chave: d };
+  const DDD = /^(1[1-9]|2[124]|2[78]|3[1-5]|3[78]|4[1-9]|5[135]|5[45]|6[1-9]|7[13-5]|7[79]|8[1-9]|9[1-9])9/;
+  if (d.length === 13 && d.startsWith("55") && DDD.test(d.slice(2))) return { tipo: "celular", chave: d.slice(2) };
+  if (d.length === 11) return { tipo: DDD.test(d) ? "celular" : "cpf", chave: d };
   if (d.length === 10 && typeof v === "number") return { tipo: "cpf", chave: d.padStart(11, "0") };
   if (d.length >= 8) return { tipo: "aleatoria", chave: s };
   return null;
@@ -1501,102 +1663,227 @@ const FERIADOS = {
   "2027-07-09": "Revolução Constitucionalista (SP)", "2027-09-07": "Independência", "2027-10-12": "Nossa Senhora Aparecida",
   "2027-11-02": "Finados", "2027-11-15": "Proclamação da República", "2027-11-20": "Consciência Negra", "2027-12-25": "Natal", "2027-12-31": "Véspera de Ano Novo",
 };
-const P = {};
+const PQ = { passo: 1 };
+const LOCAL = { lat: -23.554, lon: -46.657 }; // Rua Augusta, Consolação
+async function climaPrevisao() {
+  if (PQ.prev) return PQ.prev;
+  const u = `https://api.open-meteo.com/v1/forecast?latitude=${LOCAL.lat}&longitude=${LOCAL.lon}&daily=precipitation_probability_max,precipitation_sum,temperature_2m_max,temperature_2m_min&hourly=precipitation_probability,precipitation&timezone=America%2FSao_Paulo&forecast_days=16`;
+  try { PQ.prev = await (await fetch(u)).json(); } catch (_) { PQ.prev = null; }
+  return PQ.prev;
+}
+function resumoClimaDia(prev, d) {
+  if (!prev?.daily) return null;
+  const i = prev.daily.time.indexOf(d); if (i < 0) return null;
+  // horas da noite: 17h do dia até 02h do dia seguinte
+  const horas = [];
+  prev.hourly.time.forEach((t, k) => { const dia = t.slice(0, 10), h = +t.slice(11, 13);
+    if ((dia === d && h >= 17) || (dia === addDias(d, 1) && h <= 2)) horas.push({ h, p: prev.hourly.precipitation_probability[k], mm: prev.hourly.precipitation[k] }); });
+  const chuvosas = horas.filter(x => x.p >= 50);
+  const probNoite = horas.length ? Math.max(...horas.map(x => x.p ?? 0)) : prev.daily.precipitation_probability_max[i];
+  const faixa = chuvosas.length ? `${String(chuvosas[0].h).padStart(2, "0")}h–${String((chuvosas[chuvosas.length - 1].h + 1) % 24).padStart(2, "0")}h` : null;
+  return { prob: probNoite ?? 0, probDia: prev.daily.precipitation_probability_max[i], mm: prev.daily.precipitation_sum[i], tmin: prev.daily.temperature_2m_min[i], tmax: prev.daily.temperature_2m_max[i], faixa };
+}
+async function efeitoChuva(diasFat, comidaDia) {
+  // compara noites com chuva (≥1 mm entre 17h e 02h) com a média do mesmo dia da semana
+  if (PQ.efeito) return PQ.efeito;
+  const ds = diasFat.map(d => d.dia).sort(); if (!ds.length) return null;
+  const fim = ds[ds.length - 1] > addDias(diaOperacionalHoje(), -6) ? addDias(diaOperacionalHoje(), -6) : ds[ds.length - 1];
+  try {
+    const j = await (await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${LOCAL.lat}&longitude=${LOCAL.lon}&start_date=${ds[0]}&end_date=${addDias(fim, 1)}&hourly=precipitation&timezone=America%2FSao_Paulo`)).json();
+    const mm = {}; j.hourly.time.forEach((t, k) => { const dia = t.slice(0, 10), h = +t.slice(11, 13); const op = h <= 2 ? addDias(dia, -1) : dia; if (h >= 17 || h <= 2) mm[op] = (mm[op] || 0) + (j.hourly.precipitation[k] || 0); });
+    const porDow = {}; diasFat.forEach(d => (porDow[dow(d.dia)] ??= []).push(d));
+    const r = { chuva: [], seco: [], cChuva: [], cSeco: [] };
+    diasFat.forEach(d => { if (mm[d.dia] == null || FERIADOS[d.dia] || FERIADOS[addDias(d.dia, 1)]) return; const g = porDow[dow(d.dia)]; if (g.length < 3) return;
+      const med = g.reduce((s, x) => s + +x.faturamento, 0) / g.length, medC = g.reduce((s, x) => s + (comidaDia[x.dia] || 0), 0) / g.length;
+      const chove = mm[d.dia] >= 1; r[chove ? "chuva" : "seco"].push(d.faturamento / med); if (medC) r[chove ? "cChuva" : "cSeco"].push((comidaDia[d.dia] || 0) / medC); });
+    const m = a => a.reduce((s, x) => s + x, 0) / a.length;
+    const lim = v => Math.max(.6, Math.min(1.25, v));
+    PQ.efeito = r.chuva.length >= 3 && r.seco.length >= 3
+      ? { geral: lim(m(r.chuva) / m(r.seco)), comida: r.cChuva.length >= 3 ? lim(m(r.cChuva) / m(r.cSeco)) : lim(m(r.chuva) / m(r.seco)), noitesChuva: r.chuva.length, noitesSecas: r.seco.length }
+      : { geral: .9, comida: .9, noitesChuva: r.chuva.length, noitesSecas: r.seco.length, padrao: true };
+  } catch (_) { PQ.efeito = { geral: .9, comida: .9, padrao: true, erro: true }; }
+  return PQ.efeito;
+}
+const ehComida = it => Object.keys(it.consumo || {}).length > 0 || /cozinha|insumo|comida|alimento|hortifruti|carne/i.test(it.categoria || "");
+
 async function abaPedido() {
   const hoje = diaOperacionalHoje();
-  P.ini ??= addDias(hoje, 1);
-  P.fim ??= addDias(hoje, 7);
-  const [{ data: itens }, { data: cfgRow }, { data: conts }] = await Promise.all([
-    sb.from("itens_estoque").select("*").eq("ativo", true).order("ordem"),
+  if (!PQ.ini) { const w = (3 - dow(addDias(hoje, 1)) + 7) % 7; PQ.ini = addDias(addDias(hoje, 1), w); PQ.fim = addDias(PQ.ini, 4); }
+  const { max } = await limitesDados();
+  const baseFim = max || hoje, baseIni = addDias(baseFim, -55);
+  const [diasFat, { data: cfgRow }, { data: cfgQ }] = await Promise.all([
+    todos(() => sb.from("vw_resumo_diario").select("dia,faturamento").gte("dia", baseIni).lte("dia", baseFim)),
     sb.from("config").select("valor").eq("chave", "pedido").maybeSingle(),
-    sb.from("contagens").select("data,momento,item_id,quantidade").gte("data", addDias(hoje, -45)).order("data"),
+    sb.from("config").select("valor").eq("chave", "pedido_quiz").maybeSingle(),
   ]);
   const cfg = { margem: .2, fator_feriado: 1.3, fator_vespera: 1.3, ...(cfgRow?.valor || {}) };
-  const { max } = await limitesDados();
-  const baseFim = max || hoje, baseIni = addDias(baseFim, -55); // 8 semanas de histórico
-  const codigos = [...new Set(itens.flatMap(i => i.codigos))];
-  const vendas = codigos.length ? await todos(() => sb.from("vw_vendas_codigo_dia").select("*").gte("dia", addDias(baseIni, -45)).in("codigo", codigos)) : [];
-  const diasComVenda = new Set(vendas.map(v => v.dia));
+  const cq = { ticket_pessoa: 80, ...(cfgQ?.valor || {}) };
+  const abreDow = new Set(diasFat.map(d => dow(d.dia)));
+  const periodo = []; for (let d = PQ.ini; d <= PQ.fim; d = addDias(d, 1)) periodo.push(d);
+  const noites = periodo.filter(d => abreDow.has(dow(d)) || (PQ.feriados || []).includes(d));
+  const detectados = periodo.filter(d => FERIADOS[d] || FERIADOS[addDias(d, 1)]);
+  PQ.feriados ??= detectados;
+  PQ.eventos ??= [];
+  PQ.usarClima ??= true;
+  const passos = cabPassos(["Semana", "Feriado", "Evento / reserva", "Clima", "Pedido"], PQ.passo);
+  const rodape = (voltar, prox, txt = "Próximo →") => `<div class="rodape-passos">${voltar ? `<button class="btn sec" data-pq="${voltar}">← Voltar</button>` : "<span></span>"}<button class="btn" data-pq="${prox}">${txt}</button></div>`;
+  let html = `<div class="cab-sec"><div><h2>Pedido sugerido</h2><p>Bebidas e comida, com base nas vendas, feriados, eventos e na previsão do tempo</p></div>
+    ${PQ.passo === 5 ? `<button class="btn sec" data-pq="1">↺ Refazer questionário</button>` : ""}</div>`;
+
+  if (PQ.passo === 1) html += `<div class="card quiz">${passos}<h3>Para quais noites é o pedido?</h3>
+    <div class="chips" style="margin:12px 0"><button data-atalho="esta">Esta semana (qua–dom)</button><button data-atalho="prox">Próxima semana</button></div>
+    <div class="linha-form" style="max-width:460px"><div><label>De</label><input type="date" id="q-ini" value="${PQ.ini}"></div><div><label>Até</label><input type="date" id="q-fim" value="${PQ.fim}"></div></div>
+    <p class="dica">${noites.length} noites abertas: ${noites.map(d => DIAS[dow(d)] + " " + br(d).slice(0, 5)).join(", ") || "nenhuma"}</p>${rodape(null, 2)}</div>`;
+
+  if (PQ.passo === 2) html += `<div class="card quiz">${passos}<h3>Tem feriado ou véspera de feriado nessas noites?</h3>
+    ${detectados.length ? `<div class="msg ok" style="margin-bottom:10px">Encontrei no calendário: ${detectados.map(d => FERIADOS[d] ? `${DIAS[dow(d)]} ${br(d).slice(0, 5)} — ${FERIADOS[d]}` : `${DIAS[dow(d)]} ${br(d).slice(0, 5)} — véspera de ${FERIADOS[addDias(d, 1)]}`).join(" · ")}</div>` : ""}
+    <div class="sim-nao"><button class="${PQ.feriados.length ? "sel" : ""}" data-fer="sim">Sim</button><button class="${!PQ.feriados.length ? "sel" : ""}" data-fer="nao">Não</button></div>
+    ${PQ.feriados.length || PQ.ferSim ? `<label>Marque as noites com movimento de feriado</label><div class="chips">${periodo.map(d => `<button class="${PQ.feriados.includes(d) ? "sel" : ""}" data-fdia="${d}">${DIAS[dow(d)]} ${br(d).slice(0, 5)}</button>`).join("")}</div>
+      <p class="dica">Essas noites recebem ${nfmt(cfg.fator_vespera, 2)}× a venda normal (ajustável no fim).</p>` : ""}
+    ${rodape(1, 3)}</div>`;
+
+  if (PQ.passo === 3) html += `<div class="card quiz">${passos}<h3>Tem algum evento especial ou reserva grande?</h3>
+    <div class="sim-nao"><button class="${PQ.eventos.length ? "sel" : ""}" data-ev="sim">Sim</button><button class="${!PQ.eventos.length ? "sel" : ""}" data-ev="nao">Não</button></div>
+    ${PQ.eventos.map((e, i) => `<div class="linha-form ev-linha"><div><label>Noite</label><select data-evd="${i}">${noites.map(d => `<option value="${d}" ${d === e.data ? "selected" : ""}>${DIAS[dow(d)]} ${br(d).slice(0, 5)}</option>`).join("")}</select></div>
+      <div><label>Pessoas a mais</label><input type="number" min="0" data-evp="${i}" value="${e.pessoas || ""}" placeholder="ex.: 40"></div><div><label>O quê</label><input data-evn="${i}" value="${esc(e.nome || "")}" placeholder="aniversário, reserva…"></div>
+      <div><button class="x" data-evx="${i}" style="margin-top:28px">×</button></div></div>`).join("")}
+    ${PQ.eventos.length ? `<button class="btn sec peq" data-ev="mais" style="margin-top:10px">+ Outro evento</button>
+      <p class="dica">Cada pessoa a mais conta como ${brl0(cq.ticket_pessoa)} de consumo (gasto médio por pessoa — ajustável no fim).</p>` : ""}
+    ${rodape(2, 4)}</div>`;
+
+  if (PQ.passo === 4) {
+    html += `<div class="card quiz">${passos}<h3>Previsão do tempo das noites</h3><div class="sub">Chuva entre 17h e 2h · Rua Augusta, São Paulo · fonte: Open-Meteo</div><div id="clima-cards" class="vazio">Buscando previsão…</div>
+      <div id="clima-efeito"></div>${rodape(3, 5, "Ver pedido sugerido →")}</div>`;
+  }
+  if (PQ.passo === 5) html += `<div id="pedido-res" class="vazio">Calculando…</div>`;
+  $("#conteudo").innerHTML = html;
+
+  // eventos do questionário
+  const ir = n => { PQ.passo = n; abaPedido(); };
+  document.querySelectorAll("[data-pq]").forEach(b => b.onclick = () => {
+    if (PQ.passo === 1) { PQ.ini = $("#q-ini").value; PQ.fim = $("#q-fim").value; if (PQ.fim < PQ.ini) PQ.fim = PQ.ini; PQ.feriados = null; }
+    ir(+b.dataset.pq);
+  });
+  document.querySelectorAll("[data-atalho]").forEach(b => b.onclick = () => {
+    const w = (3 - dow(addDias(hoje, 1)) + 7) % 7; let ini = addDias(addDias(hoje, 1), w);
+    if (b.dataset.atalho === "esta") { const atual = semanaDe(hoje); if (addDias(atual, 4) >= hoje) ini = atual > hoje ? atual : hoje; }
+    if (b.dataset.atalho === "prox") ini = addDias(semanaDe(hoje), 7);
+    PQ.ini = ini; PQ.fim = addDias(semanaDe(ini), 4); PQ.feriados = null; abaPedido();
+  });
+  document.querySelectorAll("[data-fer]").forEach(b => b.onclick = () => { if (b.dataset.fer === "nao") { PQ.feriados = []; PQ.ferSim = false; } else { PQ.ferSim = true; if (!PQ.feriados.length) PQ.feriados = detectados.slice(); } abaPedido(); });
+  document.querySelectorAll("[data-fdia]").forEach(b => b.onclick = () => { const d = b.dataset.fdia; PQ.feriados = PQ.feriados.includes(d) ? PQ.feriados.filter(x => x !== d) : [...PQ.feriados, d]; PQ.ferSim = true; abaPedido(); });
+  document.querySelectorAll("[data-ev]").forEach(b => b.onclick = () => { if (b.dataset.ev === "nao") PQ.eventos = []; else PQ.eventos.push({ data: noites[0] || PQ.ini, pessoas: null, nome: "" }); abaPedido(); });
+  document.querySelectorAll("[data-evd]").forEach(x => x.onchange = () => PQ.eventos[x.dataset.evd].data = x.value);
+  document.querySelectorAll("[data-evp]").forEach(x => x.oninput = () => PQ.eventos[x.dataset.evp].pessoas = +x.value || 0);
+  document.querySelectorAll("[data-evn]").forEach(x => x.oninput = () => PQ.eventos[x.dataset.evn].nome = x.value);
+  document.querySelectorAll("[data-evx]").forEach(x => x.onclick = () => { PQ.eventos.splice(+x.dataset.evx, 1); abaPedido(); });
+
+  if (PQ.passo === 4) {
+    const [prev, comidaDia] = await Promise.all([climaPrevisao(), comidaPorDia(baseIni, baseFim)]);
+    const ef = await efeitoChuva(diasFat, comidaDia);
+    $("#clima-cards").className = "clima-grade";
+    $("#clima-cards").innerHTML = noites.map(d => { const c = resumoClimaDia(prev, d);
+      if (!c) return `<div class="clima"><b>${DIAS[dow(d)]} ${br(d).slice(0, 5)}</b><small>sem previsão ainda (só até 16 dias)</small></div>`;
+      const ic = c.prob >= 60 ? "🌧️" : c.prob >= 30 ? "🌦️" : c.tmax >= 28 ? "☀️" : "⛅";
+      return `<div class="clima ${c.prob >= 60 ? "chuva" : ""}"><b>${DIAS[dow(d)]} ${br(d).slice(0, 5)}</b><span class="ic">${ic}</span>
+        <div class="prob">${c.prob}%<small>chance de chuva à noite</small></div>
+        <small>${c.faixa ? "chuva provável " + c.faixa : "noite sem chuva prevista"}${c.mm ? " · " + nfmt(c.mm, 1) + " mm no dia" : ""}</small><small>${nfmt(c.tmin)}° a ${nfmt(c.tmax)}°C</small></div>`; }).join("") || `<p>Sem noites no período.</p>`;
+    $("#clima-efeito").innerHTML = `<div class="sim-nao" style="margin-top:16px"><button class="${PQ.usarClima ? "sel" : ""}" data-cl="1">Considerar o clima</button><button class="${!PQ.usarClima ? "sel" : ""}" data-cl="0">Ignorar o clima</button></div>
+      <p class="dica">${ef?.padrao ? `Ainda há poucas noites com chuva no histórico; usando ${pct(1 - ef.geral)} a menos nas noites chuvosas como ponto de partida.` :
+        `No seu histórico (${ef.noitesChuva} noites com chuva × ${ef.noitesSecas} secas), noite chuvosa vendeu <b>${ef.geral >= 1 ? "+" : "−"}${pct(Math.abs(1 - ef.geral))}</b> no geral e <b>${ef.comida >= 1 ? "+" : "−"}${pct(Math.abs(1 - ef.comida))}</b> em comida, comparado com o mesmo dia da semana.`}
+        Chance ≥ 60% aplica o efeito inteiro; entre 30% e 60%, metade.</p>`;
+    document.querySelectorAll("[data-cl]").forEach(b => b.onclick = () => { PQ.usarClima = b.dataset.cl === "1"; document.querySelectorAll("[data-cl]").forEach(x => x.classList.toggle("sel", x === b)); });
+  }
+  if (PQ.passo === 5) await resultadoPedido({ hoje, baseIni, baseFim, diasFat, cfg, cq, noites });
+}
+async function comidaPorDia(ini, fim) {
+  const r = await todos(() => sb.from("vw_vendas_produto_dia").select("dia,grupo,faturamento").gte("dia", ini).lte("dia", fim));
+  const o = {}; r.forEach(x => { if (CATEG(x.grupo) === "Comida") o[x.dia] = (o[x.dia] || 0) + +x.faturamento; }); return o;
+}
+async function resultadoPedido({ hoje, baseIni, baseFim, diasFat, cfg, cq, noites }) {
+  const [{ data: itens }, { data: conts }, vendas, prods, prev, comidaDia] = await Promise.all([
+    sb.from("itens_estoque").select("*").eq("ativo", true).order("ordem"),
+    sb.from("contagens").select("data,momento,item_id,quantidade").gte("data", addDias(hoje, -45)).order("data"),
+    todos(() => sb.from("vw_vendas_codigo_dia").select("*").gte("dia", addDias(baseIni, -45))),
+    todos(() => sb.from("produtos").select("codigo,nome,grupo")),
+    climaPrevisao(), comidaPorDia(baseIni, baseFim),
+  ]);
+  const ef = await efeitoChuva(diasFat, comidaDia);
   const vendaDia = {}; vendas.forEach(v => { vendaDia[v.dia + "|" + v.codigo] = +v.qtd; });
-
-  // média por dia da semana em noites abertas (últimas 8 semanas), excluindo feriados para não inflar
-  const noitesBase = [...diasComVenda].filter(d => d >= baseIni && d <= baseFim && !FERIADOS[d] && !FERIADOS[addDias(d, 1)]);
+  const noitesBase = diasFat.map(d => d.dia).filter(d => !FERIADOS[d] && !FERIADOS[addDias(d, 1)]);
   const nPorDow = {}; noitesBase.forEach(d => nPorDow[dow(d)] = (nPorDow[dow(d)] || 0) + 1);
-  const abreDow = w => (nPorDow[w] || 0) > 0;
-
-  // dias do período a cobrir
-  const periodo = []; for (let d = P.ini; d <= P.fim; d = addDias(d, 1)) periodo.push(d);
-  const diasAbertos = periodo.filter(d => abreDow(dow(d)) || FERIADOS[addDias(d, 1)]);
-  const fatorDia = d => FERIADOS[addDias(d, 1)] ? cfg.fator_vespera : FERIADOS[d] ? cfg.fator_feriado : 1;
-
+  const fatDow = {}; diasFat.forEach(d => { if (noitesBase.includes(d.dia)) fatDow[dow(d.dia)] = (fatDow[dow(d.dia)] || 0) + +d.faturamento / nPorDow[dow(d.dia)]; });
+  const mediaCod = {}; // média por dia da semana de cada código
+  noitesBase.forEach(d => { const w = dow(d); Object.keys(vendaDia).forEach(() => {}); });
+  vendas.forEach(v => { if (!noitesBase.includes(v.dia)) return; const w = dow(v.dia); mediaCod[v.codigo + "|" + w] = (mediaCod[v.codigo + "|" + w] || 0) + +v.qtd / nPorDow[w]; });
+  // fator de cada noite
+  const fatores = noites.map(d => {
+    const fer = PQ.feriados.includes(d) ? cfg.fator_vespera : 1;
+    const pessoas = PQ.eventos.filter(e => e.data === d).reduce((s, e) => s + (+e.pessoas || 0), 0);
+    const base = fatDow[dow(d)] || 0;
+    const ev = pessoas && base ? 1 + pessoas * cq.ticket_pessoa / base : 1;
+    const c = resumoClimaDia(prev, d);
+    const peso = !PQ.usarClima || !c ? 0 : c.prob >= 60 ? 1 : c.prob >= 30 ? .5 : 0;
+    const ch = 1 + (ef.geral - 1) * peso, chC = 1 + (ef.comida - 1) * peso;
+    return { d, fer, ev, pessoas, ch, chC, c, f: fer * ev * ch, fC: fer * ev * chC, base };
+  });
+  const previsaoCod = (cod, comida) => fatores.reduce((s, x) => s + (mediaCod[cod + "|" + dow(x.d)] || 0) * (comida ? x.fC : x.f), 0);
   const linhas = itens.map(it => {
-    const temCod = it.codigos.length > 0;
-    // média de unidades por dia da semana
-    const mediaDow = {};
-    if (temCod) noitesBase.forEach(d => { const q = it.codigos.reduce((s, c) => s + (vendaDia[d + "|" + c] || 0), 0) * (+it.fator || 1); mediaDow[dow(d)] = (mediaDow[dow(d)] || 0) + q / nPorDow[dow(d)]; });
-    const previsto = temCod ? diasAbertos.reduce((s, d) => s + (mediaDow[dow(d)] ?? 0) * fatorDia(d), 0) : null;
-    // estoque atual: última contagem (fechamento > abertura no mesmo dia) + entradas depois − vendas depois
+    const comida = ehComida(it), cons = it.consumo || {};
+    const usa = Object.keys(cons).length ? Object.entries(cons) : it.codigos.map(c => [c, +it.fator || 1]);
+    const previsto = usa.length ? usa.reduce((s, [c, k]) => s + previsaoCod(c, comida) * +k, 0) : null;
     const cs = (conts || []).filter(c => c.item_id === it.id);
     const base = [...cs].filter(c => c.momento !== "entrada").sort((a, b) => a.data.localeCompare(b.data) || (a.momento === "fechamento") - (b.momento === "fechamento")).pop();
     let estoque = null, ref = null;
     if (base) {
       ref = base.data + (base.momento === "abertura" ? " (abertura)" : "");
-      estoque = +base.quantidade
-        + cs.filter(c => c.momento === "entrada" && (c.data > base.data || (base.momento === "abertura" && c.data === base.data))).reduce((s, c) => s + +c.quantidade, 0);
-      if (temCod) {
-        const desde = base.momento === "fechamento" ? addDias(base.data, 1) : base.data;
-        for (let d = desde; d <= hoje; d = addDias(d, 1)) estoque -= it.codigos.reduce((s, c) => s + (vendaDia[d + "|" + c] || 0), 0) * (+it.fator || 1);
-        estoque = Math.max(0, estoque);
-      }
+      estoque = +base.quantidade + cs.filter(c => c.momento === "entrada" && (c.data > base.data || (base.momento === "abertura" && c.data === base.data))).reduce((s, c) => s + +c.quantidade, 0);
+      const desde = base.momento === "fechamento" ? addDias(base.data, 1) : base.data;
+      for (let d = desde; d <= hoje; d = addDias(d, 1)) estoque -= usa.reduce((s, [c, k]) => s + (vendaDia[d + "|" + c] || 0) * +k, 0);
+      estoque = Math.max(0, estoque);
     }
-    let sugerido = null, caixas = null;
-    if (previsto != null) {
-      const precisa = previsto * (1 + cfg.margem) - (estoque ?? 0);
-      caixas = Math.max(0, Math.ceil(precisa / it.embalagem));
-      sugerido = caixas * it.embalagem;
-    }
-    return { it, previsto, estoque, ref, sugerido, caixas };
+    let caixas = null, sugerido = null;
+    if (previsto != null) { caixas = Math.max(0, Math.ceil((previsto * (1 + cfg.margem) - (estoque ?? 0)) / it.embalagem)); sugerido = caixas * it.embalagem; }
+    return { it, comida, previsto, estoque, ref, caixas, sugerido };
   });
-  const feriadosNoPeriodo = periodo.filter(d => FERIADOS[d] || FERIADOS[addDias(d, 1)]);
-  const semEstoque = linhas.filter(l => l.estoque == null && l.previsto != null).length;
-  const porForn = {}; linhas.filter(l => l.caixas > 0).forEach(l => (porForn[l.it.fornecedor || "Sem fornecedor"] ??= []).push(l));
+  // pratos: previsão de porções por prato de comida
+  const pratos = prods.filter(x => CATEG(x.grupo) === "Comida").map(x => ({ ...x, porNoite: fatores.map(f => (mediaCod[x.codigo + "|" + dow(f.d)] || 0) * f.fC) }))
+    .map(x => ({ ...x, total: x.porNoite.reduce((s, v) => s + v, 0) })).filter(x => x.total >= .5).sort((a, b) => b.total - a.total);
+  PQ.aba ??= "bebidas";
+  const grupoLinhas = PQ.aba === "comida" ? linhas.filter(l => l.comida) : linhas.filter(l => !l.comida);
+  const porForn = {}; grupoLinhas.filter(l => l.caixas > 0).forEach(l => (porForn[l.it.fornecedor || "Sem fornecedor"] ??= []).push(l));
+  const semEstoque = grupoLinhas.filter(l => l.estoque == null && l.previsto != null).length;
+  const insumos = linhas.filter(l => l.comida);
 
-  $("#conteudo").innerHTML = `
-  <div class="cab-sec"><div><h2>Pedido sugerido</h2><p>Baseado no que vendeu por dia da semana nas últimas 8 semanas (${noitesBase.length} noites), no estoque contado e nos feriados</p></div></div>
-  <div class="card"><div class="linha-form">
-    <div><label>Cobrir de</label><input type="date" id="p-ini" value="${P.ini}"></div><div><label>até</label><input type="date" id="p-fim" value="${P.fim}"></div>
-    <div><label>Margem de segurança</label><input type="number" id="p-margem" value="${Math.round(cfg.margem * 100)}" min="0" max="200"> </div>
-    <div><label>Véspera de feriado (×)</label><input type="number" step="0.05" id="p-vesp" value="${cfg.fator_vespera}"></div>
-    <div><label>Feriado (×)</label><input type="number" step="0.05" id="p-fer" value="${cfg.fator_feriado}"></div>
-    <div><button class="btn largo" id="p-calc" style="margin-top:0">Recalcular</button></div></div>
-    <p style="font-size:13px;color:var(--mute);margin-bottom:0">Período: ${diasAbertos.length} noites abertas (${diasAbertos.map(d => DIAS[dow(d)] + " " + br(d).slice(0, 5)).join(", ") || "nenhuma"}).
-    ${feriadosNoPeriodo.length ? `<br>🎉 ${feriadosNoPeriodo.map(d => FERIADOS[d] ? `${br(d).slice(0, 5)} ${FERIADOS[d]}` : `${br(d).slice(0, 5)} véspera de ${FERIADOS[addDias(d, 1)]}`).join(" · ")}` : ""}</p></div>
-  ${!noitesBase.length ? `<div class="aviso" style="margin-top:14px">Ainda não há vendas importadas nas últimas 8 semanas — importe o relatório do Epoc para a previsão funcionar.</div>` : ""}
-  ${semEstoque ? `<div class="aviso" style="margin-top:14px">${semEstoque} itens sem contagem recente: a sugestão considera estoque zero para eles. Faça a contagem de fechamento para o pedido ficar certeiro.</div>` : ""}
-  <div class="grade dois" style="margin-top:14px">
-    <div class="card"><h3>Pedido pronto para enviar</h3><div class="sub">Por fornecedor, em embalagens fechadas</div>
-      ${Object.keys(porForn).length ? Object.entries(porForn).map(([f, ls]) => `<div style="margin-bottom:14px"><b>${esc(f)}</b><pre id="txt-${esc(f).replace(/\W/g, "")}" style="white-space:pre-wrap;background:var(--panel2);padding:10px;border-radius:10px;font:13px/1.5 'DM Sans'">${esc(`Pedido Vezpa Bar – ${br(hoje)}\n` + ls.map(l => `${l.caixas} × ${l.it.embalagem > 1 ? "cx " + l.it.embalagem : ""} ${l.it.nome}`.replace("  ", " ")).join("\n"))}</pre>
-        <button class="btn sec peq" data-copiar="txt-${esc(f).replace(/\W/g, "")}">Copiar texto</button></div>`).join("") : `<div class="vazio">Nada a pedir no período com o estoque atual.</div>`}</div>
-    <div class="card"><h3>Como a conta é feita</h3><ol class="insights">
-      <li>Para cada item, calcula a média vendida em cada dia da semana nas últimas 8 semanas (sem contar feriados).</li>
-      <li>Soma a previsão das noites que o bar abre no período, multiplicando vésperas e feriados pelo fator.</li>
-      <li>Acrescenta a margem de segurança e desconta o estoque atual (última contagem − vendas desde então + entradas).</li>
-      <li>Arredonda para cima em caixas fechadas. Embalagem e fornecedor se ajustam em <a href="#contagem" onclick="abrir('contagem');setTimeout(editarItens,300);return false">Itens da contagem</a>.</li></ol></div>
-  </div>
-  <div class="card" style="margin-top:14px"><h3>Item a item</h3><div class="rolagem" style="max-height:600px"><table><thead><tr><th>Item</th><th>Fornecedor</th><th class="n">Previsão de venda</th><th class="n">Estoque atual</th><th>Contado em</th><th class="n">Embalagem</th><th class="n">Pedir</th></tr></thead><tbody>
-    ${linhas.map(l => `<tr><td>${esc(l.it.nome)}</td><td>${esc(l.it.fornecedor || "")}</td><td class="n">${l.previsto != null ? nfmt(l.previsto) : "<span class='tag'>sem vínculo Epoc</span>"}</td><td class="n">${l.estoque != null ? nfmt(l.estoque) : "—"}</td><td>${l.ref ? br(l.ref.slice(0, 10)) + l.ref.slice(10) : "—"}</td><td class="n">${l.it.embalagem}</td>
-      <td class="n">${l.caixas == null ? "—" : l.caixas === 0 ? "<span class='tag bom'>ok</span>" : `<b>${l.caixas}</b> (${nfmt(l.sugerido)} ${esc(l.it.unidade)})`}</td></tr>`).join("")}
-  </tbody></table></div>
-  <p style="font-size:13px;color:var(--mute)">Destilados não têm código no Epoc (saem em doses e drinks), então não entram na previsão. Para eles, use a contagem como referência. Se quiser, dá para vincular cada drink ao destilado com um fator em doses.</p></div>`;
-  $("#p-calc").onclick = async () => {
-    P.ini = $("#p-ini").value; P.fim = $("#p-fim").value;
-    const novo = { margem: (+$("#p-margem").value || 0) / 100, fator_vespera: +$("#p-vesp").value || 1, fator_feriado: +$("#p-fer").value || 1 };
-    await sb.from("config").upsert({ chave: "pedido", valor: novo });
-    abrir("pedido");
+  let corpo = "";
+  if (PQ.aba === "pratos") corpo = `<div class="sub">Quantas porções de cada prato devem sair, noite a noite — use para a produção e para a lista de compras da cozinha</div>
+    <div class="rolagem" style="max-height:600px"><table><thead><tr><th>Prato</th>${fatores.map(f => `<th class="n">${DIAS[dow(f.d)]} ${br(f.d).slice(0, 5)}</th>`).join("")}<th class="n">Total</th></tr></thead><tbody>
+    ${pratos.map(x => `<tr><td>${esc(x.nome)}<small class="sub2">${esc(x.grupo || "")}</small></td>${x.porNoite.map(v => `<td class="n">${v >= .5 ? nfmt(Math.ceil(v)) : "—"}</td>`).join("")}<td class="n"><b>${nfmt(Math.ceil(x.total))}</b></td></tr>`).join("") || `<tr><td class="vazio">Sem histórico de pratos</td></tr>`}</tbody></table></div>`;
+  else corpo = `${semEstoque ? `<div class="aviso">${semEstoque} item(ns) sem contagem recente — a sugestão considera estoque zero para eles.</div>` : ""}
+    ${PQ.aba === "comida" && !insumos.some(l => l.previsto != null) ? `<div class="aviso">Para a cozinha, cadastre os insumos (batata, costela, pão…) em <b>Contagem → Editar itens da contagem</b> com a categoria “Insumos cozinha” e, em códigos Epoc, quanto cada prato usa. Ex.: <code>93:0.35, 91:0.30</code> = 0,35 kg na Batata Costela e 0,30 kg na Batata Tradicional. Enquanto isso, a aba <b>Pratos</b> já mostra quantas porções devem sair.</div>` : ""}
+    <div class="grade dois"><div><h3 style="margin-bottom:8px">Pedido pronto para enviar</h3>
+      ${Object.keys(porForn).length ? Object.entries(porForn).map(([f, ls]) => { const id = "txt-" + f.replace(/\W/g, ""); return `<div style="margin-bottom:14px"><b>${esc(f)}</b><pre id="${id}" class="pedido-txt">${esc(`Pedido Vezpa Bar – ${br(hoje)}\n` + ls.map(l => `${nfmt(l.caixas)} × ${l.it.embalagem > 1 ? "cx " + l.it.embalagem + " " : ""}${l.it.nome}${l.it.embalagem === 1 ? " (" + l.it.unidade + ")" : ""}`).join("\n"))}</pre><button class="btn sec peq" data-copiar="${id}">Copiar texto</button></div>`; }).join("") : `<div class="vazio">Nada a pedir com o estoque atual.</div>`}</div>
+      <div><h3 style="margin-bottom:8px">Item a item</h3><div class="rolagem" style="max-height:520px"><table><thead><tr><th>Item</th><th class="n">Previsão</th><th class="n">Estoque</th><th class="n">Pedir</th></tr></thead><tbody>
+      ${grupoLinhas.map(l => `<tr><td>${esc(l.it.nome)}<small class="sub2">${esc(l.it.fornecedor || "")}${l.ref ? " · contado " + br(l.ref.slice(0, 10)).slice(0, 5) : ""}</small></td><td class="n">${l.previsto != null ? nfmt(l.previsto, l.previsto < 10 ? 1 : 0) + " " + esc(l.it.unidade) : "<span class='tag'>sem vínculo</span>"}</td><td class="n">${l.estoque != null ? nfmt(l.estoque, 1) : "—"}</td>
+        <td class="n">${l.caixas == null ? "—" : l.caixas === 0 ? "<span class='tag bom'>ok</span>" : `<b>${nfmt(l.caixas)}</b>${l.it.embalagem > 1 ? ` cx <small class="sub2">${nfmt(l.sugerido)} ${esc(l.it.unidade)}</small>` : " " + esc(l.it.unidade)}`}</td></tr>`).join("")}</tbody></table></div></div></div>`;
+
+  $("#pedido-res").className = "";
+  $("#pedido-res").innerHTML = `
+  <div class="card"><h3>O que entrou na conta</h3><div class="sub">Venda média do mesmo dia da semana nas últimas 8 semanas (${noitesBase.length} noites) × os ajustes abaixo · margem de segurança ${pct(cfg.margem)}</div>
+    <div class="rolagem"><table><thead><tr><th>Noite</th><th class="n">Venda base</th><th>Feriado</th><th>Evento</th><th>Clima</th><th class="n">Ajuste total</th></tr></thead><tbody>
+    ${fatores.map(f => `<tr><td>${DIAS_LONGO[dow(f.d)]} ${br(f.d).slice(0, 5)}</td><td class="n">${f.base ? brl0(f.base) : "—"}</td><td>${f.fer > 1 ? `<span class="tag ok">×${nfmt(f.fer, 2)}</span>` : "—"}</td><td>${f.pessoas ? `<span class="tag ok">+${f.pessoas} pessoas · ×${nfmt(f.ev, 2)}</span>` : "—"}</td>
+      <td>${f.c ? `${f.c.prob >= 60 ? "🌧️" : f.c.prob >= 30 ? "🌦️" : "☀️"} ${f.c.prob}%${f.c.faixa ? " " + f.c.faixa : ""}${f.ch !== 1 ? ` <span class="tag ruim">×${nfmt(f.ch, 2)}</span>` : ""}` : "—"}</td><td class="n"><b>${f.f === 1 ? "—" : "×" + nfmt(f.f, 2)}</b></td></tr>`).join("")}</tbody></table></div>
+    <details style="margin-top:10px"><summary class="dica" style="cursor:pointer">Ajustar parâmetros</summary><div class="linha-form" style="margin-top:8px">
+      <div><label>Margem de segurança (%)</label><input type="number" id="p-margem" value="${Math.round(cfg.margem * 100)}"></div><div><label>Feriado / véspera (×)</label><input type="number" step="0.05" id="p-vesp" value="${cfg.fator_vespera}"></div>
+      <div><label>Gasto médio por pessoa (R$)</label><input type="number" id="p-ticket" value="${cq.ticket_pessoa}"></div><div><button class="btn sec largo" id="p-salvar" style="margin-top:0">Salvar e recalcular</button></div></div></details></div>
+  <div class="card" style="margin-top:14px"><div class="segmentos">${[["bebidas", "Bebidas"], ["comida", "Comida (insumos)"], ["pratos", "Pratos (porções)"]].map(([k, n]) => `<button class="${PQ.aba === k ? "sel" : ""}" data-paba="${k}">${n}</button>`).join("")}</div>${corpo}</div>`;
+  document.querySelectorAll("[data-paba]").forEach(b => b.onclick = () => { PQ.aba = b.dataset.paba; resultadoPedido({ hoje, baseIni, baseFim, diasFat, cfg, cq, noites }); });
+  document.querySelectorAll("[data-copiar]").forEach(b => b.onclick = () => copiar($("#" + b.dataset.copiar).textContent, b));
+  $("#p-salvar").onclick = async () => {
+    await sb.from("config").upsert({ chave: "pedido", valor: { ...cfg, margem: (+$("#p-margem").value || 0) / 100, fator_vespera: +$("#p-vesp").value || 1, fator_feriado: +$("#p-vesp").value || 1 } });
+    await sb.from("config").upsert({ chave: "pedido_quiz", valor: { ...cq, ticket_pessoa: +$("#p-ticket").value || 80 } });
+    abaPedido();
   };
-  document.querySelectorAll("[data-copiar]").forEach(b => b.onclick = async () => {
-    try { await navigator.clipboard.writeText($("#" + b.dataset.copiar).textContent); b.textContent = "Copiado ✔"; } catch (_) { b.textContent = "Selecione e copie o texto acima"; }
-  });
 }
 
 // ============ ABA: IMPORTAR ============
@@ -1786,15 +2073,15 @@ async function abaUsuarios() {
   <div class="grade dois">
     <div class="card"><h3>Convidar pessoa</h3><div class="sub">Ela recebe um e-mail com link para criar a própria senha</div>
       <form id="f-conv"><div class="linha-form"><div><label>Nome</label><input name="nome" required></div><div><label>E-mail</label><input name="email" type="email" required></div></div>
-      <label>Acesso</label><select name="papel"><option value="caixa">Caixa — só o movimento do dia</option><option value="gerente">Gerente — tudo, menos usuários</option><option value="dona">Dona — tudo</option></select>
+      <label>Acesso</label><select name="papel"><option value="caixa">Equipe — noite atual, contagem, pagamentos e notas</option><option value="gerente">Gerência — tudo, menos usuários</option><option value="dona">Visão geral — tudo</option></select>
       <button class="btn largo">Enviar convite</button><div id="msg-conv"></div></form></div>
     <div class="card"><h3>O que cada acesso vê</h3><table><tbody>
-      <tr><td><span class="selo">Dona</span></td><td>Tudo: faturamento, produtos, equipe e custos, cruzamentos, importação e usuários</td></tr>
-      <tr><td><span class="selo">Gerente</span></td><td>Tudo, menos gerenciar usuários</td></tr>
-      <tr><td><span class="selo">Caixa</span></td><td>Só a aba Hoje: vendas e contagem da noite (o banco bloqueia o histórico)</td></tr></tbody></table></div>
+      <tr><td><span class="selo">Visão geral</span></td><td>Tudo: faturamento, análises, pagamentos com Pix, notas, importação e usuários</td></tr>
+      <tr><td><span class="selo">Gerência</span></td><td>Tudo, menos gerenciar usuários</td></tr>
+      <tr><td><span class="selo">Equipe</span></td><td>Noite atual, contagem, lançar pagamentos da semana (sem ver Pix) e enviar notas</td></tr></tbody></table></div>
   </div>
   <div class="card" style="margin-top:14px"><h3>Pessoas com acesso</h3><table><thead><tr><th>Nome</th><th>E-mail</th><th>Acesso</th><th>Último acesso</th><th></th></tr></thead><tbody>
-  ${lista.map(u => `<tr><td>${esc(u.nome)}</td><td>${esc(u.email)}</td><td><select data-papel="${u.user_id}" style="width:auto;padding:6px" ${u.user_id === S.user.id ? "disabled" : ""}>${["dona", "gerente", "caixa"].map(p => `<option ${p === u.papel ? "selected" : ""}>${p}</option>`).join("")}</select></td>
+  ${lista.map(u => `<tr><td>${esc(u.nome)}</td><td>${esc(u.email)}</td><td><select data-papel="${u.user_id}" style="width:auto;padding:6px" ${u.user_id === S.user.id ? "disabled" : ""}>${["dona", "gerente", "caixa"].map(p => `<option value="${p}" ${p === u.papel ? "selected" : ""}>${NOME_PAPEL[p]}</option>`).join("")}</select></td>
     <td>${u.ultimo ? new Date(u.ultimo).toLocaleString("pt-BR") : "<span class='tag'>convite pendente</span>"}</td>
     <td>${u.user_id === S.user.id ? "" : `<button class="btn perigo peq" data-rem="${u.user_id}" data-nome="${esc(u.nome)}">Remover</button>`}</td></tr>`).join("")}
   </tbody></table></div>`;
