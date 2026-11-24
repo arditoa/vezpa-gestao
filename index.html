@@ -1315,7 +1315,7 @@ function editarPessoa(p, tipo, aoSalvar) {
     <div class="linha-form"><div><label>Telefone</label><input name="telefone" value="${esc(p.telefone || "")}"></div>
       <div><label>Situação</label><select name="ativo"><option value="1" ${p.ativo !== false ? "selected" : ""}>Ativo</option><option value="0" ${p.ativo === false ? "selected" : ""}>Inativo</option></select></div></div>
     <label>Observação</label><input name="observacao" value="${esc(p.observacao || "")}" placeholder="ex.: depositar junto com…">
-    ${!ehBanda && gestor() ? `<label>📌 Equipe fixa até <small style="color:var(--mute)">(aparece primeiro nos pagamentos da semana; deixe vazio se for freela)</small></label><input type="date" name="fixo_ate" value="${p.fixo_ate || ""}">` : ""}
+    ${!ehBanda && gestor() ? `<label>📌 Freela fixo até <small style="color:var(--mute)">(entra sozinho em cada semana, no topo; vazio = freela avulso)</small></label><input type="date" name="fixo_ate" value="${p.fixo_ate || ""}">` : ""}
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn sec" type="button" id="pes-cancel">Cancelar</button><button class="btn" id="pes-ok">Salvar</button></div>
     ${p.id && gestor() ? `<div class="juntar"><b>Cadastro repetido?</b><small>Junte com outro cadastro da mesma pessoa: os lançamentos dele passam para este e ele fica inativo.</small>
       <div style="display:flex;gap:8px;margin-top:8px"><select id="jun-outro" style="flex:1"><option value="">Escolha o cadastro repetido…</option></select><button class="btn sec" type="button" id="jun-ok">Juntar</button></div></div>` : ""}
@@ -1407,6 +1407,13 @@ async function abaPagamentos() {
   // equipe fixa (até a data combinada): aparece primeiro na semana, com selo, e pode ser adicionada de uma vez
   const FIXO = Object.fromEntries((fixos0 || []).filter(f => f.fixo_ate >= ini).map(f => [f.id, f.fixo_ate]));
   const ehFixo = l => !!FIXO[l.pessoa_id];
+  // freelas fixos entram sozinhos na semana atual e nas próximas (sem dias marcados); quem faltar é só não marcar o dia
+  if (ini >= semanaDe(diaOperacionalHoje()) && !W._autoFixo?.[ini]) {
+    (W._autoFixo ??= {})[ini] = true;
+    const usados0 = new Set(fr.map(l => l.pessoa_id));
+    const faltam = pessoas.filter(p => FIXO[p.id] && p.ativo !== false && !usados0.has(p.id));
+    if (faltam.length) { const { error } = await sb.from("freelas").insert(faltam.map(p => ({ semana_inicio: ini, nome: p.nome, funcao: p.funcao, pessoa_id: p.id, dias: 0, valor: 0, dias_valores: {} }))); if (!error) return abaPagamentos(); }
+  }
   fr.sort((a, b) => (ehFixo(b) - ehFixo(a)) || (ehFixo(a) ? a.nome.localeCompare(b.nome) : a.id - b.id));
   // 23/11 — taxa de serviço pelo CAIXA FECHADO (líquido de cada noite, depois de descontos e rateios).
   // Noite ainda sem fechamento importado: usa o bruto do Epoc e avisa.
@@ -1452,16 +1459,17 @@ async function abaPagamentos() {
       <th class="n">Ajuste</th><th class="n">Diárias (R$)</th>${SV.incluir ? `<th class="n">${SV.percentual}%</th>` : ""}${EQ ? "" : `<th class="n">A pagar</th>`}<th>Pix</th><th>Situação</th><th></th></tr></thead><tbody>
       ${fr.map(l => { const p = pesDe(l.pessoa_id, l.nome, "freela"); const diaria = +(p?.valor_padrao || 0);
         const nd = Object.keys(l.dias_valores || {}).length;
-        return `<tr data-linha="${l.id}" class="${ehFixo(l) ? "linha-fixa" : ""}"><td><b>${esc(l.nome)}</b>${ehFixo(l) ? ` <span class="tag fixa" title="Equipe fixa até ${br(FIXO[l.pessoa_id])}">fixa</span>` : ""} <span class="tag ${nd ? "ok" : ""}" data-nd="${l.id}">${nd} ${nd === 1 ? "dia" : "dias"}</span><small class="sub2">${esc(l.funcao || p?.funcao || "")}${diaria ? " · diária " + brl0(diaria) : ""}</small></td>
+        return `<tr data-linha="${l.id}" class="${ehFixo(l) ? "linha-fixa" : ""}"><td><b>${esc(l.nome)}</b>${ehFixo(l) ? ` <span class="tag fixa" title="Freela fixo até ${br(FIXO[l.pessoa_id])}: entra toda semana; se faltar, é só não marcar o dia">fixo</span>` : ""} <span class="tag ${nd ? "ok" : ""}" data-nd="${l.id}">${nd} ${nd === 1 ? "dia" : "dias"}</span><small class="sub2">${esc(l.funcao || p?.funcao || "")}${diaria ? " · diária " + brl0(diaria) : ""}</small></td>
         ${diasVis.map(d => `<td class="c ${abreDow.has(dow(d)) ? "" : "fechado"}"><input class="dia ${l.dias_valores?.[d] ? "on" : ""}" inputmode="decimal" data-l="${l.id}" data-d="${d}" data-diaria="${diaria || ""}" value="${l.dias_valores?.[d] != null ? nfmt(+l.dias_valores[d]) : ""}" placeholder="·"></td>`).join("")}
         <td class="n"><input class="aj" inputmode="decimal" data-aj="${l.id}" value="${+l.ajuste ? nfmt(+l.ajuste, 2) : ""}" placeholder="0"><input class="aj-obs" data-ajobs="${l.id}" value="${esc(l.ajuste_obs || "")}" placeholder="motivo"></td>
         <td class="n" data-total="${l.id}">${brl(l._total)}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(l._serv)}</td>` : ""}${EQ ? "" : `<td class="n"><b data-pagar="${l.id}">${brl(l._pagar)}</b></td>`}<td>${pixCel(p, l.nome)}</td><td>${status("freelas", l.id, l.status)}</td>
         <td>${l.status === "pago" && EQ ? "" : `<button class="x" data-del-fr="${l.id}" title="Tirar da semana">×</button>`}</td></tr>`; }).join("") || `<tr><td colspan="15" class="vazio"><span class="vazio-txt">Nenhum freela nesta semana ainda. Adicione abaixo ou repita a escala da semana anterior.</span></td></tr>`}
       </tbody><tfoot><tr><td><b>Total</b></td>${diasVis.map(d => `<td class="c n"><small>${brl0(fr.reduce((s, l) => s + (+l.dias_valores?.[d] || 0), 0)) }</small></td>`).join("")}<td></td><td class="n">${brl(tFre)}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(tServ)}</td>` : ""}${EQ ? "" : `<td class="n"><b>${brl(tFre + tServ)}</b></td>`}<td colspan="3"></td></tr></tfoot></table></div>
-      ${fixosFaltando.length ? `<div class="fixos-falta"><span>📌 <b>Equipe fixa</b>${fixosFaltando.length < Object.keys(FIXO).length ? " — faltam nesta semana" : ""}: ${fixosFaltando.map(p => esc(nomeBonitoPessoa(p.nome))).join(", ")}</span><button class="btn peq" id="add-fixos">Adicionar equipe fixa</button></div>` : ""}
-      <div class="acoes-pag freelas"><select id="add-fr"><option value="">+ Adicionar freela à semana…</option>${fixosFaltando.length ? `<optgroup label="Equipe fixa">${fixosFaltando.map(p => `<option value="${p.id}">📌 ${esc(p.nome)}${p.funcao ? " — " + esc(p.funcao) : ""}</option>`).join("")}</optgroup><optgroup label="Freelas">` : ""}${outrosDisp.map(p => `<option value="${p.id}">${esc(p.nome)}${p.funcao ? " — " + esc(p.funcao) : ""}</option>`).join("")}${fixosFaltando.length ? "</optgroup>" : ""}<option value="novo">＋ Cadastrar nova pessoa…</option></select>
+      ${fixosFaltando.length ? `<div class="fixos-falta"><span>📌 <b>Freelas fixos</b> fora desta semana: ${fixosFaltando.map(p => esc(nomeBonitoPessoa(p.nome))).join(", ")}</span><button class="btn peq" id="add-fixos">Adicionar freelas fixos</button></div>` : ""}
+      <div class="acoes-pag freelas"><select id="add-fr"><option value="">+ Adicionar freela à semana…</option>${fixosFaltando.length ? `<optgroup label="Freelas fixos">${fixosFaltando.map(p => `<option value="${p.id}">📌 ${esc(p.nome)}${p.funcao ? " — " + esc(p.funcao) : ""}</option>`).join("")}</optgroup><optgroup label="Freelas">` : ""}${outrosDisp.map(p => `<option value="${p.id}">${esc(p.nome)}${p.funcao ? " — " + esc(p.funcao) : ""}</option>`).join("")}${fixosFaltando.length ? "</optgroup>" : ""}<option value="novo">＋ Cadastrar nova pessoa…</option></select>
         ${diasVis.length < 7 ? `<button class="link-btn" id="todos-dias">Mostrar seg e ter (feriado)</button>` : W.todosDias ? `<button class="link-btn" id="todos-dias">Esconder dias fechados</button>` : ""}
         ${!fr.length ? `<button class="link-btn" id="repetir">↻ Repetir a escala da semana anterior</button>` : ""}</div>
+      ${Object.keys(FIXO).length ? `<p class="dica">📌 Os freelas fixos entram sozinhos em cada semana, no topo da lista. Se alguém faltar, é só não marcar aquele dia: sem dia marcado, a pessoa não entra no pagamento nem na divisão dos 10%.</p>` : ""}
       <p class="dica">Toque no dia para lançar a diária; toque de novo para mudar o valor. Dias em cinza: o bar costuma fechar. Tudo salva na hora.</p>`;
   }
   if (W.sub === "bandas") {
@@ -1511,7 +1519,7 @@ async function abaPagamentos() {
     <div class="filtros semana-nav"><button class="btn sec peq" id="sem-ant">‹</button><b>${semanaTxt}</b><button class="btn sec peq" id="sem-prox">›</button>
       <label class="cal-btn" title="Escolher a semana no calendário">📅<input type="date" id="sem-cal" value="${ini}"></label><button class="btn sec peq" id="sem-hoje">Semana atual</button></div></div>
   <div class="grade kpis ${EQ ? "hidden" : ""}">
-    <div class="card kpi"><div class="rot">Freelas</div><div class="val">${brl0(tFre)}</div><div class="det">${fr.length} pessoas · ${nDiarias} diárias${SV.incluir ? " · + " + brl0(tServ) + " de " + SV.percentual + "%" : ""}</div></div>
+    <div class="card kpi"><div class="rot">Freelas</div><div class="val">${brl0(tFre)}</div><div class="det">${fr.filter(l => Object.keys(l.dias_valores || {}).length).length} pessoas trabalharam · ${nDiarias} diárias${SV.incluir ? " · + " + brl0(tServ) + " de " + SV.percentual + "%" : ""}</div></div>
     <div class="card kpi"><div class="rot">Bandas</div><div class="val">${brl0(tBan)}</div><div class="det">${bd.length} cachês</div></div>
     <div class="card kpi destaque"><div class="rot">Custo da semana (diárias + cachês)</div><div class="val">${brl0(tFre + tBan)}</div><div class="det">${fatSemana ? pct((tFre + tBan) / fatSemana) + " do faturamento (" + brl0(fatSemana) + ")" : "faturamento ainda não importado"}</div></div>
     <div class="card kpi"><div class="rot">Falta pagar</div><div class="val" style="color:${tFre + tServ + tBan - pago > 0 ? "var(--amber2)" : "var(--green)"}">${brl0(tFre + tServ + tBan - pago)}</div><div class="det">já pago ${brl0(pago)}${SV.incluir ? " · inclui o " + SV.percentual + "%" : ""}</div></div>
