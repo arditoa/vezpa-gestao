@@ -179,7 +179,7 @@ th.fechado,td.fechado{opacity:.45}
 input.dia{width:58px;text-align:center;padding:8px 2px;font-weight:700;border-radius:8px;cursor:pointer}
 input.dia.on{background:#3a2a14;border-color:#7a5422;color:var(--amber2)}
 input.aj{width:76px;text-align:right;padding:6px}
-input.aj-obs{width:90px;padding:4px 6px;font-size:12px;margin-top:4px;display:block;margin-left:auto}
+input.aj-obs{width:170px;padding:4px 6px;font-size:12px;margin-top:4px;display:block;margin-left:auto}
 input.val-banda{width:110px;text-align:right;font-weight:700;padding:8px}
 .pix{display:flex;flex-direction:column;gap:3px;align-items:flex-start;font-size:13px}
 .pix small{color:var(--mute);font-size:11.5px}
@@ -340,6 +340,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = (s, el = document) => el.querySelector(s);
 const brl = v => (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const brl0 = v => (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const brlI = v => Math.abs((v ?? 0) - Math.round(v ?? 0)) < 0.005 ? brl0(v) : brl(v); // R$ 850 · R$ 601,50
 const nfmt = (v, d = 0) => (v ?? 0).toLocaleString("pt-BR", { maximumFractionDigits: d, minimumFractionDigits: d });
 const pct = v => isFinite(v) ? (v * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + "%" : "—";
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1430,6 +1431,7 @@ async function abaPagamentos() {
   const pesDe = (id, nome, tipo) => P[id] || pessoas.find(p => p.tipo === tipo && p.nome.toLowerCase() === (nome || "").toLowerCase());
   const abreDow = new Set(hist.map(h => dow(h.dia)));
   const fatSemana = res.reduce((s, r) => s + +r.faturamento, 0);
+  const ndPl = l => +((l.ajuste_obs || "").match(/(\d+)\s*diárias?/i) || [])[1] || 0; // "3 diárias (planilha)"
   const totFr = l => Object.values(l.dias_valores || {}).reduce((s, v) => s + +v, 0) + +(l.ajuste || 0);
   fr.forEach(l => { l._total = totFr(l); });
   const nDiarias = fr.reduce((s, l) => s + Object.keys(l.dias_valores || {}).length, 0);
@@ -1463,12 +1465,12 @@ async function abaPagamentos() {
       <th class="n">Ajuste</th><th class="n">Diárias (R$)</th>${SV.incluir ? `<th class="n">${SV.percentual}%</th>` : ""}${EQ ? "" : `<th class="n">A pagar</th>`}<th>Pix</th><th>Situação</th><th></th></tr></thead><tbody>
       ${fr.map(l => { const p = pesDe(l.pessoa_id, l.nome, "freela"); const diaria = +(p?.valor_padrao || 0);
         const nd = Object.keys(l.dias_valores || {}).length;
-        return `<tr data-linha="${l.id}" class="${ehFixo(l) ? "linha-fixa" : ""}"><td><b>${esc(l.nome)}</b>${ehFixo(l) ? ` <span class="tag fixa" title="Freela fixo até ${br(FIXO[l.pessoa_id])}: entra toda semana; se faltar, é só não marcar o dia">fixo</span>` : ""} <span class="tag ${nd ? "ok" : ""}" data-nd="${l.id}">${nd} ${nd === 1 ? "dia" : "dias"}</span><small class="sub2">${esc(l.funcao || p?.funcao || "")}${diaria ? " · diária " + brl0(diaria) : ""}</small></td>
+        return `<tr data-linha="${l.id}" class="${ehFixo(l) ? "linha-fixa" : ""}"><td><b>${esc(l.nome)}</b>${ehFixo(l) ? ` <span class="tag fixa" title="Freela fixo até ${br(FIXO[l.pessoa_id])}: entra toda semana; se faltar, é só não marcar o dia">fixo</span>` : ""} <span class="tag ${nd || ndPl(l) ? "ok" : ""}" data-nd="${l.id}" ${!nd && ndPl(l) ? 'title="Dias lançados pela planilha (sem marcar quais)"' : ""}>${!nd && ndPl(l) ? ndPl(l) + (ndPl(l) === 1 ? " dia" : " dias") + " · planilha" : nd + (nd === 1 ? " dia" : " dias")}</span><small class="sub2">${esc(l.funcao || p?.funcao || "")}${diaria ? " · diária " + brl0(diaria) : ""}</small></td>
         ${diasVis.map(d => `<td class="c ${abreDow.has(dow(d)) ? "" : "fechado"}"><input class="dia ${l.dias_valores?.[d] ? "on" : ""}" inputmode="decimal" data-l="${l.id}" data-d="${d}" data-diaria="${diaria || ""}" value="${l.dias_valores?.[d] != null ? nfmt(+l.dias_valores[d]) : ""}" placeholder="·"></td>`).join("")}
-        <td class="n"><input class="aj" inputmode="decimal" data-aj="${l.id}" value="${+l.ajuste ? nfmt(+l.ajuste, 2) : ""}" placeholder="0"><input class="aj-obs" data-ajobs="${l.id}" value="${esc(l.ajuste_obs || "")}" placeholder="motivo"></td>
-        <td class="n" data-total="${l.id}">${brl(l._total)}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(l._serv)}</td>` : ""}${EQ ? "" : `<td class="n"><b data-pagar="${l.id}">${brl(l._pagar)}</b></td>`}<td>${pixCel(p, l.nome)}</td><td>${status("freelas", l.id, l.status)}</td>
+        <td class="n"><input class="aj" inputmode="decimal" data-aj="${l.id}" value="${+l.ajuste ? nfmt(+l.ajuste, Number.isInteger(+l.ajuste) ? 0 : 2) : ""}" placeholder="0"><input class="aj-obs" data-ajobs="${l.id}" value="${esc(l.ajuste_obs || "")}" placeholder="motivo"></td>
+        <td class="n" data-total="${l.id}">${brlI(l._total)}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(l._serv)}</td>` : ""}${EQ ? "" : `<td class="n"><b data-pagar="${l.id}">${brlI(l._pagar)}</b></td>`}<td>${pixCel(p, l.nome)}</td><td>${status("freelas", l.id, l.status)}</td>
         <td>${l.status === "pago" && EQ ? "" : `<button class="x" data-del-fr="${l.id}" title="Tirar da semana">×</button>`}</td></tr>`; }).join("") || `<tr><td colspan="15" class="vazio"><span class="vazio-txt">Nenhum freela nesta semana ainda. Adicione abaixo ou repita a escala da semana anterior.</span></td></tr>`}
-      </tbody><tfoot><tr><td><b>Total</b></td>${diasVis.map(d => `<td class="c n"><small>${brl0(fr.reduce((s, l) => s + (+l.dias_valores?.[d] || 0), 0)) }</small></td>`).join("")}<td></td><td class="n">${brl(tFre)}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(tServ)}</td>` : ""}${EQ ? "" : `<td class="n"><b>${brl(tFre + tServ)}</b></td>`}<td colspan="3"></td></tr></tfoot></table></div>
+      </tbody><tfoot><tr><td><b>Total</b></td>${diasVis.map(d => `<td class="c n"><small>${brl0(fr.reduce((s, l) => s + (+l.dias_valores?.[d] || 0), 0)) }</small></td>`).join("")}<td></td><td class="n">${brlI(tFre)}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(tServ)}</td>` : ""}${EQ ? "" : `<td class="n"><b>${brlI(tFre + tServ)}</b></td>`}<td colspan="3"></td></tr></tfoot></table></div>
       ${fixosFaltando.length ? `<div class="fixos-falta"><span>📌 <b>Freelas fixos</b> fora desta semana: ${fixosFaltando.map(p => esc(nomeBonitoPessoa(p.nome))).join(", ")}</span><button class="btn peq" id="add-fixos">Adicionar freelas fixos</button></div>` : ""}
       <div class="acoes-pag freelas"><select id="add-fr"><option value="">+ Adicionar freela à semana…</option>${fixosFaltando.length ? `<optgroup label="Freelas fixos">${fixosFaltando.map(p => `<option value="${p.id}">📌 ${esc(p.nome)}${p.funcao ? " — " + esc(p.funcao) : ""}</option>`).join("")}</optgroup><optgroup label="Freelas">` : ""}${outrosDisp.map(p => `<option value="${p.id}">${esc(p.nome)}${p.funcao ? " — " + esc(p.funcao) : ""}</option>`).join("")}${fixosFaltando.length ? "</optgroup>" : ""}<option value="novo">＋ Cadastrar nova pessoa…</option></select>
         ${diasVis.length < 7 ? `<button class="link-btn" id="todos-dias">Mostrar seg e ter (feriado)</button>` : W.todosDias ? `<button class="link-btn" id="todos-dias">Esconder dias fechados</button>` : ""}
@@ -1556,9 +1558,9 @@ async function abaPagamentos() {
   // freelas: dias, ajuste, adicionar, remover, repetir
   const salvarLinha = (id, mudar) => {
     const l = fr.find(x => x.id == id); mudar(l); l._total = totFr(l);
-    const t = $(`[data-total="${id}"]`); if (t) t.textContent = brl(l._total);
+    const t = $(`[data-total="${id}"]`); if (t) t.textContent = brlI(l._total);
     const nd = Object.keys(l.dias_valores || {}).length, tg = $(`[data-nd="${id}"]`); if (tg) { tg.textContent = nd + (nd === 1 ? " dia" : " dias"); tg.className = "tag " + (nd ? "ok" : ""); }
-    const pg = $(`[data-pagar="${id}"]`); if (pg) pg.textContent = brl(l._total + (l._serv || 0)) + " *";
+    const pg = $(`[data-pagar="${id}"]`); if (pg) pg.textContent = brlI(l._total + (l._serv || 0)) + " *";
     clearTimeout(W.timers[id]);
     W.pendentes ??= {}; W.salvando ??= {};
     const gravar = () => { clearTimeout(W.timers[id]); delete W.pendentes[id];
