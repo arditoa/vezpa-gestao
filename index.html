@@ -2654,20 +2654,22 @@ function lancarPelaAgenda(ini, bandas, jaLancadas, aoTerminar) {
   let achados = {};
   const mostrar = () => {
     const dias = Object.keys(achados).map(Number).sort((a, b) => a - b);
-    $("#ag-res").innerHTML = dias.length ? `<table class="pag" style="margin-top:10px"><thead><tr><th>Noite</th><th>Atração</th><th class="n">Cachê</th><th></th></tr></thead><tbody>
+    $("#ag-res").innerHTML = dias.length ? `<table class="pag" style="margin-top:10px"><thead><tr><th>Noite</th><th>Atração</th><th class="n">Cachê (cadastro)</th><th class="n">Extra</th><th></th></tr></thead><tbody>
       ${dias.flatMap(k => achados[k].map((b, i) => { const dt = addDias(ini, k), ja = jaLancadas.some(x => x.data === dt && String(x.pessoa_id) === String(b.id));
         return `<tr><td>${DIAS[dow(dt)]} ${br(dt).slice(0, 5)}</td><td><b>${esc(nomeBonitoPessoa(b.nome))}</b>${ja ? ` <span class="tag">já lançada</span>` : ""}</td>
-        <td class="n">${ja ? "—" : `<input class="val-banda" inputmode="decimal" data-agv="${k}:${i}" value="${b.valor_padrao ? nfmt(+b.valor_padrao, 2) : ""}" placeholder="cachê">`}</td>
+        <td class="n">${ja ? "—" : `<input class="val-banda" inputmode="decimal" data-agv="${k}:${i}" value="${b._valor != null ? nfmt(b._valor, 2) : b.valor_padrao ? nfmt(+b.valor_padrao, 2) : ""}" placeholder="cachê">`}</td>
+        <td class="n">${ja ? "" : `<input class="val-banda" style="width:90px" inputmode="decimal" data-age="${k}:${i}" value="${b._extra ? nfmt(b._extra, 2) : ""}" placeholder="+ R$">`}</td>
         <td>${ja ? "" : `<button class="x" data-agx="${k}:${i}" title="Tirar">×</button>`}</td></tr>`; })).join("")}</tbody></table>
       <div class="linha-form" style="margin-top:10px"><div><label>Faltou alguém?</label><select id="ag-add-dia">${[0, 1, 2, 3, 4, 5, 6].map(k => `<option value="${k}">${DIAS[dow(addDias(ini, k))]} ${br(addDias(ini, k)).slice(0, 5)}</option>`).join("")}</select></div>
       <div><label>&nbsp;</label><select id="ag-add-b"><option value="">+ escolher atração…</option>${bandas.map(b => `<option value="${b.id}">${esc(nomeBonitoPessoa(b.nome))}</option>`).join("")}</select></div></div>
-      <p class="dica">Dividiu um cachê entre noites (ex.: Alci quinta e sexta)? Ajuste o valor de cada noite aqui. O Pix vem do cadastro.</p>`
+      <p class="dica">O cachê vem do cadastro e dá para mudar. Tocou a mais e cobrou extra? Coloque em <b>Extra</b>: soma no pagamento e fica anotado. Dividiu um cachê entre noites (ex.: Alci quinta e sexta)? Ajuste o valor de cada noite. O Pix vem do cadastro.</p>`
       : `<div class="aviso" style="margin-top:10px">Não achei atrações cadastradas no texto. Confira se a banda está em Cadastros, ou adicione abaixo.</div>
       <div class="linha-form" style="margin-top:10px"><div><select id="ag-add-dia">${[0, 1, 2, 3, 4, 5, 6].map(k => `<option value="${k}">${DIAS[dow(addDias(ini, k))]} ${br(addDias(ini, k)).slice(0, 5)}</option>`).join("")}</select></div>
       <div><select id="ag-add-b"><option value="">+ escolher atração…</option>${bandas.map(b => `<option value="${b.id}">${esc(nomeBonitoPessoa(b.nome))}</option>`).join("")}</select></div></div>`;
     $("#ag-ok").classList.toggle("hidden", !dias.length);
     d.querySelectorAll("[data-agx]").forEach(x => x.onclick = () => { const [k, i] = x.dataset.agx.split(":").map(Number); achados[k].splice(i, 1); if (!achados[k].length) delete achados[k]; mostrar(); });
     d.querySelectorAll("[data-agv]").forEach(x => x.oninput = () => { const [k, i] = x.dataset.agv.split(":").map(Number); achados[k][i] = { ...achados[k][i], _valor: numBR(x.value) }; });
+    d.querySelectorAll("[data-age]").forEach(x => x.oninput = () => { const [k, i] = x.dataset.age.split(":").map(Number); achados[k][i] = { ...achados[k][i], _extra: numBR(x.value) || 0 }; });
     $("#ag-add-b").onchange = e => { const b = bandas.find(x => String(x.id) === e.target.value); if (!b) return; const k = +$("#ag-add-dia").value; (achados[k] ??= []).push(b); mostrar(); };
   };
   $("#ag-ler").onclick = async () => {
@@ -2691,8 +2693,8 @@ function lancarPelaAgenda(ini, bandas, jaLancadas, aoTerminar) {
     const linhas = [];
     Object.entries(achados).forEach(([k, arr]) => arr.forEach(b => { const dt = addDias(ini, +k);
       if (jaLancadas.some(x => x.data === dt && String(x.pessoa_id) === String(b.id))) return;
-      const v = b._valor ?? (+b.valor_padrao || 0);
-      linhas.push({ data: dt, atracao: nomeBonitoPessoa(b.nome), valor: v, pessoa_id: b.id, status: "a pagar", observacao: "pela agenda" }); }));
+      const v = b._valor ?? (+b.valor_padrao || 0), ex = +b._extra || 0;
+      linhas.push({ data: dt, atracao: nomeBonitoPessoa(b.nome), valor: v + ex, pessoa_id: b.id, status: "a pagar", observacao: ex ? `pela agenda · cachê ${brl0(v)} + extra ${brl0(ex)}` : "pela agenda" }); }));
     if (!linhas.length) { d.close(); return; }
     $("#ag-ok").disabled = true; $("#ag-ok").textContent = "Lançando…";
     const { error } = await sb.from("pagamentos_bandas").insert(linhas);
