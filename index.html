@@ -180,7 +180,7 @@ input.dia{width:58px;text-align:center;padding:8px 2px;font-weight:700;border-ra
 input.dia.on{background:#3a2a14;border-color:#7a5422;color:var(--amber2)}
 input.aj{width:76px;text-align:right;padding:6px}
 table.pag td:first-child{min-width:190px}table.pag td:first-child b{white-space:nowrap}
-td.td-aj{min-width:170px}input.aj.bonus.on{border-color:var(--teal);color:var(--teal);font-weight:600}td[data-total]{white-space:nowrap}.busca-fr{min-width:320px;flex:1;max-width:460px}
+td.td-aj{min-width:170px}.add-banda-topo{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.add-banda-topo .busca-fr{max-width:none}.chips-bd{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:14px;font-size:13px}.chip-bd{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:5px 11px;font-size:13px;cursor:pointer}.chip-bd:hover{border-color:#f2a63b;color:#f2a63b}input.aj.bonus.on{border-color:var(--teal);color:var(--teal);font-weight:600}td[data-total]{white-space:nowrap}.busca-fr{min-width:320px;flex:1;max-width:460px}
 input.aj-obs{width:100%;min-width:180px;padding:4px 6px;font-size:12px;margin-top:4px;display:block;margin-left:auto}
 input.val-banda{width:110px;text-align:right;font-weight:700;padding:8px}
 .pix{display:flex;flex-direction:column;gap:3px;align-items:flex-start;font-size:13px}
@@ -1503,7 +1503,13 @@ async function abaPagamentos() {
     const naGrade = new Set(G.map(g => g.pessoa_id).filter(Boolean));
     const dispB = bandas.filter(p => !naGrade.has(p.id));
     W._dispB = dispB;
-    corpo = `${EQ ? "" : `<div class="agenda-cta"><div><b>📷 Lançar pela agenda da semana</b><small class="sub2">Suba a foto da programação (ou cole o texto do post) e as atrações entram sozinhas, prontas para pagar na terça.</small></div><button class="btn" id="agenda-foto">Usar agenda</button></div>`}
+    // bandas que tocaram nas últimas 8 semanas — atalho de 1 toque
+    const { data: recB } = await sb.from("pagamentos_bandas").select("pessoa_id").gte("data", addDias(ini, -56)).lt("data", ini).not("pessoa_id", "is", null);
+    const freqB = {}; (recB || []).forEach(r => freqB[r.pessoa_id] = (freqB[r.pessoa_id] || 0) + 1);
+    const recentes = dispB.filter(p => freqB[p.id]).sort((a, b) => freqB[b.id] - freqB[a.id]).slice(0, 14);
+    corpo = `<div class="add-banda-topo"><input id="busca-bd" class="busca-fr" list="lista-bd" autocomplete="off" placeholder="🔍 Qual banda tocou? Digite o nome…"><datalist id="lista-bd">${dispB.map(p => `<option value="${esc(nomeBonitoPessoa(p.nome))}"></option>`).join("")}</datalist>
+        ${EQ ? "" : `<button class="btn sec peq" id="nova-bd">＋ Nova banda</button><button class="btn sec peq" id="agenda-foto">📷 Usar foto da agenda</button>`}</div>
+      ${recentes.length ? `<div class="chips-bd"><span class="mute">Tocaram nas últimas semanas:</span> ${recentes.map(p => `<button class="chip-bd" data-addb="${p.id}">＋ ${esc(nomeBonitoPessoa(p.nome))}</button>`).join("")}</div>` : ""}
       <div class="rolagem tabela-pag" style="max-height:none"><table class="pag"><thead><tr><th>Atração</th>
       ${colsB.map(d => `<th class="c ${abreDow.has(dow(d)) ? "" : "fechado"}">${DIAS[dow(d)]}<br><small>${br(d).slice(0, 5)}</small></th>`).join("")}
       <th class="n">Cachês</th><th>Pix</th><th>Situação</th><th></th></tr></thead><tbody>
@@ -1517,10 +1523,9 @@ async function abaPagamentos() {
         <td>${EQ ? `<span class="tag ${todosPagos ? "bom" : "ok"}">${todosPagos ? "pago" : "a pagar"}</span>` : n ? `<button class="status ${todosPagos ? "pago" : ""}" data-stgb="${g.k}">${todosPagos ? "Pago ✓" : algumPago ? "Parte paga" : "A pagar"}</button>` : ""}</td>
         <td>${EQ && algumPago ? "" : `<button class="x" data-del-gb="${g.k}" title="Tirar da semana">×</button>`}</td></tr>`; }).join("") || `<tr><td colspan="15" class="vazio"><span class="vazio-txt">Nenhuma banda nesta semana ainda. Use a agenda ou busque a banda abaixo.</span></td></tr>`}
       </tbody><tfoot><tr><td><b>Total</b></td>${colsB.map(d => `<td class="c n"><small>${brl0(bd.filter(b => b.data === d).reduce((s, b) => s + +b.valor, 0))}</small></td>`).join("")}<td class="n"><b>${brlI(tBan)}</b></td><td colspan="3"></td></tr></tfoot></table></div>
-      <div class="acoes-pag freelas"><input id="busca-bd" class="busca-fr" list="lista-bd" autocomplete="off" placeholder="🔍 Buscar banda pelo nome e adicionar à semana…"><datalist id="lista-bd">${dispB.map(p => `<option value="${esc(nomeBonitoPessoa(p.nome))}"></option>`).join("")}</datalist>
-        ${EQ ? "" : `<button class="btn sec peq" id="nova-bd">＋ Cadastrar nova banda</button>`}
+      <div class="acoes-pag freelas">
         ${diasVis.length < 7 ? `<button class="link-btn" id="todos-dias">Mostrar seg e ter (feriado)</button>` : W.todosDias ? `<button class="link-btn" id="todos-dias">Esconder dias fechados</button>` : ""}</div>
-      <p class="dica">Toque na noite para lançar o cachê (vem do cadastro); mude o valor se tocou a mais ou cobrou extra. Tocou duas vezes na semana? Marque as duas noites na mesma linha. Apagar o valor tira a noite. Tudo salva na hora.</p>`;
+      <p class="dica"><b>Como lançar:</b> escolha a banda acima → ela aparece na tabela → toque na noite em que tocou e o cachê do cadastro já aparece. Tocou a mais ou cobrou extra? É só mudar o valor. Tocou 2x na semana? Marque as duas noites. Apagar o valor tira a noite.</p>`;
   }
   if (W.sub === "pagar") {
     const itens = [
@@ -1664,7 +1669,8 @@ async function abaPagamentos() {
       if (ids.length && !confirm(`Tirar ${nomeBonitoPessoa(g.nome)} desta semana (${ids.length} ${ids.length === 1 ? "noite" : "noites"})?`)) return;
       if (ids.length) await sb.from("pagamentos_bandas").delete().in("id", ids);
       if (g.pessoa_id) W.bandasAdd[ini] = (W.bandasAdd[ini] || []).filter(x => x !== g.pessoa_id); recarregar(); });
-    const addB = p => { (W.bandasAdd[ini] ||= []).push(p.id); recarregar().then(() => { const c = $(`input[data-bk="p${p.id}"]`); if (c) c.scrollIntoView({ block: "center" }); }); };
+    const addB = p => { (W.bandasAdd[ini] ||= []).push(p.id); recarregar().then(() => { const tr = $(`tr[data-gb="p${p.id}"]`); if (tr) { tr.scrollIntoView({ block: "center", behavior: "smooth" }); tr.classList.add("piscar"); setTimeout(() => tr.classList.remove("piscar"), 1600); } }); };
+    document.querySelectorAll("[data-addb]").forEach(b => b.onclick = () => { const p = P[b.dataset.addb]; if (p) addB(p); });
     if ($("#busca-bd")) { const bb = $("#busca-bd");
       const achar = () => (W._dispB || []).find(x => nomeBonitoPessoa(x.nome) === bb.value.trim());
       bb.oninput = () => { const p = achar(); if (p) addB(p); };
