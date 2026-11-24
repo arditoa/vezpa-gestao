@@ -1424,7 +1424,8 @@ async function abaPagamentos() {
   const baseServ = res.reduce((s, r) => s + (fechLiq[r.dia] != null ? fechLiq[r.dia] : +r.faturamento), 0);
   const noitesSemFech = res.filter(r => fechLiq[r.dia] == null).length;
   if (EQ && W.sub === "pagar") W.sub = "freelas";
-  const SV = { percentual: 10, casa: 20, incluir: !EQ, fixas: 0, ...(cfgServ?.valor || {}), ...(EQ ? { incluir: false } : {}) };
+  // (24/11) os 10% são só da equipe registrada (fixos com carteira) — freelas não entram na divisão
+  const SV = { percentual: 10, casa: 20, fixas: 0, ...(cfgServ?.valor || {}), incluir: false };
   const P = Object.fromEntries(pessoas.map(p => [p.id, p]));
   const pesDe = (id, nome, tipo) => P[id] || pessoas.find(p => p.tipo === tipo && p.nome.toLowerCase() === (nome || "").toLowerCase());
   const abreDow = new Set(hist.map(h => dow(h.dia)));
@@ -1455,7 +1456,7 @@ async function abaPagamentos() {
     const fixosFaltando = disponiveis.filter(p => FIXO[p.id]);
     const outrosDisp = disponiveis.filter(p => !FIXO[p.id]);
     corpo = `${EQ ? `<div class="aviso">Lance quem trabalhou e os dias. A gerência confere e faz os pagamentos.</div>` : ""}<div class="servico ${EQ ? "hidden" : ""}"><div><b>Taxa de serviço da semana</b><small class="sub2">Caixa fechado ${brl0(baseServ)} × ${SV.percentual}% = ${brl0(servBruto)} · casa fica com ${SV.casa}% (${brl0(servCasa)})${noitesSemFech ? ` · ${noitesSemFech} ${noitesSemFech === 1 ? "noite ainda sem fechamento (usei o bruto)" : "noites ainda sem fechamento (usei o bruto)"}` : ""}</small></div>
-      <div class="n"><b style="font-size:18px;color:var(--teal)">${brl0(servEquipe)}</b><small class="sub2">para a equipe · ${cotas ? brl(porDiaria) + " por diária (" + nDiarias + " de freelas" + (+SV.fixas ? " + " + SV.fixas + " da equipe fixa = " + brl0(porDiaria * SV.fixas) : "") + ")" : "lance as diárias para dividir"}</small></div>
+      <div class="n"><b style="font-size:18px;color:var(--teal)">${brl0(servEquipe)}</b><small class="sub2">para a equipe registrada · os freelas não entram nessa divisão</small></div>
       <button class="btn sec peq" id="cfg-serv">Ajustar</button></div>
       <div class="rolagem tabela-pag" style="max-height:none"><table class="pag"><thead><tr><th>Freela</th>
       ${diasVis.map(d => `<th class="c ${abreDow.has(dow(d)) ? "" : "fechado"}">${DIAS[dow(d)]}<br><small>${br(d).slice(0, 5)}</small></th>`).join("")}
@@ -1472,7 +1473,7 @@ async function abaPagamentos() {
       <div class="acoes-pag freelas"><select id="add-fr"><option value="">+ Adicionar freela à semana…</option>${fixosFaltando.length ? `<optgroup label="Freelas fixos">${fixosFaltando.map(p => `<option value="${p.id}">📌 ${esc(p.nome)}${p.funcao ? " — " + esc(p.funcao) : ""}</option>`).join("")}</optgroup><optgroup label="Freelas">` : ""}${outrosDisp.map(p => `<option value="${p.id}">${esc(p.nome)}${p.funcao ? " — " + esc(p.funcao) : ""}</option>`).join("")}${fixosFaltando.length ? "</optgroup>" : ""}<option value="novo">＋ Cadastrar nova pessoa…</option></select>
         ${diasVis.length < 7 ? `<button class="link-btn" id="todos-dias">Mostrar seg e ter (feriado)</button>` : W.todosDias ? `<button class="link-btn" id="todos-dias">Esconder dias fechados</button>` : ""}
         ${!fr.length ? `<button class="link-btn" id="repetir">↻ Repetir a escala da semana anterior</button>` : ""}</div>
-      ${Object.keys(FIXO).length ? `<p class="dica">📌 Os freelas fixos entram sozinhos em cada semana, no topo da lista. Se alguém faltar, é só não marcar aquele dia: sem dia marcado, a pessoa não entra no pagamento nem na divisão dos 10%.</p>` : ""}
+      ${Object.keys(FIXO).length ? `<p class="dica">📌 Os freelas fixos entram sozinhos em cada semana, no topo da lista. Se alguém faltar, é só não marcar aquele dia: sem dia marcado, a pessoa não entra no pagamento.</p>` : ""}
       <p class="dica">Toque no dia para lançar a diária; toque de novo para mudar o valor. Dias em cinza: o bar costuma fechar. Tudo salva na hora.</p>`;
   }
   if (W.sub === "bandas") {
@@ -1577,13 +1578,11 @@ async function abaPagamentos() {
   if ($("#cfg-serv")) $("#cfg-serv").onclick = () => {
     const d = $("#dlg");
     d.innerHTML = `<h3>Taxa de serviço</h3><form id="f-serv"><div class="linha-form"><div><label>Taxa (%)</label><input name="percentual" type="number" step="0.1" value="${SV.percentual}"></div><div><label>Parte da casa (% da taxa)</label><input name="casa" type="number" step="0.1" value="${SV.casa}"></div></div>
-      <label>Diárias da equipe fixa na semana (quem é registrado e também divide os ${SV.percentual}%)</label><input name="fixas" type="number" min="0" value="${+SV.fixas || 0}" placeholder="ex.: 4 pessoas × 5 noites = 20">
-      <label><input type="checkbox" name="incluir" style="width:auto" ${SV.incluir ? "checked" : ""}> Somar a parte de cada freela no pagamento da semana</label>
-      <p class="dica">A taxa é calculada sobre o faturamento das noites da semana no Epoc. A parte da casa sai primeiro; o resto é dividido por diária trabalhada (freelas + equipe fixa): quem trabalhou 3 noites recebe 3 partes.</p>
+      <p class="dica">A taxa é calculada sobre o caixa fechado das noites da semana no Epoc. A parte da casa sai primeiro; o resto fica com a equipe registrada. Os freelas não entram na divisão.</p>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn sec" type="button" id="sv-c">Cancelar</button><button class="btn">Salvar</button></div></form>`;
     d.showModal(); $("#sv-c").onclick = () => d.close();
     $("#f-serv").onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target);
-      await sb.from("config").upsert({ chave: "servico", valor: { percentual: +f.get("percentual") || 0, casa: +f.get("casa") || 0, fixas: +f.get("fixas") || 0, incluir: f.get("incluir") === "on" } }); d.close(); recarregar(); };
+      await sb.from("config").upsert({ chave: "servico", valor: { percentual: +f.get("percentual") || 0, casa: +f.get("casa") || 0, fixas: 0, incluir: false } }); d.close(); recarregar(); };
   };
   document.querySelectorAll("[data-aj]").forEach(inp => inp.oninput = () => salvarLinha(inp.dataset.aj, l => { l.ajuste = inp.value.trim() ? numBR(inp.value.replace(/^\+/, "")) * (inp.value.trim().startsWith("-") ? 1 : 1) : 0; }));
   document.querySelectorAll("[data-ajobs]").forEach(inp => inp.oninput = () => salvarLinha(inp.dataset.ajobs, l => { l.ajuste_obs = inp.value; }));
