@@ -180,7 +180,7 @@ input.dia{width:58px;text-align:center;padding:8px 2px;font-weight:700;border-ra
 input.dia.on{background:#3a2a14;border-color:#7a5422;color:var(--amber2)}
 input.aj{width:76px;text-align:right;padding:6px}
 table.pag td:first-child{min-width:190px}table.pag td:first-child b{white-space:nowrap}
-td.td-aj{min-width:170px}td[data-total]{white-space:nowrap}.busca-fr{min-width:320px;flex:1;max-width:460px}
+td.td-aj{min-width:170px}input.aj.bonus.on{border-color:var(--teal);color:var(--teal);font-weight:600}td[data-total]{white-space:nowrap}.busca-fr{min-width:320px;flex:1;max-width:460px}
 input.aj-obs{width:100%;min-width:180px;padding:4px 6px;font-size:12px;margin-top:4px;display:block;margin-left:auto}
 input.val-banda{width:110px;text-align:right;font-weight:700;padding:8px}
 .pix{display:flex;flex-direction:column;gap:3px;align-items:flex-start;font-size:13px}
@@ -1440,7 +1440,7 @@ async function abaPagamentos() {
     if (!n) return ndPl(l) ? `<span class="mute">—</span><small class="sub2">${ndPl(l)} dias na planilha · valor no ajuste</small>` : `<span class="mute">—</span>`;
     const igual = vs.every(v => v === vs[0]);
     return `${brlI(somaDias(l))}<small class="sub2">${igual ? `${n} × ${brlI(vs[0])}` : `${n} ${n === 1 ? "dia" : "dias"}`}</small>`; };
-  const totFr = l => Object.values(l.dias_valores || {}).reduce((s, v) => s + +v, 0) + +(l.ajuste || 0);
+  const totFr = l => Object.values(l.dias_valores || {}).reduce((s, v) => s + +v, 0) + +(l.bonus || 0) + +(l.ajuste || 0);
   fr.forEach(l => { l._total = totFr(l); });
   const nDiarias = fr.reduce((s, l) => s + Object.keys(l.dias_valores || {}).length, 0);
   const servBruto = baseServ * SV.percentual / 100, servCasa = servBruto * SV.casa / 100, servEquipe = servBruto - servCasa;
@@ -1471,16 +1471,17 @@ async function abaPagamentos() {
       <button class="btn sec peq" id="cfg-serv">Ajustar</button></div>
       <div class="rolagem tabela-pag" style="max-height:none"><table class="pag"><thead><tr><th>Freela</th>
       ${diasVis.map(d => `<th class="c ${abreDow.has(dow(d)) ? "" : "fechado"}">${DIAS[dow(d)]}<br><small>${br(d).slice(0, 5)}</small></th>`).join("")}
-      <th class="n">Diárias</th><th class="n">Ajuste</th>${SV.incluir ? `<th class="n">${SV.percentual}%</th>` : ""}${EQ ? "" : `<th class="n">A pagar</th>`}<th>Pix</th><th>Situação</th><th></th></tr></thead><tbody>
+      <th class="n">Diárias</th><th class="n">Bônus</th><th class="n">Ajuste</th>${SV.incluir ? `<th class="n">${SV.percentual}%</th>` : ""}${EQ ? "" : `<th class="n">A pagar</th>`}<th>Pix</th><th>Situação</th><th></th></tr></thead><tbody>
       ${fr.map(l => { const p = pesDe(l.pessoa_id, l.nome, "freela"); const diaria = +(p?.valor_padrao || 0);
         const nd = Object.keys(l.dias_valores || {}).length;
         return `<tr data-linha="${l.id}" class="${ehFixo(l) ? "linha-fixa" : ""}"><td><b>${esc(l.nome)}</b>${ehFixo(l) ? ` <span class="tag fixa" title="Freela fixo até ${br(FIXO[l.pessoa_id])}: entra toda semana; se faltar, é só não marcar o dia">fixo</span>` : ""} <span class="tag ${nd || ndPl(l) ? "ok" : ""}" data-nd="${l.id}" ${!nd && ndPl(l) ? 'title="Dias lançados pela planilha (sem marcar quais)"' : ""}>${!nd && ndPl(l) ? ndPl(l) + (ndPl(l) === 1 ? " dia" : " dias") + " · planilha" : nd + (nd === 1 ? " dia" : " dias")}</span><small class="sub2">${esc(l.funcao || p?.funcao || "")}${diaria ? " · diária " + brl0(diaria) : ""}</small></td>
         ${diasVis.map(d => `<td class="c ${abreDow.has(dow(d)) ? "" : "fechado"}"><input class="dia ${l.dias_valores?.[d] ? "on" : ""}" inputmode="decimal" data-l="${l.id}" data-d="${d}" data-diaria="${diaria || ""}" value="${l.dias_valores?.[d] != null ? nfmt(+l.dias_valores[d]) : ""}" placeholder="·"></td>`).join("")}
         <td class="n" data-total="${l.id}">${celDiarias(l)}</td>
+        <td class="n"><input class="aj bonus ${+l.bonus ? "on" : ""}" inputmode="decimal" data-bn="${l.id}" value="${+l.bonus ? nfmt(+l.bonus, Number.isInteger(+l.bonus) ? 0 : 2) : ""}" placeholder="bônus" title="Bônus (ex.: veio o mês todo)"></td>
         <td class="n td-aj"><input class="aj" inputmode="decimal" data-aj="${l.id}" value="${+l.ajuste ? nfmt(+l.ajuste, Number.isInteger(+l.ajuste) ? 0 : 2) : ""}" placeholder="0"><input class="aj-obs" data-ajobs="${l.id}" value="${esc(l.ajuste_obs || "")}" placeholder="motivo"></td>
         ${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(l._serv)}</td>` : ""}${EQ ? "" : `<td class="n"><b data-pagar="${l.id}">${brlI(l._pagar)}</b></td>`}<td>${pixCel(p, l.nome)}</td><td>${status("freelas", l.id, l.status)}</td>
         <td>${l.status === "pago" && EQ ? "" : `<button class="x" data-del-fr="${l.id}" title="Tirar da semana">×</button>`}</td></tr>`; }).join("") || `<tr><td colspan="15" class="vazio"><span class="vazio-txt">Nenhum freela nesta semana ainda. Adicione abaixo ou repita a escala da semana anterior.</span></td></tr>`}
-      </tbody><tfoot><tr><td><b>Total</b></td>${diasVis.map(d => `<td class="c n"><small>${brl0(fr.reduce((s, l) => s + (+l.dias_valores?.[d] || 0), 0)) }</small></td>`).join("")}<td class="n">${brlI(fr.reduce((s, l) => s + somaDias(l), 0))}</td><td class="n">${brlI(fr.reduce((s, l) => s + (+l.ajuste || 0), 0))}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(tServ)}</td>` : ""}${EQ ? "" : `<td class="n"><b>${brlI(tFre + tServ)}</b></td>`}<td colspan="3"></td></tr></tfoot></table></div>
+      </tbody><tfoot><tr><td><b>Total</b></td>${diasVis.map(d => `<td class="c n"><small>${brl0(fr.reduce((s, l) => s + (+l.dias_valores?.[d] || 0), 0)) }</small></td>`).join("")}<td class="n">${brlI(fr.reduce((s, l) => s + somaDias(l), 0))}</td><td class="n">${brlI(fr.reduce((s, l) => s + (+l.bonus || 0), 0))}</td><td class="n">${brlI(fr.reduce((s, l) => s + (+l.ajuste || 0), 0))}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(tServ)}</td>` : ""}${EQ ? "" : `<td class="n"><b>${brlI(tFre + tServ)}</b></td>`}<td colspan="3"></td></tr></tfoot></table></div>
       ${fixosFaltando.length ? `<div class="fixos-falta"><span>📌 <b>Freelas fixos</b> fora desta semana: ${fixosFaltando.map(p => esc(nomeBonitoPessoa(p.nome))).join(", ")}</span><button class="btn peq" id="add-fixos">Adicionar freelas fixos</button></div>` : ""}
       <div class="acoes-pag freelas"><input id="busca-fr" class="busca-fr" list="lista-fr" autocomplete="off" placeholder="🔍 Buscar freela pelo nome e adicionar à semana…"><datalist id="lista-fr">${[...fixosFaltando, ...outrosDisp].map(p => `<option value="${esc(rotFr(p))}"></option>`).join("")}</datalist>
         <button class="btn sec peq" id="novo-fr">＋ Cadastrar nova pessoa</button>
@@ -1514,7 +1515,7 @@ async function abaPagamentos() {
   }
   if (W.sub === "pagar") {
     const itens = [
-      ...fr.filter(l => l.status !== "pago" && l._pagar > 0).map(l => ({ tab: "freelas", id: l.id, nome: l.nome, p: pesDe(l.pessoa_id, l.nome, "freela"), valor: l._pagar, oq: l._serv ? `diárias ${brl0(l._total)} + ${SV.percentual}% ${brl0(l._serv)}` : `diárias ${brl0(l._total)}` })),
+      ...fr.filter(l => l.status !== "pago" && l._pagar > 0).map(l => ({ tab: "freelas", id: l.id, nome: l.nome, p: pesDe(l.pessoa_id, l.nome, "freela"), valor: l._pagar, oq: `diárias ${brl0(l._total - (+l.bonus || 0))}${+l.bonus ? " + bônus " + brl0(+l.bonus) : ""}` })),
       ...bd.filter(b => b.status !== "pago").map(b => ({ tab: "pagamentos_bandas", id: b.id, nome: b.atracao, p: pesDe(b.pessoa_id, b.atracao, "banda"), valor: +b.valor, oq: `cachê ${DIAS[dow(b.data)]} ${br(b.data).slice(0, 5)} ${brl0(+b.valor)}` })),
     ];
     const grupos = {};
@@ -1577,7 +1578,7 @@ async function abaPagamentos() {
     clearTimeout(W.timers[id]);
     W.pendentes ??= {}; W.salvando ??= {};
     const gravar = () => { clearTimeout(W.timers[id]); delete W.pendentes[id];
-      const p = sb.from("freelas").update({ dias_valores: l.dias_valores, dias: Object.keys(l.dias_valores).length, ajuste: +l.ajuste || 0, ajuste_obs: l.ajuste_obs || null, valor: l._total }).eq("id", id).select("id")
+      const p = sb.from("freelas").update({ dias_valores: l.dias_valores, dias: Object.keys(l.dias_valores).length, ajuste: +l.ajuste || 0, ajuste_obs: l.ajuste_obs || null, bonus: +l.bonus || 0, valor: l._total }).eq("id", id).select("id")
         .then(({ data, error }) => { if (error || !data?.length) { const tt = $(`[data-total="${id}"]`); if (tt) { tt.textContent = "⚠️ não salvou"; tt.title = error?.message || "sem permissão para esta semana"; } alertaSalvar(error?.message || "Não foi possível salvar esta linha (sem permissão para esta semana?)."); } })
         .finally(() => { if (W.salvando[id] === p) delete W.salvando[id]; });
       W.salvando[id] = p; };
@@ -1604,6 +1605,7 @@ async function abaPagamentos() {
       await sb.from("config").upsert({ chave: "servico", valor: { percentual: +f.get("percentual") || 0, casa: +f.get("casa") || 0, fixas: 0, incluir: false } }); d.close(); recarregar(); };
   };
   document.querySelectorAll("[data-aj]").forEach(inp => inp.oninput = () => salvarLinha(inp.dataset.aj, l => { l.ajuste = inp.value.trim() ? numBR(inp.value.replace(/^\+/, "")) * (inp.value.trim().startsWith("-") ? 1 : 1) : 0; }));
+  document.querySelectorAll("[data-bn]").forEach(inp => inp.oninput = () => { inp.classList.toggle("on", !!inp.value.trim()); salvarLinha(inp.dataset.bn, l => { l.bonus = inp.value.trim() ? numBR(inp.value) : 0; }); });
   document.querySelectorAll("[data-ajobs]").forEach(inp => inp.oninput = () => salvarLinha(inp.dataset.ajobs, l => { l.ajuste_obs = inp.value; }));
   document.querySelectorAll("[data-del-fr]").forEach(b => b.onclick = async () => { await sb.from("freelas").delete().eq("id", b.dataset.delFr); recarregar(); });
   const inserirFr = async p => { await sb.from("freelas").insert({ semana_inicio: ini, nome: p.nome, funcao: p.funcao, pessoa_id: p.id, dias: 0, valor: 0, dias_valores: {} }); recarregar(); };
