@@ -179,7 +179,9 @@ th.fechado,td.fechado{opacity:.45}
 input.dia{width:58px;text-align:center;padding:8px 2px;font-weight:700;border-radius:8px;cursor:pointer}
 input.dia.on{background:#3a2a14;border-color:#7a5422;color:var(--amber2)}
 input.aj{width:76px;text-align:right;padding:6px}
-input.aj-obs{width:170px;padding:4px 6px;font-size:12px;margin-top:4px;display:block;margin-left:auto}
+table.pag td:first-child{min-width:190px}table.pag td:first-child b{white-space:nowrap}
+td.td-aj{min-width:170px}td[data-total]{white-space:nowrap}.busca-fr{min-width:320px;flex:1;max-width:460px}
+input.aj-obs{width:100%;min-width:180px;padding:4px 6px;font-size:12px;margin-top:4px;display:block;margin-left:auto}
 input.val-banda{width:110px;text-align:right;font-weight:700;padding:8px}
 .pix{display:flex;flex-direction:column;gap:3px;align-items:flex-start;font-size:13px}
 .pix small{color:var(--mute);font-size:11.5px}
@@ -1432,6 +1434,12 @@ async function abaPagamentos() {
   const abreDow = new Set(hist.map(h => dow(h.dia)));
   const fatSemana = res.reduce((s, r) => s + +r.faturamento, 0);
   const ndPl = l => +((l.ajuste_obs || "").match(/(\d+)\s*diárias?/i) || [])[1] || 0; // "3 diárias (planilha)"
+  const rotFr = p => (FIXO[p.id] ? "📌 " : "") + nomeBonitoPessoa(p.nome) + (p.funcao ? " — " + p.funcao : "");
+  const somaDias = l => Object.values(l.dias_valores || {}).reduce((s, v) => s + +v, 0);
+  const celDiarias = l => { const vs = Object.values(l.dias_valores || {}).map(Number), n = vs.length;
+    if (!n) return ndPl(l) ? `<span class="mute">—</span><small class="sub2">${ndPl(l)} dias na planilha · valor no ajuste</small>` : `<span class="mute">—</span>`;
+    const igual = vs.every(v => v === vs[0]);
+    return `${brlI(somaDias(l))}<small class="sub2">${igual ? `${n} × ${brlI(vs[0])}` : `${n} ${n === 1 ? "dia" : "dias"}`}</small>`; };
   const totFr = l => Object.values(l.dias_valores || {}).reduce((s, v) => s + +v, 0) + +(l.ajuste || 0);
   fr.forEach(l => { l._total = totFr(l); });
   const nDiarias = fr.reduce((s, l) => s + Object.keys(l.dias_valores || {}).length, 0);
@@ -1457,22 +1465,25 @@ async function abaPagamentos() {
     const disponiveis = pessoas.filter(p => p.tipo === "freela" && p.ativo && !usados.has(p.id));
     const fixosFaltando = disponiveis.filter(p => FIXO[p.id]);
     const outrosDisp = disponiveis.filter(p => !FIXO[p.id]);
+    W._dispFr = [...fixosFaltando, ...outrosDisp];
     corpo = `${EQ ? `<div class="aviso">Lance quem trabalhou e os dias. A gerência confere e faz os pagamentos.</div>` : ""}<div class="servico ${EQ ? "hidden" : ""}"><div><b>Taxa de serviço da semana</b><small class="sub2">Caixa fechado ${brl0(baseServ)} × ${SV.percentual}% = ${brl0(servBruto)} · casa fica com ${SV.casa}% (${brl0(servCasa)})${noitesSemFech ? ` · ${noitesSemFech} ${noitesSemFech === 1 ? "noite ainda sem fechamento (usei o bruto)" : "noites ainda sem fechamento (usei o bruto)"}` : ""}</small></div>
       <div class="n"><b style="font-size:18px;color:var(--teal)">${brl0(servEquipe)}</b><small class="sub2">para a equipe registrada · os freelas não entram nessa divisão</small></div>
       <button class="btn sec peq" id="cfg-serv">Ajustar</button></div>
       <div class="rolagem tabela-pag" style="max-height:none"><table class="pag"><thead><tr><th>Freela</th>
       ${diasVis.map(d => `<th class="c ${abreDow.has(dow(d)) ? "" : "fechado"}">${DIAS[dow(d)]}<br><small>${br(d).slice(0, 5)}</small></th>`).join("")}
-      <th class="n">Ajuste</th><th class="n">Diárias (R$)</th>${SV.incluir ? `<th class="n">${SV.percentual}%</th>` : ""}${EQ ? "" : `<th class="n">A pagar</th>`}<th>Pix</th><th>Situação</th><th></th></tr></thead><tbody>
+      <th class="n">Diárias</th><th class="n">Ajuste</th>${SV.incluir ? `<th class="n">${SV.percentual}%</th>` : ""}${EQ ? "" : `<th class="n">A pagar</th>`}<th>Pix</th><th>Situação</th><th></th></tr></thead><tbody>
       ${fr.map(l => { const p = pesDe(l.pessoa_id, l.nome, "freela"); const diaria = +(p?.valor_padrao || 0);
         const nd = Object.keys(l.dias_valores || {}).length;
         return `<tr data-linha="${l.id}" class="${ehFixo(l) ? "linha-fixa" : ""}"><td><b>${esc(l.nome)}</b>${ehFixo(l) ? ` <span class="tag fixa" title="Freela fixo até ${br(FIXO[l.pessoa_id])}: entra toda semana; se faltar, é só não marcar o dia">fixo</span>` : ""} <span class="tag ${nd || ndPl(l) ? "ok" : ""}" data-nd="${l.id}" ${!nd && ndPl(l) ? 'title="Dias lançados pela planilha (sem marcar quais)"' : ""}>${!nd && ndPl(l) ? ndPl(l) + (ndPl(l) === 1 ? " dia" : " dias") + " · planilha" : nd + (nd === 1 ? " dia" : " dias")}</span><small class="sub2">${esc(l.funcao || p?.funcao || "")}${diaria ? " · diária " + brl0(diaria) : ""}</small></td>
         ${diasVis.map(d => `<td class="c ${abreDow.has(dow(d)) ? "" : "fechado"}"><input class="dia ${l.dias_valores?.[d] ? "on" : ""}" inputmode="decimal" data-l="${l.id}" data-d="${d}" data-diaria="${diaria || ""}" value="${l.dias_valores?.[d] != null ? nfmt(+l.dias_valores[d]) : ""}" placeholder="·"></td>`).join("")}
-        <td class="n"><input class="aj" inputmode="decimal" data-aj="${l.id}" value="${+l.ajuste ? nfmt(+l.ajuste, Number.isInteger(+l.ajuste) ? 0 : 2) : ""}" placeholder="0"><input class="aj-obs" data-ajobs="${l.id}" value="${esc(l.ajuste_obs || "")}" placeholder="motivo"></td>
-        <td class="n" data-total="${l.id}">${brlI(l._total)}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(l._serv)}</td>` : ""}${EQ ? "" : `<td class="n"><b data-pagar="${l.id}">${brlI(l._pagar)}</b></td>`}<td>${pixCel(p, l.nome)}</td><td>${status("freelas", l.id, l.status)}</td>
+        <td class="n" data-total="${l.id}">${celDiarias(l)}</td>
+        <td class="n td-aj"><input class="aj" inputmode="decimal" data-aj="${l.id}" value="${+l.ajuste ? nfmt(+l.ajuste, Number.isInteger(+l.ajuste) ? 0 : 2) : ""}" placeholder="0"><input class="aj-obs" data-ajobs="${l.id}" value="${esc(l.ajuste_obs || "")}" placeholder="motivo"></td>
+        ${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(l._serv)}</td>` : ""}${EQ ? "" : `<td class="n"><b data-pagar="${l.id}">${brlI(l._pagar)}</b></td>`}<td>${pixCel(p, l.nome)}</td><td>${status("freelas", l.id, l.status)}</td>
         <td>${l.status === "pago" && EQ ? "" : `<button class="x" data-del-fr="${l.id}" title="Tirar da semana">×</button>`}</td></tr>`; }).join("") || `<tr><td colspan="15" class="vazio"><span class="vazio-txt">Nenhum freela nesta semana ainda. Adicione abaixo ou repita a escala da semana anterior.</span></td></tr>`}
-      </tbody><tfoot><tr><td><b>Total</b></td>${diasVis.map(d => `<td class="c n"><small>${brl0(fr.reduce((s, l) => s + (+l.dias_valores?.[d] || 0), 0)) }</small></td>`).join("")}<td></td><td class="n">${brlI(tFre)}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(tServ)}</td>` : ""}${EQ ? "" : `<td class="n"><b>${brlI(tFre + tServ)}</b></td>`}<td colspan="3"></td></tr></tfoot></table></div>
+      </tbody><tfoot><tr><td><b>Total</b></td>${diasVis.map(d => `<td class="c n"><small>${brl0(fr.reduce((s, l) => s + (+l.dias_valores?.[d] || 0), 0)) }</small></td>`).join("")}<td class="n">${brlI(fr.reduce((s, l) => s + somaDias(l), 0))}</td><td class="n">${brlI(fr.reduce((s, l) => s + (+l.ajuste || 0), 0))}</td>${SV.incluir ? `<td class="n" style="color:var(--teal)">${brl(tServ)}</td>` : ""}${EQ ? "" : `<td class="n"><b>${brlI(tFre + tServ)}</b></td>`}<td colspan="3"></td></tr></tfoot></table></div>
       ${fixosFaltando.length ? `<div class="fixos-falta"><span>📌 <b>Freelas fixos</b> fora desta semana: ${fixosFaltando.map(p => esc(nomeBonitoPessoa(p.nome))).join(", ")}</span><button class="btn peq" id="add-fixos">Adicionar freelas fixos</button></div>` : ""}
-      <div class="acoes-pag freelas"><select id="add-fr"><option value="">+ Adicionar freela à semana…</option>${fixosFaltando.length ? `<optgroup label="Freelas fixos">${fixosFaltando.map(p => `<option value="${p.id}">📌 ${esc(p.nome)}${p.funcao ? " — " + esc(p.funcao) : ""}</option>`).join("")}</optgroup><optgroup label="Freelas">` : ""}${outrosDisp.map(p => `<option value="${p.id}">${esc(p.nome)}${p.funcao ? " — " + esc(p.funcao) : ""}</option>`).join("")}${fixosFaltando.length ? "</optgroup>" : ""}<option value="novo">＋ Cadastrar nova pessoa…</option></select>
+      <div class="acoes-pag freelas"><input id="busca-fr" class="busca-fr" list="lista-fr" autocomplete="off" placeholder="🔍 Buscar freela pelo nome e adicionar à semana…"><datalist id="lista-fr">${[...fixosFaltando, ...outrosDisp].map(p => `<option value="${esc(rotFr(p))}"></option>`).join("")}</datalist>
+        <button class="btn sec peq" id="novo-fr">＋ Cadastrar nova pessoa</button>
         ${diasVis.length < 7 ? `<button class="link-btn" id="todos-dias">Mostrar seg e ter (feriado)</button>` : W.todosDias ? `<button class="link-btn" id="todos-dias">Esconder dias fechados</button>` : ""}
         ${!fr.length ? `<button class="link-btn" id="repetir">↻ Repetir a escala da semana anterior</button>` : ""}</div>
       ${Object.keys(FIXO).length ? `<p class="dica">📌 Os freelas fixos entram sozinhos em cada semana, no topo da lista. Se alguém faltar, é só não marcar aquele dia: sem dia marcado, a pessoa não entra no pagamento.</p>` : ""}
@@ -1558,9 +1569,11 @@ async function abaPagamentos() {
   // freelas: dias, ajuste, adicionar, remover, repetir
   const salvarLinha = (id, mudar) => {
     const l = fr.find(x => x.id == id); mudar(l); l._total = totFr(l);
-    const t = $(`[data-total="${id}"]`); if (t) t.textContent = brlI(l._total);
+    const t = $(`[data-total="${id}"]`); if (t) t.innerHTML = celDiarias(l);
+    const aj = $(`[data-aj="${id}"]`); if (aj && document.activeElement !== aj) aj.value = +l.ajuste ? nfmt(+l.ajuste, Number.isInteger(+l.ajuste) ? 0 : 2) : "";
+    const ao = $(`[data-ajobs="${id}"]`); if (ao && document.activeElement !== ao) ao.value = l.ajuste_obs || "";
     const nd = Object.keys(l.dias_valores || {}).length, tg = $(`[data-nd="${id}"]`); if (tg) { tg.textContent = nd + (nd === 1 ? " dia" : " dias"); tg.className = "tag " + (nd ? "ok" : ""); }
-    const pg = $(`[data-pagar="${id}"]`); if (pg) pg.textContent = brlI(l._total + (l._serv || 0)) + " *";
+    const pg = $(`[data-pagar="${id}"]`); if (pg) pg.textContent = brlI(l._total + (l._serv || 0));
     clearTimeout(W.timers[id]);
     W.pendentes ??= {}; W.salvando ??= {};
     const gravar = () => { clearTimeout(W.timers[id]); delete W.pendentes[id];
@@ -1571,10 +1584,14 @@ async function abaPagamentos() {
     W.pendentes[id] = gravar;
     W.timers[id] = setTimeout(gravar, 500);
   };
+  // (24/11) linha que veio da planilha (valor no ajuste): ao marcar os dias, o ajuste desconta o que foi marcado — o total não dobra
+  const absorver = (l, antes) => { if (!/planilha/i.test(l.ajuste_obs || "") || !(+l.ajuste > 0)) return;
+    const delta = somaDias(l) - antes; if (delta <= 0) return;
+    l.ajuste = Math.max(0, +l.ajuste - delta); if (!l.ajuste) l.ajuste_obs = ""; };
   document.querySelectorAll("input.dia").forEach(inp => {
-    inp.onfocus = () => { if (!inp.value && inp.dataset.diaria) { inp.value = nfmt(+inp.dataset.diaria); inp.classList.add("on"); salvarLinha(inp.dataset.l, l => { l.dias_valores = { ...l.dias_valores, [inp.dataset.d]: +inp.dataset.diaria }; }); } setTimeout(() => inp.select(), 0); };
+    inp.onfocus = () => { if (!inp.value && inp.dataset.diaria) { inp.value = nfmt(+inp.dataset.diaria); inp.classList.add("on"); salvarLinha(inp.dataset.l, l => { const a = somaDias(l); l.dias_valores = { ...l.dias_valores, [inp.dataset.d]: +inp.dataset.diaria }; absorver(l, a); }); } setTimeout(() => inp.select(), 0); };
     inp.oninput = () => { const v = inp.value.trim() ? numQtd(inp.value) : null; inp.classList.toggle("on", !!v);
-      salvarLinha(inp.dataset.l, l => { const dv = { ...l.dias_valores }; if (v) dv[inp.dataset.d] = v; else delete dv[inp.dataset.d]; l.dias_valores = dv; }); };
+      salvarLinha(inp.dataset.l, l => { const a = somaDias(l), dv = { ...l.dias_valores }; if (v) dv[inp.dataset.d] = v; else delete dv[inp.dataset.d]; l.dias_valores = dv; absorver(l, a); }); };
   });
   // (24/11) não recarrega mais a tela a cada dia digitado: os totais da linha atualizam na hora e tudo grava sozinho
   if ($("#cfg-serv")) $("#cfg-serv").onclick = () => {
@@ -1589,11 +1606,13 @@ async function abaPagamentos() {
   document.querySelectorAll("[data-aj]").forEach(inp => inp.oninput = () => salvarLinha(inp.dataset.aj, l => { l.ajuste = inp.value.trim() ? numBR(inp.value.replace(/^\+/, "")) * (inp.value.trim().startsWith("-") ? 1 : 1) : 0; }));
   document.querySelectorAll("[data-ajobs]").forEach(inp => inp.oninput = () => salvarLinha(inp.dataset.ajobs, l => { l.ajuste_obs = inp.value; }));
   document.querySelectorAll("[data-del-fr]").forEach(b => b.onclick = async () => { await sb.from("freelas").delete().eq("id", b.dataset.delFr); recarregar(); });
-  if ($("#add-fr")) $("#add-fr").onchange = async e => {
-    const v = e.target.value; if (!v) return;
-    const inserir = async p => { await sb.from("freelas").insert({ semana_inicio: ini, nome: p.nome, funcao: p.funcao, pessoa_id: p.id, dias: 0, valor: 0, dias_valores: {} }); recarregar(); };
-    if (v === "novo") editarPessoa(null, "freela", inserir); else inserir(P[v]);
-  };
+  const inserirFr = async p => { await sb.from("freelas").insert({ semana_inicio: ini, nome: p.nome, funcao: p.funcao, pessoa_id: p.id, dias: 0, valor: 0, dias_valores: {} }); recarregar(); };
+  if ($("#busca-fr")) { const bf = $("#busca-fr");
+    const escolher = () => { const p = (W._dispFr || []).find(x => rotFr(x) === bf.value.trim()); if (p) { bf.disabled = true; inserirFr(p); } };
+    bf.oninput = escolher; bf.onkeydown = e => { if (e.key !== "Enter") return; e.preventDefault();
+      const q = semAcento(bf.value).toLowerCase(), achou = (W._dispFr || []).filter(x => semAcento(x.nome).toLowerCase().includes(q));
+      if (achou.length === 1) { bf.disabled = true; inserirFr(achou[0]); } else if (!achou.length && bf.value.trim()) { if (confirm(`Ninguém chamado "${bf.value.trim()}" no cadastro. Cadastrar agora?`)) editarPessoa({ tipo: "freela", nome: bf.value.trim(), ativo: true }, "freela", inserirFr); } }; }
+  if ($("#novo-fr")) $("#novo-fr").onclick = () => editarPessoa(null, "freela", inserirFr);
   if ($("#add-fixos")) $("#add-fixos").onclick = async () => {
     const usados = new Set(fr.map(l => l.pessoa_id));
     const novos = pessoas.filter(p => FIXO[p.id] && !usados.has(p.id));
