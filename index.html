@@ -54,6 +54,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--amber)}
 .tag.fixa{background:rgba(242,166,59,.16);color:var(--amber,#f2a63b);border-color:rgba(242,166,59,.35)}
 tr.linha-fixa td:first-child{box-shadow:inset 3px 0 0 #f2a63b}
 .fixos-falta{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:rgba(242,166,59,.08);border:1px solid rgba(242,166,59,.25);border-radius:10px;padding:10px 12px;margin:12px 0 4px;font-size:14px}
+.agenda-cta{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:rgba(242,166,59,.08);border:1px solid rgba(242,166,59,.25);border-radius:12px;padding:12px 14px;margin-bottom:14px}
 .rot-wa{font-size:12px;color:var(--mute);margin:0 0 6px}
 .wa-hora{display:block;text-align:right;font-size:11px;color:#8fbfb2;margin-top:3px}
 .marca2{display:flex;align-items:center;gap:11px;margin:2px 6px 16px}
@@ -1482,7 +1483,8 @@ async function abaPagamentos() {
     // (✓ lançada) e um resumo da noite. Tocar numa banda já lançada leva até a linha dela para ajustar o cachê.
     const daNoite = bd.filter(b => b.data === W.noite);
     const lancada = id => daNoite.find(b => String(b.pessoa_id) === String(id));
-    corpo = `<div class="add-banda">
+    corpo = `${EQ ? "" : `<div class="agenda-cta"><div><b>📷 Lançar pela agenda da semana</b><small class="sub2">Suba a foto da programação (ou cole o texto do post) e as atrações entram sozinhas, prontas para pagar na terça.</small></div><button class="btn" id="agenda-foto">Usar agenda</button></div>`}
+    <div class="add-banda">
       <div><div class="passo">Escolha a noite</div><div class="chips faixa" id="noites">${dias.map(d => { const n = bd.filter(b => b.data === d).length; return `<button class="${d === W.noite ? "sel" : ""} ${abreDow.has(dow(d)) ? "" : "fechado"}" data-noite="${d}">${DIAS[dow(d)]} <b>${br(d).slice(0, 5)}</b>${n ? `<i class="bolinha">${n}</i>` : ""}</button>`; }).join("")}</div></div>
       <div><div class="passo">Quem tocou em ${DIAS[dow(W.noite)]} ${br(W.noite).slice(0, 5)}? <small>Toque para lançar · o Pix vem do cadastro</small></div>
       <div class="lista-bandas">${bandas.map(p => { const l = lancada(p.id); return `<button class="linha-banda ${l ? "on" : ""}" data-banda="${p.id}" ${l ? `data-ja="${l.id}"` : ""}><span class="marca">${l ? "✓" : "+"}</span><span class="nome">${esc(nomeBonitoPessoa(p.nome))}</span><span class="cache">${l ? brl0(+l.valor) : p.valor_padrao ? brl0(+p.valor_padrao) : "—"}</span><span class="estado">${l ? "lançada" : ""}</span></button>${EQ ? "" : `<button class="editar-banda" data-ed-banda="${p.id}" title="Editar ${esc(p.nome)}">✎</button>`}`; }).join("")}
@@ -1608,6 +1610,7 @@ async function abaPagamentos() {
   // bandas
   document.querySelectorAll("[data-noite]").forEach(b => b.onclick = () => { W.noite = b.dataset.noite; recarregar(); });
   document.querySelectorAll("[data-ed-banda]").forEach(b => b.onclick = () => editarPessoa(P[b.dataset.edBanda], "banda", recarregar));
+  if ($("#agenda-foto")) $("#agenda-foto").onclick = () => lancarPelaAgenda(ini, pessoas.filter(p => p.tipo === "banda" && p.ativo !== false), bd, recarregar);
   document.querySelectorAll("[data-banda]").forEach(b => b.onclick = async () => {
     if (b.dataset.ja) { const tr = $(`#bd-${b.dataset.ja}`); if (tr) { tr.scrollIntoView({ behavior: "smooth", block: "center" }); tr.classList.add("piscar"); setTimeout(() => tr.classList.remove("piscar"), 1400); const inp = tr.querySelector("[data-vb]"); if (inp) setTimeout(() => { inp.focus(); inp.select(); }, 400); } return; }
     if (b.dataset.banda !== "novo") { b.classList.add("carregando"); b.querySelector(".marca").textContent = "…"; b.querySelector(".estado").textContent = "lançando"; }
@@ -2612,6 +2615,96 @@ const TROCAS_MASC = [[/\buma Vezpa\b/g, "um Vezpa"], [/\bas amigas\b/g, "os amig
   [/\bsumida\b/g, "sumido"], [/\bconvidada\b/g, "convidado"], [/\blinda\b/g, "lindo"], [/\bparada\b/g, "parado"], [/\bapaixonada\b/g, "apaixonado"],
   [/\bsapatonas?\b/gi, "galera"], [/\bVezpetchys?\b/g, "Vezpetchy"]];
 const generoMsg = (c, texto) => ehHomem(c) ? TROCAS_MASC.reduce((t, [r, v]) => t.replace(r, v), texto) : texto;
+// ============ Agenda da semana → cachês a pagar ============
+// Lê a foto da programação (OCR no próprio navegador, Tesseract) ou o texto colado do post, acha os dias da semana
+// e as atrações cadastradas em cada dia, e mostra para conferir antes de lançar.
+const DIAS_AGENDA = [[/\bQUA(RTA)?\b/, 0], [/\bQUI(NTA)?\b/, 1], [/\bSEX(TA)?\b/, 2], [/\bS[AÁ]B(ADO)?\b/, 3], [/\bDOM(INGO)?\b/, 4], [/\bSEG(UNDA)?\b/, 5], [/\bTER([CÇ]A)?\b/, 6]];
+function distEdicao(a, b) { const m = a.length, n = b.length; if (!m) return n; if (!n) return m; let p = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) { const c = [i]; for (let j = 1; j <= n; j++) c[j] = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); p = c; } return p[n]; }
+const normAg = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/0/g, "o").replace(/[^a-z0-9]+/g, " ").trim();
+function acharAtracoes(trecho, bandas) {
+  const t = " " + normAg(trecho) + " ";
+  const nm = b => normAg(nomeBonitoPessoa(b.nome)).replace(/^dj /, "").trim();
+  const achou = [];
+  bandas.forEach(b => {
+    const nome = nm(b); if (nome.length < 3) return;
+    if (t.includes(" " + nome + " ")) return achou.push(b);
+    // tolera erro de leitura da foto: compara janelas de palavras do mesmo tamanho
+    const pal = t.trim().split(" "), k = nome.split(" ").length;
+    for (let i = 0; i + k <= pal.length; i++) { const j = pal.slice(i, i + k).join(" "); if (Math.abs(j.length - nome.length) <= 2 && distEdicao(j, nome) <= Math.max(1, Math.floor(nome.length / 6))) return achou.push(b); }
+  });
+  // "Fernanda" dentro de "Maria Fernanda": fica só o nome mais completo
+  return [...new Set(achou)].filter(b => !achou.some(o => o !== b && nm(o).length > nm(b).length && nm(o).includes(nm(b))));
+}
+function lerAgenda(texto, bandas) {
+  const linhas = String(texto).toUpperCase().normalize("NFC").split(/\n|(?=\b(?:QUARTA|QUINTA|SEXTA|S[AÁ]BADO|DOMINGO|SEGUNDA|TER[CÇ]A)\b)/);
+  const porDia = {}; let atual = null;
+  linhas.forEach(l => { const d = DIAS_AGENDA.find(([r]) => r.test(l)); if (d) atual = d[1]; if (atual == null) return; (porDia[atual] ??= []).push(l); });
+  const res = {}; Object.entries(porDia).forEach(([d, ls]) => { const a = acharAtracoes(ls.join(" "), bandas); if (a.length) res[d] = a; });
+  return res;
+}
+function lancarPelaAgenda(ini, bandas, jaLancadas, aoTerminar) {
+  const d = $("#dlg"); const tercaPag = addDias(ini, 6 + 7 * 0);
+  d.innerHTML = `<h3>📷 Lançar pela agenda da semana</h3><div class="sub">Semana de ${br(ini)} a ${br(addDias(ini, 6))} · os cachês entram como <b>a pagar</b> (pagamento na terça ${br(addDias(ini, 6))})</div>
+    <label style="margin-top:12px">Foto da agenda</label><input type="file" id="ag-foto" accept="image/*">
+    <label>…ou cole o texto do post do Instagram</label><textarea id="ag-txt" rows="5" placeholder="Quinta: Sapaoke…&#10;Sexta: Samba com Pimenta e pistinha do Alci…"></textarea>
+    <div id="ag-status" class="dica"></div><div id="ag-res"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn sec" type="button" id="ag-c">Cancelar</button><button class="btn sec" type="button" id="ag-ler">Ler agenda</button><button class="btn hidden" type="button" id="ag-ok">Lançar cachês</button></div>`;
+  d.showModal(); $("#ag-c").onclick = () => d.close();
+  let achados = {};
+  const mostrar = () => {
+    const dias = Object.keys(achados).map(Number).sort((a, b) => a - b);
+    $("#ag-res").innerHTML = dias.length ? `<table class="pag" style="margin-top:10px"><thead><tr><th>Noite</th><th>Atração</th><th class="n">Cachê</th><th></th></tr></thead><tbody>
+      ${dias.flatMap(k => achados[k].map((b, i) => { const dt = addDias(ini, k), ja = jaLancadas.some(x => x.data === dt && String(x.pessoa_id) === String(b.id));
+        return `<tr><td>${DIAS[dow(dt)]} ${br(dt).slice(0, 5)}</td><td><b>${esc(nomeBonitoPessoa(b.nome))}</b>${ja ? ` <span class="tag">já lançada</span>` : ""}</td>
+        <td class="n">${ja ? "—" : `<input class="val-banda" inputmode="decimal" data-agv="${k}:${i}" value="${b.valor_padrao ? nfmt(+b.valor_padrao, 2) : ""}" placeholder="cachê">`}</td>
+        <td>${ja ? "" : `<button class="x" data-agx="${k}:${i}" title="Tirar">×</button>`}</td></tr>`; })).join("")}</tbody></table>
+      <div class="linha-form" style="margin-top:10px"><div><label>Faltou alguém?</label><select id="ag-add-dia">${[0, 1, 2, 3, 4, 5, 6].map(k => `<option value="${k}">${DIAS[dow(addDias(ini, k))]} ${br(addDias(ini, k)).slice(0, 5)}</option>`).join("")}</select></div>
+      <div><label>&nbsp;</label><select id="ag-add-b"><option value="">+ escolher atração…</option>${bandas.map(b => `<option value="${b.id}">${esc(nomeBonitoPessoa(b.nome))}</option>`).join("")}</select></div></div>
+      <p class="dica">Dividiu um cachê entre noites (ex.: Alci quinta e sexta)? Ajuste o valor de cada noite aqui. O Pix vem do cadastro.</p>`
+      : `<div class="aviso" style="margin-top:10px">Não achei atrações cadastradas no texto. Confira se a banda está em Cadastros, ou adicione abaixo.</div>
+      <div class="linha-form" style="margin-top:10px"><div><select id="ag-add-dia">${[0, 1, 2, 3, 4, 5, 6].map(k => `<option value="${k}">${DIAS[dow(addDias(ini, k))]} ${br(addDias(ini, k)).slice(0, 5)}</option>`).join("")}</select></div>
+      <div><select id="ag-add-b"><option value="">+ escolher atração…</option>${bandas.map(b => `<option value="${b.id}">${esc(nomeBonitoPessoa(b.nome))}</option>`).join("")}</select></div></div>`;
+    $("#ag-ok").classList.toggle("hidden", !dias.length);
+    d.querySelectorAll("[data-agx]").forEach(x => x.onclick = () => { const [k, i] = x.dataset.agx.split(":").map(Number); achados[k].splice(i, 1); if (!achados[k].length) delete achados[k]; mostrar(); });
+    d.querySelectorAll("[data-agv]").forEach(x => x.oninput = () => { const [k, i] = x.dataset.agv.split(":").map(Number); achados[k][i] = { ...achados[k][i], _valor: numBR(x.value) }; });
+    $("#ag-add-b").onchange = e => { const b = bandas.find(x => String(x.id) === e.target.value); if (!b) return; const k = +$("#ag-add-dia").value; (achados[k] ??= []).push(b); mostrar(); };
+  };
+  $("#ag-ler").onclick = async () => {
+    const st = $("#ag-status"); let texto = $("#ag-txt").value;
+    const arq = $("#ag-foto").files?.[0];
+    if (arq) {
+      st.textContent = "Lendo a foto… (na primeira vez demora uns 20 segundos)";
+      try {
+        if (!window.Tesseract) await new Promise((ok, erro) => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"; sc.onload = ok; sc.onerror = erro; document.head.appendChild(sc); });
+        const r = await Tesseract.recognize(arq, "por", { logger: m => { if (m.status === "recognizing text") st.textContent = `Lendo a foto… ${Math.round(m.progress * 100)}%`; } });
+        texto += "\n" + r.data.text;
+      } catch (e) { st.textContent = "Não consegui ler a foto. Cole o texto do post no campo acima."; return; }
+    }
+    if (!texto.trim()) { st.textContent = "Escolha a foto ou cole o texto da agenda."; return; }
+    achados = lerAgenda(texto, bandas);
+    const n = Object.values(achados).reduce((s, a) => s + a.length, 0);
+    st.textContent = n ? `Achei ${n} ${n === 1 ? "atração" : "atrações"}. Confira os dias e os cachês:` : "";
+    mostrar();
+  };
+  $("#ag-ok").onclick = async () => {
+    const linhas = [];
+    Object.entries(achados).forEach(([k, arr]) => arr.forEach(b => { const dt = addDias(ini, +k);
+      if (jaLancadas.some(x => x.data === dt && String(x.pessoa_id) === String(b.id))) return;
+      const v = b._valor ?? (+b.valor_padrao || 0);
+      linhas.push({ data: dt, atracao: nomeBonitoPessoa(b.nome), valor: v, pessoa_id: b.id, status: "a pagar", observacao: "pela agenda" }); }));
+    if (!linhas.length) { d.close(); return; }
+    $("#ag-ok").disabled = true; $("#ag-ok").textContent = "Lançando…";
+    const { error } = await sb.from("pagamentos_bandas").insert(linhas);
+    if (error) { $("#ag-status").textContent = "Erro: " + error.message; $("#ag-ok").disabled = false; $("#ag-ok").textContent = "Lançar cachês"; return; }
+    // programação da noite (Hoje, Faturamento, Atrações)
+    const porDia = {}; linhas.forEach(l => (porDia[l.data] ??= []).push(l.atracao));
+    for (const [dt, nomes] of Object.entries(porDia)) { const { data: ex } = await sb.from("dias").select("atracao").eq("data", dt).maybeSingle();
+      await sb.from("dias").upsert({ data: dt, atracao: ex?.atracao || nomes.join(" + ") }); }
+    d.close(); aoTerminar();
+  };
+}
+
 // ============ Prévia de WhatsApp reutilizável ============
 function previaWhatsGeral({ titulo, sub, rotulo, texto, telefone, aoEnviar }) {
   const d = $("#dlg");
