@@ -1390,6 +1390,8 @@ const fatSemanaCalc = res => res.reduce((s, r) => s + +r.faturamento, 0);
 const semanaDe = d => addDias(d, -((dow(d) - 3 + 7) % 7)); // semana começa na quarta
 const W = { sub: "freelas", timers: {} };
 async function abaPagamentos() {
+  // 24/11 — antes de recarregar, termina de gravar o que ainda estava esperando (senão a tela voltava sem o último dia digitado)
+  if (W.pendentes) { Object.values(W.pendentes).forEach(f => f()); await Promise.all(Object.values(W.salvando || {})); }
   W.ini ??= semanaDe(addDias(diaOperacionalHoje(), -1));
   const ini = W.ini, fim = addDias(ini, 6);
   const dias = Array.from({ length: 7 }, (_, i) => addDias(ini, i));
@@ -1529,6 +1531,7 @@ async function abaPagamentos() {
     ${corpo}</div>`;
 
   // ---------- eventos ----------
+  const alertaSalvar = msg => { let a = $("#aviso-salvar"); if (!a) { a = document.createElement("div"); a.id = "aviso-salvar"; a.className = "msg erro"; a.style.cssText = "position:sticky;top:8px;z-index:5;margin-bottom:10px"; $("#conteudo").prepend(a); } a.textContent = "⚠️ " + msg + " Avise a gerência."; };
   const recarregar = () => abaPagamentos().catch(e => $("#conteudo").innerHTML = `<div class="msg erro">${esc(e.message)}</div>`);
   const minEq = addDias(semanaDe(addDias(diaOperacionalHoje(), -1)), -7);
   if (EQ && ini <= minEq) $("#sem-ant").disabled = true;
@@ -1554,17 +1557,21 @@ async function abaPagamentos() {
     const nd = Object.keys(l.dias_valores || {}).length, tg = $(`[data-nd="${id}"]`); if (tg) { tg.textContent = nd + (nd === 1 ? " dia" : " dias"); tg.className = "tag " + (nd ? "ok" : ""); }
     const pg = $(`[data-pagar="${id}"]`); if (pg) pg.textContent = brl(l._total + (l._serv || 0)) + " *";
     clearTimeout(W.timers[id]);
-    W.timers[id] = setTimeout(async () => {
-      const { error } = await sb.from("freelas").update({ dias_valores: l.dias_valores, dias: Object.keys(l.dias_valores).length, ajuste: +l.ajuste || 0, ajuste_obs: l.ajuste_obs || null, valor: l._total }).eq("id", id);
-      if (error && t) t.textContent = "erro ao salvar";
-    }, 500);
+    W.pendentes ??= {}; W.salvando ??= {};
+    const gravar = () => { clearTimeout(W.timers[id]); delete W.pendentes[id];
+      const p = sb.from("freelas").update({ dias_valores: l.dias_valores, dias: Object.keys(l.dias_valores).length, ajuste: +l.ajuste || 0, ajuste_obs: l.ajuste_obs || null, valor: l._total }).eq("id", id).select("id")
+        .then(({ data, error }) => { if (error || !data?.length) { const tt = $(`[data-total="${id}"]`); if (tt) { tt.textContent = "⚠️ não salvou"; tt.title = error?.message || "sem permissão para esta semana"; } alertaSalvar(error?.message || "Não foi possível salvar esta linha (sem permissão para esta semana?)."); } })
+        .finally(() => { if (W.salvando[id] === p) delete W.salvando[id]; });
+      W.salvando[id] = p; };
+    W.pendentes[id] = gravar;
+    W.timers[id] = setTimeout(gravar, 500);
   };
   document.querySelectorAll("input.dia").forEach(inp => {
     inp.onfocus = () => { if (!inp.value && inp.dataset.diaria) { inp.value = nfmt(+inp.dataset.diaria); inp.classList.add("on"); salvarLinha(inp.dataset.l, l => { l.dias_valores = { ...l.dias_valores, [inp.dataset.d]: +inp.dataset.diaria }; }); } setTimeout(() => inp.select(), 0); };
     inp.oninput = () => { const v = inp.value.trim() ? numQtd(inp.value) : null; inp.classList.toggle("on", !!v);
       salvarLinha(inp.dataset.l, l => { const dv = { ...l.dias_valores }; if (v) dv[inp.dataset.d] = v; else delete dv[inp.dataset.d]; l.dias_valores = dv; }); };
   });
-  document.querySelectorAll("input.dia").forEach(inp => inp.addEventListener("change", () => setTimeout(recarregar, 700)));
+  // (24/11) não recarrega mais a tela a cada dia digitado: os totais da linha atualizam na hora e tudo grava sozinho
   if ($("#cfg-serv")) $("#cfg-serv").onclick = () => {
     const d = $("#dlg");
     d.innerHTML = `<h3>Taxa de serviço</h3><form id="f-serv"><div class="linha-form"><div><label>Taxa (%)</label><input name="percentual" type="number" step="0.1" value="${SV.percentual}"></div><div><label>Parte da casa (% da taxa)</label><input name="casa" type="number" step="0.1" value="${SV.casa}"></div></div>
