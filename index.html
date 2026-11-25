@@ -285,9 +285,28 @@ tr.piscar td{background:#3a2612 !important;transition:background .3s}
   table.pag.cartoes tfoot tr{background:none;border:0}
   .acoes-pag select{max-width:none;width:100%}
 }
+#tela-ponto{min-height:100vh;display:flex;justify-content:center;padding:28px 16px}
+.ponto-box{width:100%;max-width:420px}
+.ponto-box .relogio{font-size:44px;font-weight:700;text-align:center;letter-spacing:1px;margin:6px 0 2px}
+.ponto-box .data-h{text-align:center;color:var(--mute);margin-bottom:22px}
+.ponto-nomes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 18px}
+.ponto-nomes button{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:14px 10px;font-size:15px;cursor:pointer;text-align:left}
+.ponto-nomes button.sel{border-color:#f2a63b;background:#3a2a12;color:#f7c77a;font-weight:600}
+.ponto-nomes small{display:block;color:var(--mute);font-size:12px;margin-top:2px}
+.ponto-pin{font-size:28px;letter-spacing:12px;text-align:center;width:100%;padding:12px;border-radius:12px}
+.ponto-acoes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.ponto-acoes button{padding:18px;font-size:18px;font-weight:700;border-radius:14px;border:0;cursor:pointer}
+.ponto-acoes .ent{background:#2f9e6e;color:#fff}.ponto-acoes .sai{background:#c4553f;color:#fff}
+.ponto-res{margin-top:18px;padding:16px;border-radius:14px;text-align:center;font-size:17px}
+.ponto-res.ok{background:#173a2b;color:#8fe0b8}.ponto-res.erro{background:#3a1a17;color:#f3a497}
+table.ponto td.c{white-space:nowrap;font-size:13px;cursor:pointer}table.ponto td.c:hover{background:var(--panel2)}
+.hx{color:#f2a63b;font-weight:700}.sem-saida{color:#f3a497}
 </style>
 </head>
 <body>
+
+<!-- PONTO (público, sem login) -->
+<section id="tela-ponto" class="hidden"></section>
 
 <!-- LOGIN -->
 <section id="tela-login" class="hidden">
@@ -455,7 +474,51 @@ function telaSenha() {
   $("#form-login").classList.add("hidden"); $("#form-nova-senha").classList.remove("hidden");
 }
 
+// ============ PONTO (link público da equipe: www.vezpabar.com.br/#ponto) ============
+async function telaPonto() {
+  $("#tela-login").classList.add("hidden"); $("#app").classList.add("hidden");
+  const T = $("#tela-ponto"); T.classList.remove("hidden");
+  const { data: equipe, error } = await sb.rpc("ponto_equipe");
+  let sel = localStorage.getItem("vz_ponto_pessoa") || "";
+  const hora = () => new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
+  T.innerHTML = `<div class="ponto-box">
+    <div class="marca2" style="justify-content:center;margin-bottom:6px"><img class="logo-img" src="logo.jpg" alt="Vezpa" style="width:52px;height:52px"><div><b style="font-size:20px">Ponto Vezpa</b><span>entrada e saída da equipe</span></div></div>
+    <div class="relogio" id="pt-relogio">${hora()}</div>
+    <div class="data-h">${new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", day: "2-digit", month: "long" })}</div>
+    ${error ? `<div class="ponto-res erro">Sem conexão. Tente de novo em instantes.</div>` : !equipe?.length ? `<div class="ponto-res erro">Ninguém com PIN cadastrado ainda. Peça para a gerência cadastrar o seu.</div>` : `
+    <div class="passo">1. Quem é você?</div>
+    <div class="ponto-nomes">${equipe.map(p => `<button data-pp="${p.id}" class="${String(p.id) === sel ? "sel" : ""}">${esc(p.nome)}${p.funcao ? `<small>${esc(p.funcao)}</small>` : ""}</button>`).join("")}</div>
+    <div class="passo">2. Seu PIN</div>
+    <input id="pt-pin" class="ponto-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••">
+    <div class="ponto-acoes"><button class="ent" data-acao="entrada">Entrada</button><button class="sai" data-acao="saida">Saída</button></div>
+    <div id="pt-res"></div>
+    <p class="dica" style="text-align:center;margin-top:16px">O ponto só funciona no Vezpa (até 150 m do bar) e usa a localização do celular. O horário é o do sistema.</p>`}
+  </div>`;
+  setInterval(() => { const r = $("#pt-relogio"); if (r) r.textContent = hora(); }, 10000);
+  T.querySelectorAll("[data-pp]").forEach(b => b.onclick = () => { sel = b.dataset.pp; localStorage.setItem("vz_ponto_pessoa", sel); T.querySelectorAll("[data-pp]").forEach(x => x.classList.toggle("sel", x === b)); $("#pt-pin").focus(); });
+  const res = (ok, html) => { $("#pt-res").innerHTML = `<div class="ponto-res ${ok ? "ok" : "erro"}">${html}</div>`; };
+  T.querySelectorAll("[data-acao]").forEach(b => b.onclick = () => {
+    const pin = $("#pt-pin").value.trim();
+    if (!sel) return res(false, "Toque no seu nome primeiro.");
+    if (!/^\d{4}$/.test(pin)) return res(false, "Digite o seu PIN de 4 números.");
+    if (!navigator.geolocation) return res(false, "Este celular não libera a localização.");
+    T.querySelectorAll("[data-acao]").forEach(x => x.disabled = true); res(true, "📍 Conferindo sua localização…");
+    const fim = () => T.querySelectorAll("[data-acao]").forEach(x => x.disabled = false);
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const { data: r, error } = await sb.rpc("bater_ponto", { p_pessoa: +sel, p_pin: pin, p_acao: b.dataset.acao, p_lat: pos.coords.latitude, p_lng: pos.coords.longitude });
+      fim();
+      if (error) return res(false, "Não consegui registrar. Tente de novo.");
+      if (!r.ok) return res(false, esc(r.erro));
+      $("#pt-pin").value = "";
+      const nome = T.querySelector(`[data-pp="${sel}"]`)?.childNodes[0]?.textContent || "";
+      res(true, r.acao === "entrada" ? `✅ <b>Entrada às ${r.hora}</b><br>Bom trabalho, ${esc(nome.split(" ")[0])}! 🐝` : `👋 <b>Saída às ${r.hora}</b><br>Você entrou às ${r.entrada} · ${String(r.horas).replace(".", ",")} h hoje. Até a próxima!`);
+    }, err => { fim(); res(false, err.code === 1 ? "Você precisa permitir a localização para bater o ponto (toque no cadeado do navegador → Localização → Permitir)." : "Não consegui pegar sua localização. Vá para perto da porta e tente de novo."); },
+    { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+  });
+}
+
 async function iniciar() {
+  if (location.hash === "#ponto") return telaPonto();
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return telaLogin();
   if (definindoSenha) return telaSenha();
@@ -1527,6 +1590,36 @@ async function abaPagamentos() {
         ${diasVis.length < 7 ? `<button class="link-btn" id="todos-dias">Mostrar seg e ter (feriado)</button>` : W.todosDias ? `<button class="link-btn" id="todos-dias">Esconder dias fechados</button>` : ""}</div>
       <p class="dica"><b>Como lançar:</b> escolha a banda acima → ela aparece na tabela → toque na noite em que tocou e o cachê do cadastro já aparece. Tocou a mais ou cobrou extra? É só mudar o valor. Tocou 2x na semana? Marque as duas noites. Apagar o valor tira a noite.</p>`;
   }
+  if (W.sub === "ponto" && !EQ) {
+    const tz = { timeZone: "America/Sao_Paulo" };
+    const hm = t => new Date(t).toLocaleTimeString("pt-BR", { ...tz, hour: "2-digit", minute: "2-digit" });
+    const noiteDe = t => new Date(new Date(t).getTime() - 6 * 3600e3).toLocaleDateString("sv-SE", tz);
+    const { data: cfgP } = await sb.from("config").select("valor").eq("chave", "ponto").maybeSingle();
+    const PC = cfgP?.valor || { raio: 150 }; W._pc = PC;
+    const { data: pts } = await sb.from("ponto").select("*").gte("entrada", ini + "T06:00:00-03:00").lt("entrada", addDias(ini, 7) + "T06:00:00-03:00").order("entrada");
+    const jor = +PC.jornada || 0;
+    const porP = {}; (pts || []).forEach(r => { const n = noiteDe(r.entrada); ((porP[r.pessoa_id] ||= {})[n] ||= []).push(r); });
+    const colsP = dias.filter(d => diasVis.includes(d) || (pts || []).some(r => noiteDe(r.entrada) === d));
+    const horas = r => r.saida ? (new Date(r.saida) - new Date(r.entrada)) / 3600e3 : 0;
+    const hfmt = h => h.toFixed(1).replace(".", ",") + " h";
+    const freelasAtivos = pessoas.filter(p => p.tipo === "freela" && p.ativo).sort((a, b) => (FIXO[b.id] ? 1 : 0) - (FIXO[a.id] ? 1 : 0) || a.nome.localeCompare(b.nome));
+    const linhasP = Object.keys(porP).map(id => P[id]).filter(Boolean).sort((a, b) => a.nome.localeCompare(b.nome));
+    W._ptRows = Object.fromEntries((pts || []).map(r => [r.id, r]));
+    const comPin = freelasAtivos.filter(p => p.pin_hash).length;
+    corpo = `<div class="agenda-cta"><div><b>⏱️ Link do ponto da equipe</b><small class="sub2">Cada pessoa abre no celular, toca no nome, digita o PIN e marca Entrada/Saída. Só funciona até ${PC.raio || 150} m do bar. ${PC.local_gravado ? "📍 Localização do bar gravada." : "⚠️ Localização do bar ainda aproximada: grave estando no bar."}</small></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sec peq" id="pt-copiar">Copiar link</button><button class="btn sec peq" id="pt-local">📍 Gravar localização do bar</button><button class="btn sec peq" id="pt-config">Jornada e raio</button></div></div>
+      <div class="rolagem tabela-pag" style="max-height:none"><table class="pag ponto"><thead><tr><th>Pessoa</th>${colsP.map(d => `<th class="c ${abreDow.has(dow(d)) ? "" : "fechado"}">${DIAS[dow(d)]}<br><small>${br(d).slice(0, 5)}</small></th>`).join("")}<th class="n">Horas</th>${jor ? `<th class="n">Extras</th>` : ""}</tr></thead><tbody>
+      ${linhasP.map(p => { let tot = 0, ext = 0;
+        const cel = colsP.map(d => { const rs = porP[p.id][d] || []; if (!rs.length) return `<td class="c" data-pt-novo="${p.id}:${d}"><span class="mute">·</span></td>`;
+          return `<td class="c">${rs.map(r => { const h = horas(r); tot += h; const x = jor && h > jor ? h - jor : 0; ext += x;
+            return `<div data-pt="${r.id}" title="${r.origem === "manual" ? "lançado à mão" : "celular · " + (r.dist_entrada ?? "?") + " m do bar"}">${hm(r.entrada)}–${r.saida ? hm(r.saida) : `<span class="sem-saida">sem saída</span>`}${r.saida ? `<br><small class="${x ? "hx" : "mute"}">${hfmt(h)}${x ? " (+" + hfmt(x) + ")" : ""}</small>` : ""}${r.origem === "manual" ? " ✎" : ""}</div>`; }).join("")}</td>`; }).join("");
+        return `<tr><td><b>${esc(nomeBonitoPessoa(p.nome))}</b>${FIXO[p.id] ? ` <span class="tag">fixo</span>` : ""}</td>${cel}<td class="n"><b>${hfmt(tot)}</b></td>${jor ? `<td class="n ${ext ? "hx" : "mute"}">${ext ? hfmt(ext) : "—"}</td>` : ""}</tr>`; }).join("") || `<tr><td colspan="12" class="vazio"><span class="vazio-txt">Ninguém bateu ponto nesta semana ainda.</span></td></tr>`}
+      </tbody></table></div>
+      <p class="dica">Toque num horário para corrigir (esqueceu de bater a saída, por exemplo). ${jor ? `Jornada normal: <b>${String(jor).replace(".", ",")} h</b> por noite; o que passar aparece em laranja como extra.` : `Quando definir a jornada normal (botão "Jornada e raio"), as horas extras aparecem em destaque.`} As horas extras são só informação: se for pagar, lance no Bônus do freela.</p>
+      <div class="passo" style="margin-top:18px">PIN da equipe <small>${comPin} de ${freelasAtivos.length} com PIN</small></div>
+      <div class="chips-bd">${freelasAtivos.map(p => `<button class="chip-bd" data-pin="${p.id}" style="${p.pin_hash ? "border-color:var(--teal);color:var(--teal)" : ""}">${p.pin_hash ? "✓" : "＋"} ${esc(nomeBonitoPessoa(p.nome))}</button>`).join("")}</div>
+      <p class="dica">Toque no nome para criar ou trocar o PIN (4 números). Passe o PIN pessoalmente; ele não fica visível depois.</p>`;
+  }
   if (W.sub === "pagar") {
     const itens = [
       ...fr.filter(l => l.status !== "pago" && l._pagar > 0).map(l => ({ tab: "freelas", id: l.id, nome: l.nome, p: pesDe(l.pessoa_id, l.nome, "freela"), valor: l._pagar, oq: `diárias ${brl0(l._total - (+l.bonus || 0))}${+l.bonus ? " + bônus " + brl0(+l.bonus) : ""}` })),
@@ -1558,7 +1651,7 @@ async function abaPagamentos() {
     <div class="card kpi"><div class="rot">Falta pagar</div><div class="val" style="color:${tFre + tServ + tBan - pago > 0 ? "var(--amber2)" : "var(--green)"}">${brl0(tFre + tServ + tBan - pago)}</div><div class="det">já pago ${brl0(pago)}${SV.incluir ? " · inclui o " + SV.percentual + "%" : ""}</div></div>
   </div>
   <div class="card" style="margin-top:14px">
-    <div class="segmentos">${[["freelas", "Freelas"], ["bandas", "Bandas"], ...(EQ ? [] : [["pagar", "Para pagar"]])].map(([k, n]) => `<button class="${W.sub === k ? "sel" : ""}" data-sub="${k}">${n}</button>`).join("")}</div>
+    <div class="segmentos">${[["freelas", "Freelas"], ["bandas", "Bandas"], ...(EQ ? [] : [["pagar", "Para pagar"], ["ponto", "Ponto"]])].map(([k, n]) => `<button class="${W.sub === k ? "sel" : ""}" data-sub="${k}">${n}</button>`).join("")}</div>
     ${corpo}</div>`;
 
   // ---------- eventos ----------
@@ -1677,6 +1770,43 @@ async function abaPagamentos() {
       bb.onkeydown = e => { if (e.key !== "Enter") return; e.preventDefault(); const q = semAcento(bb.value), ach = (W._dispB || []).filter(x => semAcento(x.nome).includes(q));
         if (ach.length === 1) addB(ach[0]); else if (!ach.length && bb.value.trim() && !EQ && confirm(`Nenhuma banda "${bb.value.trim()}" no cadastro. Cadastrar agora?`)) editarPessoa({ tipo: "banda", nome: bb.value.trim(), ativo: true }, "banda", async p => { if (p?.id) addB(p); else recarregar(); }); }; }
     if ($("#nova-bd")) $("#nova-bd").onclick = () => editarPessoa(null, "banda", async p => { if (p?.id) addB(p); else recarregar(); });
+  }
+  if (W.sub === "ponto") {
+    const link = "https://www.vezpabar.com.br/#ponto";
+    if ($("#pt-copiar")) $("#pt-copiar").onclick = e => copiar(link, e.target);
+    if ($("#pt-local")) $("#pt-local").onclick = e => { const b = e.target;
+      if (!confirm("Você está DENTRO do Vezpa agora? A localização deste aparelho vira o ponto de referência dos 150 m.")) return;
+      b.textContent = "📍 Pegando localização…"; b.disabled = true;
+      navigator.geolocation.getCurrentPosition(async pos => {
+        const v = { ...(W._pc || {}), lat: +pos.coords.latitude.toFixed(6), lng: +pos.coords.longitude.toFixed(6), local_gravado: true, precisao_m: Math.round(pos.coords.accuracy) };
+        const { error } = await sb.from("config").upsert({ chave: "ponto", valor: v }); if (error) alertaSalvar(error.message); else alert(`Localização do bar gravada (precisão de ~${v.precisao_m} m).`); recarregar();
+      }, () => { alert("Não consegui pegar a localização. Libere o GPS para o site e tente de novo."); recarregar(); }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }); };
+    if ($("#pt-config")) $("#pt-config").onclick = async () => { const pc = W._pc || {};
+      const j = prompt("Jornada normal por noite, em horas (ex.: 8 ou 7,5). Deixe vazio para só mostrar as horas.", pc.jornada ? String(pc.jornada).replace(".", ",") : ""); if (j === null) return;
+      const r = prompt("Raio máximo do bar para bater ponto, em metros:", pc.raio || 150); if (r === null) return;
+      await sb.from("config").upsert({ chave: "ponto", valor: { ...pc, jornada: j.trim() ? numBR(j) : null, raio: Math.max(50, parseInt(r) || 150) } }); recarregar(); };
+    document.querySelectorAll("[data-pin]").forEach(b => b.onclick = async () => { const p = P[b.dataset.pin];
+      const pin = prompt(`PIN de 4 números para ${nomeBonitoPessoa(p.nome)}${p.pin_hash ? " (deixe vazio para remover o PIN)" : ""}:`); if (pin === null) return;
+      if (pin.trim() && !/^\d{4}$/.test(pin.trim())) return alert("O PIN precisa ter exatamente 4 números.");
+      const { error } = await sb.rpc("definir_pin", { p_pessoa: p.id, p_pin: pin.trim() }); if (error) return alertaSalvar(error.message);
+      if (pin.trim()) alert(`PIN de ${nomeBonitoPessoa(p.nome)} salvo. Passe para a pessoa: ${pin.trim()}`); recarregar(); });
+    const loc = t => { const d = new Date(new Date(t).getTime() - 3 * 3600e3); return d.toISOString().slice(0, 16); };
+    const dlgPonto = (r, pessoaId, noite) => { const d = $("#dlg");
+      const ent = r ? loc(r.entrada) : noite + "T18:00", sai = r?.saida ? loc(r.saida) : "";
+      d.innerHTML = `<h3>${r ? "Corrigir ponto" : "Lançar ponto à mão"} · ${esc(nomeBonitoPessoa(P[pessoaId]?.nome || ""))}</h3><form id="f-pt">
+        <div class="linha-form"><div><label>Entrada</label><input type="datetime-local" name="e" value="${ent}" required></div>
+        <div><label>Saída</label><input type="datetime-local" name="s" value="${sai}"></div></div>
+        <label>Motivo</label><input name="o" value="${esc(r?.obs || "")}" placeholder="ex.: esqueceu de bater a saída">
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">${r ? `<button type="button" class="btn sec" id="pt-del" style="margin-right:auto">Apagar</button>` : ""}<button type="button" class="btn sec" id="pt-cancel">Cancelar</button><button class="btn">Salvar</button></div></form>`;
+      d.showModal(); $("#pt-cancel").onclick = () => d.close();
+      if (r) $("#pt-del").onclick = async () => { if (!confirm("Apagar este registro de ponto?")) return; await sb.from("ponto").delete().eq("id", r.id); d.close(); recarregar(); };
+      $("#f-pt").onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target);
+        const v = { entrada: f.get("e") + ":00-03:00", saida: f.get("s") ? f.get("s") + ":00-03:00" : null, obs: f.get("o").trim() || null, origem: "manual" };
+        if (v.saida && new Date(v.saida) <= new Date(v.entrada)) return alert("A saída precisa ser depois da entrada (se passou da meia-noite, use o dia seguinte).");
+        const { error } = r ? await sb.from("ponto").update(v).eq("id", r.id) : await sb.from("ponto").insert({ ...v, pessoa_id: pessoaId });
+        if (error) return alertaSalvar(error.message); d.close(); recarregar(); }; };
+    document.querySelectorAll("[data-pt]").forEach(x => x.onclick = () => { const r = W._ptRows[x.dataset.pt]; dlgPonto(r, r.pessoa_id); });
+    document.querySelectorAll("[data-pt-novo]").forEach(x => x.onclick = () => { const [pid, n] = x.dataset.ptNovo.split(":"); dlgPonto(null, +pid, n); });
   }
   // para pagar
   document.querySelectorAll("[data-pagar-grupo]").forEach(b => b.onclick = async () => {
