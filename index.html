@@ -301,6 +301,26 @@ tr.piscar td{background:#3a2612 !important;transition:background .3s}
 .ponto-res.ok{background:#173a2b;color:#8fe0b8}.ponto-res.erro{background:#3a1a17;color:#f3a497}
 table.ponto td.c{white-space:nowrap;font-size:13px;cursor:pointer}table.ponto td.c:hover{background:var(--panel2)}
 .hx{color:#f2a63b;font-weight:700}.sem-saida{color:#f3a497}
+details.msgs-atuais>summary{list-style:none;display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap;cursor:pointer}
+details.msgs-atuais>summary::-webkit-details-marker{display:none}
+details.msgs-atuais:not([open])>summary h3::after{content:" ▸ ver";font-size:13px;font-weight:500;color:var(--mute)}
+input.busca-cli{max-width:240px}
+@media (max-width:700px){
+  input.busca-cli{max-width:none;width:100%;font-size:16px;padding:12px}
+  .card .segmentos{width:100%;overflow-x:auto;flex-wrap:nowrap}
+  .card .segmentos button{flex:1 0 auto;white-space:nowrap}
+  table.lista-cel thead{display:none}
+  table.lista-cel,table.lista-cel tbody,table.lista-cel tr,table.lista-cel td{display:block;width:100%}
+  table.lista-cel tr{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+  table.lista-cel td{background:transparent!important;border:0!important;padding:3px 0!important;text-align:left!important;white-space:normal!important}
+  table.lista-cel td b{font-size:16px}
+  table.lista-cel td .btn[data-wa],table.lista-cel td .btn[data-rqw]{width:100%;padding:13px;font-size:16px;margin-top:6px;background:#25d366;color:#06301a;border-color:#25d366;font-weight:700}
+  table.lista-cel td .btn.sec[data-wa],table.lista-cel td .btn.sec[data-rqw]{background:transparent;color:#25d366}
+  table.lista-cel td .btn[data-copmsg]{margin-top:6px}
+  table.lista-cel td .status{margin-top:4px}
+  table.lista-cel td:empty{display:none}
+  .card:has(table.lista-cel) .rolagem{max-height:none!important;overflow:visible}
+}
 </style>
 </head>
 <body>
@@ -2660,24 +2680,24 @@ async function abaAniversarios() {
     <div class="card kpi"><div class="rot">Mensagens enviadas</div><div class="val">${enviados}</div><div class="det">${itens.length ? pct(enviados / itens.length) + " da lista" : ""}</div></div>
     <div class="card kpi"><div class="rot">Vieram comemorar</div><div class="val">${(envios || []).filter(e => e.veio).length}</div><div class="det">em ${ay} · marque na lista</div></div>
   </div>
-  <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><h3>Mensagens atuais</h3><div class="sub">Assim elas chegam no WhatsApp (exemplo com o nome Juliana). O painel escolhe pelo DDD do telefone.</div></div><button class="btn sec peq" id="an-msg2">✎ Trocar mensagens</button></div>
+  <details class="card msgs-atuais" style="margin-top:14px" ${ehCelular() || innerWidth < 700 ? "" : "open"}><summary><div><h3>Mensagens atuais</h3><div class="sub">Assim elas chegam no WhatsApp (exemplo com o nome Juliana). O painel escolhe pelo DDD do telefone.</div></div><button class="btn sec peq" id="an-msg2">✎ Trocar mensagens</button></summary>
     <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:12px">
       <div><div class="rot-wa">📍 São Paulo capital (DDD 11): convite com ${esc(C2.presente)}</div><div class="wa-tela"><div class="wa-bolha">${esc(C2.mensagem.replaceAll("{nome}", "Juliana").replaceAll("{presente}", C2.presente)).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
       <div><div class="rot-wa">👑 Vezpa de carteirinha (10+ visitas, qualquer DDD)${C2.presente_vip ? `: ${esc(C2.presente_vip)}` : ""}</div><div class="wa-tela"><div class="wa-bolha">${esc(C2.mensagem_vip.replaceAll("{nome}", "Juliana").replaceAll("{presente}", C2.presente_vip || C2.presente).replaceAll("{visitas}", 12)).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
       <div><div class="rot-wa">✈️ Interior e outros estados: parabéns caloroso</div><div class="wa-tela"><div class="wa-bolha">${esc(C2.mensagem_fora.replaceAll("{nome}", "Juliana").replaceAll("{presente}", C2.presente)).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
-    </div></div>
+    </div></details>
   <div class="card" style="margin-top:14px">
     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <div class="segmentos" style="margin:0">${[["hoje", "Hoje"], ["semana", "Próximos 7 dias"], ["mes", "Mês"]].map(([k, n]) => `<button class="${AN.filtro === k ? "sel" : ""}" data-anf="${k}">${n}</button>`).join("")}</div>
       ${AN.filtro === "mes" ? `<select id="an-mes" style="width:auto">${MESES.map((m, i) => `<option value="${i + 1}" ${i + 1 === AN.mes ? "selected" : ""}>${m}</option>`).join("")}</select>` : ""}
       <div class="segmentos" style="margin:0">${[["todos", "Todos"], ["sp", "SP capital"], ["interior", "Interior SP"], ["fora", "Outros estados"]].map(([k, n]) => `<button class="${AN.regiao === k ? "sel" : ""}" data-anr="${k}">${n} <small>${contReg[k]}</small></button>`).join("")}</div>
-      <input id="an-busca" placeholder="🔎 Buscar cliente (qualquer mês)…" value="${esc(AN.busca || "")}" style="max-width:220px">
+      <input id="an-busca" class="busca-cli" placeholder="🔎 Buscar cliente (qualquer mês)…" value="${esc(AN.busca || "")}">
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-fone" style="width:auto" ${AN.soFone ? "checked" : ""}> Só com telefone</label>
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-pend" style="width:auto" ${AN.pendentes ? "checked" : ""}> Só quem falta mandar</label>
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-vip" style="width:auto" ${AN.soVip ? "checked" : ""}> 👑 Só Vezpa de carteirinha <small style="color:var(--mute)">(${nVip})</small></label>
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-rec" style="width:auto" ${AN.recentes ? "checked" : ""}> Só quem veio nos últimos 3 meses <small style="color:var(--mute)">(${nAtivas})</small></label>
     </div>
-    <div class="rolagem" style="max-height:640px"><table class="pag"><thead><tr><th>Aniversário</th><th>Cliente</th><th>Telefone</th><th>Última visita</th><th>Mensagem</th><th>Veio?</th></tr></thead><tbody>
+    <div class="rolagem" style="max-height:640px"><table class="pag lista-cel"><thead><tr><th>Aniversário</th><th>Cliente</th><th>Telefone</th><th>Última visita</th><th>Mensagem</th><th>Veio?</th></tr></thead><tbody>
     ${itens.slice(0, 600).map(c => { const e = env[c.codigo], id = idade(c);
       return `<tr><td><b>${String(c.nasc_dia).padStart(2, "0")}/${String(c.nasc_mes).padStart(2, "0")}</b> ${quando(c)}${id ? `<small class="sub2">faz ${id} anos</small>` : ""}</td>
       <td><b>${esc(c.nome)}</b>${ehVip(c) ? ` <span class="tag ok" title="${c.visitas} visitas">👑 Vezpa de carteirinha</span>` : ""} <button class="x" style="font-size:13px" data-nc="${c.codigo}" title="${c.nao_contatar ? "Liberar contato" : "Marcar: não quer receber mensagens"}">${c.nao_contatar ? "↺" : "🚫"}</button>${c.nao_contatar ? `<small class="sub2">não quer contato</small>` : ""}</td><td>${fone(c.telefone) || "<span class='tag'>sem telefone</span>"} ${tagReg(c)}</td>
@@ -2720,7 +2740,7 @@ async function abaAniversarios() {
   document.querySelectorAll("[data-nc]").forEach(b => b.onclick = async () => { const c = porCod[b.dataset.nc]; await sb.from("clientes").update({ nao_contatar: !c.nao_contatar }).eq("codigo", c.codigo); ir(); });
   document.querySelectorAll("[data-copmsg]").forEach(b => b.onclick = () => copiar(msg(porCod[b.dataset.copmsg]), b));
   document.querySelectorAll("[data-veio]").forEach(b => b.onclick = async () => { const e = env[b.dataset.veio]; await sb.from("aniversario_envios").update({ veio: !e.veio }).eq("cliente_codigo", b.dataset.veio).eq("ano", ay); ir(); });
-  $("#an-msg2").onclick = () => $("#an-msg").click();
+  $("#an-msg2").onclick = e => { e.preventDefault(); $("#an-msg").click(); };
   $("#an-msg").onclick = () => {
     const d = $("#dlg");
     const MODELOS = [
@@ -2949,20 +2969,20 @@ async function abaReconquista() {
     <div class="card kpi"><div class="rot">Convites enviados</div><div class="val">${nfmt(R.enviados)}</div><div class="det">nessa faixa</div></div>
     <div class="card kpi"><div class="rot">Voltaram</div><div class="val">${nfmt(R.voltaram)}</div><div class="det">marque na lista quando vierem</div></div>
   </div>
-  <div class="card" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap"><div><h3>Mensagens atuais</h3><div class="sub">O painel escolhe pelo DDD e pela frequência da cliente (exemplo com o nome Juliana)</div></div></div>
+  <details class="card msgs-atuais" style="margin-top:14px" ${ehCelular() || innerWidth < 700 ? "" : "open"}><summary><div><h3>Mensagens atuais</h3><div class="sub">O painel escolhe pelo DDD e pela frequência da cliente (exemplo com o nome Juliana)</div></div></summary>
     <div class="grade" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:12px">
       ${RQ_NIVEIS.map(n => `<div><div class="rot-wa">${["casa", "fiel"].includes(n.k) ? "💬 Qualquer DDD" : "📍 SP capital"} · ${n.ico} ${n.nome} ${n.min ? `(${n.min}+ visitas)` : "(1–2 visitas)"}</div><div class="wa-tela"><div class="wa-bolha">${esc((n.k === "geral" ? C.mensagem : C.niveis[n.k]).replaceAll("{nome}", "Juliana").replaceAll("{visitas}", n.min || 1)).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>`).join("")}
       <div><div class="rot-wa">✈️ Interior e outros estados</div><div class="wa-tela"><div class="wa-bolha">${esc(C.mensagem_fora.replaceAll("{nome}", "Juliana")).replace(/\n/g, "<br>")}<span class="wa-hora">12:00 ✓✓</span></div></div></div>
-    </div></div>
+    </div></details>
   <div class="card" style="margin-top:14px">
     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <div class="segmentos" style="margin:0">${Object.entries(RQ_FAIXAS).map(([k, f]) => `<button class="${RQ.faixa === k ? "sel" : ""}" data-rqf="${k}">${f[2]}</button>`).join("")}</div>
       <div class="segmentos" style="margin:0">${[["todos", "Todos"], ["sp", "SP capital"], ["interior", "Interior SP"], ["fora", "Outros estados"]].map(([k, n]) => `<button class="${RQ.regiao === k ? "sel" : ""}" data-rqr="${k}">${n} <small>${cont[k]}</small></button>`).join("")}</div>
       <div class="segmentos" style="margin:0">${[[0, "Qualquer frequência"], [3, "Vieram 3+ vezes"], [5, "5+ vezes"], [10, "10+ vezes"]].map(([k, n]) => `<button class="${RQ.minVis === k ? "sel" : ""}" data-rqmv="${k}">${n}</button>`).join("")}</div>
-      <input id="rq-busca" placeholder="🔎 Buscar cliente…" value="${esc(RQ.busca)}" style="max-width:220px">
+      <input id="rq-busca" class="busca-cli" placeholder="🔎 Buscar cliente…" value="${esc(RQ.busca)}">
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="rq-pend" style="width:auto" ${RQ.pendentes ? "checked" : ""}> Esconder quem já recebeu nos últimos 30 dias</label>
     </div>
-    <div class="rolagem" style="max-height:640px"><table class="pag"><thead><tr><th>Cliente</th><th>Telefone</th><th>Última visita</th><th class="n">Visitas</th><th>Convite</th><th>Voltou?</th></tr></thead><tbody>
+    <div class="rolagem" style="max-height:640px"><table class="pag lista-cel"><thead><tr><th>Cliente</th><th>Telefone</th><th>Última visita</th><th class="n">Visitas</th><th>Convite</th><th>Voltou?</th></tr></thead><tbody>
     ${lista.slice(0, 400).map(c => `<tr><td><b>${esc(c.nome || c.codigo)}</b>${c.visitas ? `<small class="sub2">${nivelRQ(c).ico} ${nivelRQ(c).nome}</small>` : ""}</td><td>${fone(c.telefone)} ${regiaoFone(c.telefone) === "fora" ? `<span class="tag bom">${UF_DDD[+c.telefone.slice(0, 2)]}</span>` : regiaoFone(c.telefone) === "interior" ? `<span class="tag">Interior SP</span>` : ""}</td>
       <td>${br(c.ultima)}<small class="sub2">há ${dias(c.ultima)} dias</small></td><td class="n">${c.visitas || "—"}</td>
       <td style="white-space:nowrap">${c.telefone && !c.nao_contatar ? `<button class="btn ${c.enviado_em ? "sec" : ""} peq" data-rqw="${c.codigo}">${c.enviado_em ? "Enviar de novo" : "WhatsApp"}</button>` : ""}${c.enviado_em ? `<small class="sub2">enviado ${new Date(c.enviado_em).toLocaleDateString("pt-BR")}</small>` : ""}</td>
