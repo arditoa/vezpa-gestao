@@ -329,6 +329,8 @@ input.busca-cli{max-width:240px}
 .seg-mini{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.seg-mini button{background:none;border:0;color:var(--mute);font-size:12px;padding:6px 8px;cursor:pointer;white-space:nowrap}.seg-mini button.sel{background:#f2a63b;color:#1a1208;font-weight:700}
 .notas-entrada{margin-bottom:14px;border-color:#f2a63b55}.nota-ent{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--line)}
 @media (max-width:560px){.fotos{grid-template-columns:1fr 1fr 1fr}.fotos .foto-btn small{display:none}.arq-item{grid-template-columns:40px 1fr auto}.arq-item .seg-mini{grid-column:1/-1;order:5}.arq-item .seg-mini button{flex:1}}
+tr.sep-grupo td{background:transparent!important;color:#f2a63b;font-weight:700;font-size:13px;padding:14px 4px 6px!important;border-bottom:1px solid #f2a63b44!important}tr.sep-grupo small{color:var(--mute);font-weight:500}
+@media (max-width:700px){table.lista-cel tr.sep-grupo{background:none;border:0;padding:8px 2px 0;margin:6px 0 4px}}
 </style>
 </head>
 <body>
@@ -2748,7 +2750,6 @@ async function abaAniversarios() {
   if (AN.recentes) itens = itens.filter(ativa);
   const contReg = { todos: itens.length, sp: 0, interior: 0, fora: 0, sem: 0 }; itens.forEach(c => contReg[regiaoFone(c.telefone)]++);
   if (AN.regiao !== "todos") itens = itens.filter(c => regiaoFone(c.telefone) === AN.regiao);
-  await generoPorNomes(itens.slice(0, 600).map(c => c.nome));
   const nVis = {}; for (let i = 0; i < itens.length; i += 800) { const { data } = await sb.rpc("visitas_por_cliente", { p_codigos: itens.slice(i, i + 800).map(c => c.codigo) }); Object.assign(nVis, data || {}); }
   itens.forEach(c => c.visitas = +nVis[c.codigo] || 0);
   const ehVip = c => c.visitas >= 10;
@@ -2756,7 +2757,10 @@ async function abaAniversarios() {
   if (AN.soVip) itens = itens.filter(ehVip);
   // ordena pela proximidade do aniversário a partir de hoje
   const hojeK = am * 100 + +hoje.slice(8, 10);
-  itens.sort((a, b) => ((a.nasc_mes * 100 + a.nasc_dia - hojeK + 1300) % 1300) - ((b.nasc_mes * 100 + b.nasc_dia - hojeK + 1300) % 1300));
+  // (26/11) quem veio nos últimos 3 meses primeiro; dentro de cada grupo: data do aniversário, depois quem mais vem
+  const distAn = c => (c.nasc_mes * 100 + c.nasc_dia - hojeK + 1300) % 1300;
+  itens.sort((a, b) => (ativa(b) ? 1 : 0) - (ativa(a) ? 1 : 0) || distAn(a) - distAn(b) || b.visitas - a.visitas || (b.ultima_visita || "").localeCompare(a.ultima_visita || ""));
+  await generoPorNomes(itens.slice(0, 600).map(c => c.nome));
   const primeiroNome = n => { const p = n.trim().split(/\s+/)[0]; return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase(); };
   const ehLocal = c => ["sp", "sem"].includes(regiaoFone(c.telefone));
   const msg = c => generoMsg(c, msgBase(c));
@@ -2796,8 +2800,9 @@ async function abaAniversarios() {
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="an-rec" style="width:auto" ${AN.recentes ? "checked" : ""}> Só quem veio nos últimos 3 meses <small style="color:var(--mute)">(${nAtivas})</small></label>
     </div>
     <div class="rolagem" style="max-height:640px"><table class="pag lista-cel"><thead><tr><th>Aniversário</th><th>Cliente</th><th>Telefone</th><th>Última visita</th><th>Mensagem</th><th>Veio?</th></tr></thead><tbody>
-    ${itens.slice(0, 600).map(c => { const e = env[c.codigo], id = idade(c);
-      return `<tr><td><b>${String(c.nasc_dia).padStart(2, "0")}/${String(c.nasc_mes).padStart(2, "0")}</b> ${quando(c)}${id ? `<small class="sub2">faz ${id} anos</small>` : ""}</td>
+    ${itens.slice(0, 600).map((c, i, arr) => { const e = env[c.codigo], id = idade(c);
+      const sep = i === 0 && ativa(c) ? `<tr class="sep-grupo"><td colspan="6">🔥 Vieram nos últimos 3 meses <small>${arr.filter(ativa).length}</small></td></tr>` : (i === 0 || ativa(arr[i - 1])) && !ativa(c) ? `<tr class="sep-grupo"><td colspan="6">Não vêm há mais de 3 meses <small>${arr.length - arr.filter(ativa).length}</small></td></tr>` : "";
+      return `${sep}<tr><td><b>${String(c.nasc_dia).padStart(2, "0")}/${String(c.nasc_mes).padStart(2, "0")}</b> ${quando(c)}${id ? `<small class="sub2">faz ${id} anos</small>` : ""}</td>
       <td><b>${esc(c.nome)}</b>${ehVip(c) ? ` <span class="tag ok" title="${c.visitas} visitas">👑 Vezpa de carteirinha</span>` : ""} <button class="x" style="font-size:13px" data-nc="${c.codigo}" title="${c.nao_contatar ? "Liberar contato" : "Marcar: não quer receber mensagens"}">${c.nao_contatar ? "↺" : "🚫"}</button>${c.nao_contatar ? `<small class="sub2">não quer contato</small>` : ""}</td><td>${fone(c.telefone) || "<span class='tag'>sem telefone</span>"} ${tagReg(c)}</td>
       <td>${c.ultima_visita ? br(c.ultima_visita) : "—"}${ativa(c) ? ` <span class="tag ok">veio nos últimos 3 meses</span>` : ""}</td>
       <td style="white-space:nowrap">${c.telefone && !c.nao_contatar ? `<button class="btn ${e ? "sec" : ""} peq" data-wa="${c.codigo}">${e ? "Enviar de novo" : "WhatsApp"}</button>` : ""} <button class="btn sec peq" data-copmsg="${c.codigo}">Copiar texto</button>${e ? `<small class="sub2">enviado ${new Date(e.enviado_em).toLocaleDateString("pt-BR")}</small>` : ""}</td>
