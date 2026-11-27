@@ -331,6 +331,8 @@ input.busca-cli{max-width:240px}
 @media (max-width:560px){.fotos{grid-template-columns:1fr 1fr 1fr}.fotos .foto-btn small{display:none}.arq-item{grid-template-columns:40px 1fr auto}.arq-item .seg-mini{grid-column:1/-1;order:5}.arq-item .seg-mini button{flex:1}}
 tr.sep-grupo td{background:transparent!important;color:#f2a63b;font-weight:700;font-size:13px;padding:14px 4px 6px!important;border-bottom:1px solid #f2a63b44!important}tr.sep-grupo small{color:var(--mute);font-weight:500}
 @media (max-width:700px){table.lista-cel tr.sep-grupo{background:none;border:0;padding:8px 2px 0;margin:6px 0 4px}}
+.cod-pag{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.cod-pag code{font-size:11.5px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 6px;line-height:1.35;max-width:230px;word-break:break-all;color:var(--ink)}
+.cod-pag.falta::before{content:"sem código";color:#f3a497;font-size:12px;width:100%}
 </style>
 </head>
 <body>
@@ -2146,16 +2148,47 @@ async function textoPdf(file) {
   for (let p = 1; p <= Math.min(pdf.numPages, 4); p++) { const c = await (await pdf.getPage(p)).getTextContent(); t += c.items.map(x => x.str).join(" ") + "\n"; }
   return t;
 }
+const mod10 = n => { let s = 0, p = 2; for (let i = n.length - 1; i >= 0; i--) { let x = +n[i] * p; s += x > 9 ? x - 9 : x; p = p === 2 ? 1 : 2; } return (10 - s % 10) % 10; };
+const mod11c = n => { let s = 0, p = 2; for (let i = n.length - 1; i >= 0; i--) { s += +n[i] * p; p = p === 9 ? 2 : p + 1; } const r = s % 11; return r < 2 ? 0 : r === 10 ? 1 : 11 - r; };
+// código de barras (44) → linha digitável (47 banco / 48 concessionária); o que o app do banco aceita colar
+function paraLinhaDigitavel(c) {
+  c = (c || "").replace(/\D/g, "");
+  if (c.length === 44 && c[0] !== "8") { const a = c.slice(0, 4) + c.slice(19, 24), b = c.slice(24, 34), d = c.slice(34, 44); return a + mod10(a) + b + mod10(b) + d + mod10(d) + c[4] + c.slice(5, 19); }
+  if (c.length === 44 && c[0] === "8") { const f = "67".includes(c[2]) ? mod10 : mod11c; return [0, 11, 22, 33].map(k => c.slice(k, k + 11)).map(b => b + f(b)).join(""); }
+  return c;
+}
+function fmtLinha(c) {
+  c = (c || "").replace(/\D/g, "");
+  if (c.length === 47) return `${c.slice(0, 5)}.${c.slice(5, 10)} ${c.slice(10, 15)}.${c.slice(15, 21)} ${c.slice(21, 26)}.${c.slice(26, 32)} ${c[32]} ${c.slice(33)}`;
+  if (c.length === 48) return c.match(/.{12}/g).join(" ");
+  return c.replace(/(.{5})/g, "$1 ").trim();
+}
+// lê o código de barras (ITF) de uma foto: BarcodeDetector quando houver, senão ZXing (funciona no iPhone e no Mac)
+async function lerBarrasImagem(fonte) {
+  const img = fonte instanceof Blob ? await createImageBitmap(fonte) : await new Promise((ok, erro) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => ok(i); i.onerror = erro; i.src = fonte; });
+  try { if ("BarcodeDetector" in window && (await BarcodeDetector.getSupportedFormats()).includes("itf")) {
+    const r = (await new BarcodeDetector({ formats: ["itf"] }).detect(img)).map(x => x.rawValue.replace(/\D/g, "")).find(x => x.length === 44); if (r) return r; } } catch {}
+  if (!window.ZXing) await new Promise((ok, erro) => { const sc = document.createElement("script"); sc.src = "https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"; sc.onload = ok; sc.onerror = erro; document.head.appendChild(sc); });
+  const hints = new Map([[ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.ITF]], [ZXing.DecodeHintType.TRY_HARDER, true]]);
+  const leitor = new ZXing.MultiFormatReader(); leitor.setHints(hints);
+  const w = img.width, h = img.height, cv = document.createElement("canvas"), cx = cv.getContext("2d", { willReadFrequently: true });
+  for (const rot of [0, 90, 270, 180]) for (const esc of [1, 0.6]) {
+    const W = Math.round((rot % 180 ? h : w) * esc), H = Math.round((rot % 180 ? w : h) * esc); cv.width = W; cv.height = H;
+    cx.save(); cx.translate(W / 2, H / 2); cx.rotate(rot * Math.PI / 180); cx.drawImage(img, -w * esc / 2, -h * esc / 2, w * esc, h * esc); cx.restore();
+    try { const lum = new ZXing.HTMLCanvasElementLuminanceSource(cv), bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
+      const t = leitor.decode(bmp).getText().replace(/\D/g, ""); if (t.length === 44) return t; } catch {}
+  }
+  return null;
+}
 async function analisarArquivo(a) {
   const nome = a.file.name || "";
   if (/boleto|fatura|cobran|bol[_-]/i.test(nome)) a.tipo = "boleto"; else if (/danfe|\bnf|nota|nfe/i.test(nome)) a.tipo = "nota";
   try {
     if (a.file.type === "application/pdf") { const r = lerTextoDoc(await textoPdf(a.file)); a.info = r;
       a.tipo = r.ehNota && r.ehBoleto ? "ambos" : r.ehBoleto ? "boleto" : r.ehNota ? "nota" : a.tipo; }
-    else if (a.file.type.startsWith("image/") && "BarcodeDetector" in window) {
-      const fmts = await BarcodeDetector.getSupportedFormats();
-      if (fmts.includes("itf")) { const cods = await new BarcodeDetector({ formats: ["itf"] }).detect(await createImageBitmap(a.file));
-        const b = cods.map(c => lerCodigoBoleto(c.rawValue)).find(Boolean); if (b) { a.info = { boleto: b, ehBoleto: true }; a.tipo = "boleto"; } }
+    else if (a.file.type.startsWith("image/") && a.tipo !== "nota") {
+      const cod = await lerBarrasImagem(a.file); const b = cod && lerCodigoBoleto(cod);
+      if (b) { b.codigo = paraLinhaDigitavel(cod); a.info = { boleto: b, ehBoleto: true }; a.tipo = "boleto"; }
     }
   } catch (e) { console.warn("leitura", e); }
   a.lido = true;
@@ -2201,7 +2234,7 @@ function formNota(aoSalvar) {
   };
   let seq = 0;
   d.querySelectorAll("[data-add]").forEach(inp => inp.onchange = async () => {
-    const novos = [...inp.files].map(f => ({ k: ++seq, file: f, tipo: inp.dataset.add === "auto" ? (ARQ.length ? "boleto" : "nota") : inp.dataset.add, url: f.type.startsWith("image/") ? URL.createObjectURL(f) : null, lido: inp.dataset.add !== "auto" && !("BarcodeDetector" in window) }));
+    const novos = [...inp.files].map(f => ({ k: ++seq, file: f, tipo: inp.dataset.add === "auto" ? (ARQ.length ? "boleto" : "nota") : inp.dataset.add, url: f.type.startsWith("image/") ? URL.createObjectURL(f) : null, lido: inp.dataset.add === "nota" }));
     if (inp.dataset.add === "auto" && novos.length > 1) novos.forEach((a, i) => a.tipo = i === 0 ? "nota" : "boleto");
     ARQ.push(...novos); inp.value = ""; desenhar();
     for (const a of novos) { if (!a.lido) { await analisarArquivo(a); desenhar(); } }
@@ -2219,7 +2252,7 @@ function formNota(aoSalvar) {
       const fotosNota = notasArq.map(a => caminho.get(a.k)), grupo = crypto.randomUUID();
       const base = { fornecedor: f.get("fornecedor").trim(), categoria, numero: f.get("numero").trim() || null, observacao: f.get("observacao").trim() || null, grupo,
         fotos_nota: fotosNota, foto_nota: fotosNota[0] || null };
-      const linhas = bs.length ? bs.map((a, i) => ({ ...base, valor: numBR(a.valor), vencimento: a.vencimento || null, codigo_barras: (a.codigo || "").replace(/\D/g, "") || null,
+      const linhas = bs.length ? bs.map((a, i) => ({ ...base, valor: numBR(a.valor), vencimento: a.vencimento || null, codigo_barras: paraLinhaDigitavel(a.codigo || "") || null,
           fotos_boleto: [caminho.get(a.k)], foto_boleto: caminho.get(a.k), observacao: [bs.length > 1 ? `parcela ${i + 1}/${bs.length}` : "", base.observacao].filter(Boolean).join(" · ") || null,
           ...(i > 0 ? { estoque_lancado: true } : {}) }))
         : [{ ...base, valor: f.get("valor") ? numBR(f.get("valor")) : null, vencimento: f.get("vencimento") || null }];
@@ -2250,10 +2283,11 @@ async function abaNotas() {
     <div class="card kpi"><div class="rot">Total em aberto</div><div class="val">${brl0(soma(abertas))}</div><div class="det">${abertas.length} nota(s)</div></div></div>` : ""}
   <div class="card" style="margin-top:14px">
     ${gest ? `<div class="segmentos">${[["a conferir", "A conferir"], ["a pagar", "A pagar"], ["atrasadas", "Atrasadas"], ["7dias", "Próximos 7 dias"], ["pago", "Pagas"]].map(([k, n]) => `<button class="${NT.filtro === k ? "sel" : ""}" data-f="${k}">${n} <small>${conta(k)}</small></button>`).join("")}</div>` : `<h3>Enviadas por você</h3>`}
-    <div class="rolagem" style="max-height:none"><table class="pag"><thead><tr><th>Vencimento</th><th>Fornecedor</th><th class="n">Valor</th><th>Categoria</th><th>Anexos</th><th>Situação</th>${gest ? "<th></th>" : ""}</tr></thead><tbody>
+    <div class="rolagem" style="max-height:none"><table class="pag"><thead><tr><th>Vencimento</th><th>Fornecedor</th><th class="n">Valor</th><th>Código para pagar</th><th>Anexos</th><th>Situação</th>${gest ? "<th></th>" : ""}</tr></thead><tbody>
     ${lista.map(n => `<tr><td>${venc(n)}</td><td><b>${esc(n.fornecedor)}</b><small class="sub2">${n.numero ? "NF " + esc(n.numero) + " · " : ""}enviada ${new Date(n.criado_em).toLocaleDateString("pt-BR")}${n.observacao ? " · " + esc(n.observacao) : ""}</small></td>
-      <td class="n"><b>${n.valor != null ? brl(n.valor) : "—"}</b></td><td>${n.categoria ? `<span class="tag">${esc(n.categoria)}</span>` : ""}</td>
-      <td style="white-space:nowrap">${arqsDe(n, "nota").map((c, i, a) => `<button class="btn sec peq" data-ver="${esc(c)}">Nota${a.length > 1 ? " " + (i + 1) : ""}</button> `).join("")}${arqsDe(n, "boleto").map((c, i, a) => `<button class="btn sec peq" data-ver="${esc(c)}">Boleto${a.length > 1 ? " " + (i + 1) : ""}</button> `).join("")}${arqsDe(n, "nota").length ? `<small class="sub2">${n.estoque_lancado ? "📦 entrada no estoque ✓" : "📦 falta dar entrada no estoque"}</small>` : ""}${n.codigo_barras ? ` <button class="btn sec peq" data-cod="${esc(n.codigo_barras)}">Cód. barras</button>` : ""}</td>
+      <td class="n"><b>${n.valor != null ? brl(n.valor) : "—"}</b></td><td class="td-cod">${n.codigo_barras ? `<div class="cod-pag"><code>${esc(fmtLinha(paraLinhaDigitavel(n.codigo_barras)))}</code><button class="btn peq" data-cod="${esc(paraLinhaDigitavel(n.codigo_barras))}">Copiar</button><button class="x" style="font-size:13px" data-edcod="${n.id}" title="Corrigir código">✎</button></div>`
+        : n.status === "pago" ? `<span class="mute">—</span>` : `<div class="cod-pag falta">${arqsDe(n, "boleto").length ? `<button class="btn sec peq" data-lercod="${n.id}">📷 Ler da foto do boleto</button>` : ""}<button class="btn sec peq" data-edcod="${n.id}">✎ Colar / digitar</button></div>`}${n.categoria ? `<small class="sub2"><span class="tag">${esc(n.categoria)}</span></small>` : ""}</td>
+      <td style="white-space:nowrap">${arqsDe(n, "nota").map((c, i, a) => `<button class="btn sec peq" data-ver="${esc(c)}">Nota${a.length > 1 ? " " + (i + 1) : ""}</button> `).join("")}${arqsDe(n, "boleto").map((c, i, a) => `<button class="btn sec peq" data-ver="${esc(c)}">Boleto${a.length > 1 ? " " + (i + 1) : ""}</button> `).join("")}${arqsDe(n, "nota").length ? `<small class="sub2">${n.estoque_lancado ? "📦 entrada no estoque ✓" : "📦 falta dar entrada no estoque"}</small>` : ""}</td>
       <td><span class="tag ${n.status === "pago" ? "bom" : n.status === "a pagar" ? "ok" : ""}">${n.status}${n.status === "pago" && n.pago_em ? " " + br(n.pago_em).slice(0, 5) : ""}</span></td>
       ${gest ? `<td style="white-space:nowrap">${n.status === "a conferir" ? `<button class="btn peq" data-conf="${n.id}">Conferir ✓</button> ` : ""}${n.status === "a pagar" ? `<button class="btn peq" data-pg="${n.id}">Marcar paga</button> ` : ""}${n.status === "pago" ? `<button class="btn sec peq" data-volta="${n.id}">Desfazer</button> ` : ""}<button class="x" data-del="${n.id}" title="Apagar">×</button></td>` : ""}</tr>`).join("") || `<tr><td colspan="7" class="vazio">Nada aqui</td></tr>`}
     </tbody><tfoot><tr><td colspan="2"><b>Total</b></td><td class="n"><b>${brl(soma(lista))}</b></td><td colspan="4"></td></tr></tfoot></table></div></div>`;
@@ -2262,6 +2296,19 @@ async function abaNotas() {
   document.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { NT.filtro = b.dataset.f; ir(); });
   document.querySelectorAll("[data-ver]").forEach(b => b.onclick = () => verArquivo(b.dataset.ver));
   document.querySelectorAll("[data-cod]").forEach(b => b.onclick = () => copiar(b.dataset.cod, b));
+  const salvarCod = async (n, cod) => { const linha = paraLinhaDigitavel(cod), info = lerCodigoBoleto(linha), up = { codigo_barras: linha };
+    if (info?.vencimento && !n.vencimento) up.vencimento = info.vencimento;
+    const { error } = await sb.from("notas").update(up).eq("id", n.id); if (error) return alertaSalvar(error.message);
+    if (info?.valor && n.valor && Math.abs(info.valor - n.valor) > 0.01) alert(`Atenção: o código diz ${brl(info.valor)}, mas a conta está lançada como ${brl(n.valor)}. Confira antes de pagar.`);
+    ir(); };
+  document.querySelectorAll("[data-edcod]").forEach(b => b.onclick = () => { const n = notas.find(x => x.id == b.dataset.edcod);
+    const v = prompt(`Código do boleto de ${n.fornecedor} (cole a linha digitável ou o código de barras):`, n.codigo_barras ? fmtLinha(n.codigo_barras) : ""); if (v === null) return;
+    const dig = v.replace(/\D/g, ""); if (dig && ![44, 47, 48].includes(dig.length)) return alert(`Esse código tem ${dig.length} números. A linha digitável tem 47 (ou 48 em contas de consumo).`);
+    salvarCod(n, dig); });
+  document.querySelectorAll("[data-lercod]").forEach(b => b.onclick = async () => { const n = notas.find(x => x.id == b.dataset.lercod); b.disabled = true; b.textContent = "🔎 Lendo…";
+    let cod = null; for (const c of arqsDe(n, "boleto")) { const { data } = await sb.storage.from("notas").createSignedUrl(c, 300); if (!data) continue;
+      try { cod = await lerBarrasImagem(data.signedUrl); } catch (e) { console.warn(e); } if (cod) break; }
+    if (cod) salvarCod(n, cod); else { b.disabled = false; b.textContent = "📷 Ler da foto do boleto"; alert("Não consegui ler o código pela foto (pode estar torta ou desfocada). Use “Colar / digitar”: no app do banco ou no PDF do boleto dá para copiar a linha digitável."); } });
   document.querySelectorAll("[data-conf]").forEach(b => b.onclick = async () => { await sb.from("notas").update({ status: "a pagar", conferido_por: S.user.id, conferido_em: new Date().toISOString() }).eq("id", b.dataset.conf); ir(); });
   document.querySelectorAll("[data-volta]").forEach(b => b.onclick = async () => { await sb.from("notas").update({ status: "a pagar", pago_em: null }).eq("id", b.dataset.volta); ir(); });
   document.querySelectorAll("[data-pg]").forEach(b => b.onclick = () => {
