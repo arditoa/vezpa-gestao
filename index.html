@@ -321,6 +321,14 @@ input.busca-cli{max-width:240px}
   table.lista-cel td:empty{display:none}
   .card:has(table.lista-cel) .rolagem{max-height:none!important;overflow:visible}
 }
+.fotos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.arqs-lista{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.arq-item{display:grid;grid-template-columns:44px 1fr auto auto;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 8px}
+.arq-mini{width:44px;height:44px;border-radius:8px;background:#2a2326 center/cover;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--mute)}
+.arq-nome{font-size:13px;min-width:0;overflow:hidden}.arq-nome small{display:block;color:var(--teal);font-size:11px}
+.seg-mini{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.seg-mini button{background:none;border:0;color:var(--mute);font-size:12px;padding:6px 8px;cursor:pointer;white-space:nowrap}.seg-mini button.sel{background:#f2a63b;color:#1a1208;font-weight:700}
+.notas-entrada{margin-bottom:14px;border-color:#f2a63b55}.nota-ent{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--line)}
+@media (max-width:560px){.fotos{grid-template-columns:1fr 1fr 1fr}.fotos .foto-btn small{display:none}.arq-item{grid-template-columns:40px 1fr auto}.arq-item .seg-mini{grid-column:1/-1;order:5}.arq-item .seg-mini button{flex:1}}
 </style>
 </head>
 <body>
@@ -1221,6 +1229,9 @@ async function abaContagem() {
 async function carregarValores() {
   const { data } = await sb.from("contagens").select("item_id,quantidade").eq("data", C.data).eq("momento", C.momento);
   C.valores = Object.fromEntries((data || []).map(r => [r.item_id, +r.quantidade]));
+  C.notasEntrada = [];
+  if (C.momento === "entrada") { const { data: ns } = await sb.from("notas").select("id,grupo,fornecedor,numero,criado_em,foto_nota,fotos_nota,estoque_lancado").eq("estoque_lancado", false).gte("criado_em", addDias(C.data, -7)).order("criado_em", { ascending: false });
+    const vistos = new Set(); C.notasEntrada = (ns || []).filter(n => arqsDe(n, "nota").length && !vistos.has(n.grupo || n.id) && vistos.add(n.grupo || n.id)); }
 }
 function cabPassos(nomes, atual) {
   return `<div class="passos">${nomes.map((n, i) => `<span class="${i + 1 === atual ? "at" : i + 1 < atual ? "ok" : ""}">${i + 1}. ${n}</span>`).join("")}</div>`;
@@ -1236,6 +1247,11 @@ function desenharContagem() {
     html += `<div class="card">${passos}<h3>Que contagem você vai fazer?</h3>
       <label>Noite (dia de operação)</label><input type="date" id="c-data" value="${C.data}" ${gestor() ? "" : `min="${addDias(max, -1)}" max="${max}"`} style="max-width:220px">
       <div class="escolhas" style="margin-top:16px">${Object.entries(MOMENTOS).map(([k, m]) => `<button class="escolha" data-mom="${k}"><b>${m.nome}</b><small>${m.dica}</small></button>`).join("")}</div></div>`;
+  }
+  if (C.passo === 2 && C.momento === "entrada" && C.notasEntrada?.length) {
+    html += `<div class="card notas-entrada"><h3>📦 Notas que chegaram</h3><div class="sub">Confira a mercadoria pela nota e lance as quantidades nas categorias abaixo. Depois marque a nota como lançada.</div>
+      ${C.notasEntrada.map(n => `<div class="nota-ent"><div><b>${esc(n.fornecedor)}</b><small class="sub2">${n.numero ? "NF " + esc(n.numero) + " · " : ""}enviada ${new Date(n.criado_em).toLocaleDateString("pt-BR")}</small></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${arqsDe(n, "nota").map((c, i, a) => `<button class="btn sec peq" data-vernota="${esc(c)}">Ver nota${a.length > 1 ? " " + (i + 1) : ""}</button>`).join("")}<button class="btn peq" data-lancou="${n.grupo || n.id}">Lancei ✓</button></div></div>`).join("")}</div>`;
   }
   if (C.passo === 2) {
     const total = C.itens.length, feitos = C.itens.filter(i => C.valores[i.id] != null).length;
@@ -1266,6 +1282,11 @@ function desenharContagem() {
   // eventos
   document.querySelectorAll("[data-mom]").forEach(b => b.onclick = async () => { C.data = $("#c-data").value; C.momento = b.dataset.mom; await carregarValores(); C.passo = 2; desenharContagem(); });
   document.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { C.cat = b.dataset.cat; C.passo = 3; desenharContagem(); window.scrollTo(0, 0); });
+  document.querySelectorAll("[data-vernota]").forEach(b => b.onclick = () => verArquivo(b.dataset.vernota));
+  document.querySelectorAll("[data-lancou]").forEach(b => b.onclick = async () => { const g = b.dataset.lancou; b.disabled = true;
+    const q = sb.from("notas").update({ estoque_lancado: true }); const { error } = /^\d+$/.test(g) ? await q.eq("id", g) : await q.eq("grupo", g);
+    if (error) { b.disabled = false; return alert("Não consegui marcar: " + error.message); }
+    C.notasEntrada = C.notasEntrada.filter(n => String(n.grupo || n.id) !== g); desenharContagem(); });
   document.querySelectorAll("[data-ir]").forEach(b => b.onclick = () => { C.passo = +b.dataset.ir; desenharContagem(); window.scrollTo(0, 0); });
   document.querySelectorAll("[data-qtd]").forEach(inp => inp.oninput = () => agendarSalvar(+inp.dataset.qtd, inp.value));
   document.querySelectorAll("[data-mais],[data-menos]").forEach(b => b.onclick = () => {
@@ -2092,44 +2113,120 @@ async function verArquivo(caminho) {
     ${/\.pdf$/i.test(caminho) ? `<p>Arquivo PDF — use “Abrir em tela cheia”.</p>` : `<img src="${data.signedUrl}" style="max-width:100%;border-radius:10px">`}`;
   d.style.width = "min(760px,94vw)"; d.showModal(); $("#ver-f").onclick = () => { d.close(); d.style.width = ""; };
 }
+// ---- leitura de boleto / nota (linha digitável, código de barras, chave da NF-e) ----
+function dataFator(f) {
+  const hoje = new Date(); const d1 = new Date(1997, 9, 7); d1.setDate(d1.getDate() + f);
+  const d2 = new Date(2025, 1, 22); d2.setDate(d2.getDate() + (f - 1000));
+  return iso(Math.abs(d1 - hoje) < Math.abs(d2 - hoje) ? d1 : d2);
+}
+function lerCodigoBoleto(dig) {
+  dig = (dig || "").replace(/\D/g, "");
+  if (dig.length === 47) { const f = +dig.slice(33, 37), v = +dig.slice(37, 47) / 100; return { codigo: dig, vencimento: f ? dataFator(f) : null, valor: v || null }; }
+  if (dig.length === 44 && dig[0] !== "8") { const f = +dig.slice(5, 9), v = +dig.slice(9, 19) / 100; return { codigo: dig, vencimento: f ? dataFator(f) : null, valor: v || null }; }
+  if (dig.length === 48 && dig[0] === "8") { const cb = [0, 12, 24, 36].map(k => dig.slice(k, k + 11)).join(""); return { codigo: dig, vencimento: null, valor: "67".includes(cb[2]) ? +cb.slice(4, 15) / 100 : null }; }
+  if (dig.length === 44 && dig[0] === "8") return { codigo: dig, vencimento: null, valor: "67".includes(dig[2]) ? +dig.slice(4, 15) / 100 : null };
+  return null;
+}
+function lerTextoDoc(t) {
+  const r = {}; const txt = t || "";
+  const ld = txt.match(/\d{5}[.\s]?\d{5}\s+\d{5}[.\s]?\d{6}\s+\d{5}[.\s]?\d{6}\s+\d\s+\d{14}/) || txt.match(/8\d{10}[\s-]?\d\s+\d{11}[\s-]?\d\s+\d{11}[\s-]?\d\s+\d{11}[\s-]?\d/);
+  if (ld) r.boleto = lerCodigoBoleto(ld[0]);
+  const ch = txt.match(/(?:\d{4}\s?){11}/g)?.map(x => x.replace(/\D/g, "")).find(x => x.length === 44 && /^(1[1-7]|2[1-9]|3[1-5]|4[1-3]|5[0-3])/.test(x) && x[0] !== "8");
+  if (ch) r.chave = ch, r.numero = String(+ch.slice(25, 34));
+  r.ehNota = !!ch || /DANFE|NOTA FISCAL|CHAVE DE ACESSO|NFC-?e/i.test(txt);
+  r.ehBoleto = !!r.boleto || /linha digit[aá]vel|ficha de compensa|pag[aá]vel (em|preferencialmente)|benefici[aá]rio/i.test(txt);
+  return r;
+}
+async function textoPdf(file) {
+  if (!window.pdfjsLib) await new Promise((ok, erro) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"; sc.onload = ok; sc.onerror = erro; document.head.appendChild(sc); });
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise; let t = "";
+  for (let p = 1; p <= Math.min(pdf.numPages, 4); p++) { const c = await (await pdf.getPage(p)).getTextContent(); t += c.items.map(x => x.str).join(" ") + "\n"; }
+  return t;
+}
+async function analisarArquivo(a) {
+  const nome = a.file.name || "";
+  if (/boleto|fatura|cobran|bol[_-]/i.test(nome)) a.tipo = "boleto"; else if (/danfe|\bnf|nota|nfe/i.test(nome)) a.tipo = "nota";
+  try {
+    if (a.file.type === "application/pdf") { const r = lerTextoDoc(await textoPdf(a.file)); a.info = r;
+      a.tipo = r.ehNota && r.ehBoleto ? "ambos" : r.ehBoleto ? "boleto" : r.ehNota ? "nota" : a.tipo; }
+    else if (a.file.type.startsWith("image/") && "BarcodeDetector" in window) {
+      const fmts = await BarcodeDetector.getSupportedFormats();
+      if (fmts.includes("itf")) { const cods = await new BarcodeDetector({ formats: ["itf"] }).detect(await createImageBitmap(a.file));
+        const b = cods.map(c => lerCodigoBoleto(c.rawValue)).find(Boolean); if (b) { a.info = { boleto: b, ehBoleto: true }; a.tipo = "boleto"; } }
+    }
+  } catch (e) { console.warn("leitura", e); }
+  a.lido = true;
+}
 function formNota(aoSalvar) {
-  const d = $("#dlg");
-  d.innerHTML = `<h3>Lançar nota ou boleto</h3>
+  const d = $("#dlg"); d.style.width = "min(620px,96vw)";
+  const ARQ = []; let categoria = null;
+  d.innerHTML = `<h3>Lançar nota e boleto</h3>
   <form id="f-nota">
     <div class="fotos">
-      <label class="foto-btn" id="lb-nota"><input type="file" accept="image/*,application/pdf" capture="environment" name="foto_nota" hidden><span>📷</span><b>Foto da nota</b><small>toque para fotografar</small></label>
-      <label class="foto-btn" id="lb-boleto"><input type="file" accept="image/*,application/pdf" capture="environment" name="foto_boleto" hidden><span>🧾</span><b>Foto do boleto</b><small>opcional</small></label>
+      <label class="foto-btn"><input type="file" accept="image/*,application/pdf" multiple data-add="auto" hidden><span>📎</span><b>Escolher arquivos</b><small>fotos ou PDFs · vários de uma vez</small></label>
+      <label class="foto-btn"><input type="file" accept="image/*" capture="environment" data-add="nota" hidden><span>📷</span><b>Fotografar nota</b><small>uma foto por página</small></label>
+      <label class="foto-btn"><input type="file" accept="image/*" capture="environment" data-add="boleto" hidden><span>🧾</span><b>Fotografar boleto</b><small>um por parcela</small></label>
     </div>
+    <div id="nt-arqs"></div>
     <label>Fornecedor</label><input name="fornecedor" list="lista-forn" required placeholder="ex.: Ambev, Atacadão…" autocomplete="off"><datalist id="lista-forn"></datalist>
-    <div class="linha-form"><div><label>Valor (R$)</label><input name="valor" inputmode="decimal" required placeholder="0,00"></div><div><label>Vencimento</label><input name="vencimento" type="date"></div></div>
     <label>Categoria</label><div class="chips" id="cat-chips">${CATEGORIAS.map(c => `<button type="button" data-cat="${c}">${c}</button>`).join("")}</div>
-    <div class="linha-form"><div><label>Nº da nota</label><input name="numero" placeholder="opcional"></div><div><label>Código de barras</label><input name="codigo_barras" inputmode="numeric" placeholder="opcional"></div></div>
-    <label>Observação</label><input name="observacao" placeholder="opcional">
+    <div id="nt-boletos"></div>
+    <div class="linha-form"><div><label>Nº da nota</label><input name="numero" placeholder="opcional"></div><div><label>Observação</label><input name="observacao" placeholder="opcional"></div></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn sec" type="button" id="nt-c">Cancelar</button><button class="btn" id="nt-ok">Enviar</button></div>
     <div id="nt-msg"></div></form>`;
-  d.showModal();
+  d.showModal(); d.addEventListener("close", () => { d.style.width = ""; }, { once: true });
   sb.from("notas").select("fornecedor").limit(500).then(({ data }) => { $("#lista-forn").innerHTML = [...new Set((data || []).map(x => x.fornecedor))].map(f => `<option value="${esc(f)}">`).join(""); });
-  let categoria = null;
   $("#cat-chips").onclick = e => { const b = e.target.closest("button"); if (!b) return; categoria = b.dataset.cat; $("#cat-chips").querySelectorAll("button").forEach(x => x.classList.toggle("sel", x === b)); };
-  ["nota", "boleto"].forEach(k => { const lb = $("#lb-" + k), inp = lb.querySelector("input");
-    inp.onchange = () => { const f = inp.files[0]; if (!f) return; lb.classList.add("ok");
-      lb.querySelector("small").textContent = f.name.length > 22 ? f.name.slice(0, 20) + "…" : f.name;
-      if (f.type.startsWith("image/")) { const u = URL.createObjectURL(f); lb.style.backgroundImage = `linear-gradient(rgba(20,16,18,.55),rgba(20,16,18,.85)),url(${u})`; } }; });
+  const TIPOS = { nota: "📄 Nota", boleto: "🧾 Boleto", ambos: "📄+🧾 Os dois" };
+  const boletos = () => ARQ.filter(a => a.tipo === "boleto" || a.tipo === "ambos");
+  const guardarCampos = () => document.querySelectorAll("[data-bv]").forEach(x => { const [k, campo] = x.dataset.bv.split(":"); const a = ARQ.find(y => y.k == k); if (a) a[campo] = x.value; });
+  const desenhar = () => { guardarCampos();
+    $("#nt-arqs").innerHTML = ARQ.length ? `<div class="arqs-lista">${ARQ.map(a => `<div class="arq-item">
+        <div class="arq-mini" ${a.url ? `style="background-image:url(${a.url})"` : ""}>${a.url ? "" : "PDF"}</div>
+        <div class="arq-nome">${esc(a.file.name.length > 26 ? a.file.name.slice(0, 24) + "…" : a.file.name)}<small>${!a.lido ? "lendo…" : a.info?.boleto?.valor ? "boleto lido ✓ " + brl(a.info.boleto.valor) : a.info?.chave ? "nota lida ✓ NF " + a.info.numero : ""}</small></div>
+        <div class="seg-mini">${Object.entries(TIPOS).map(([t, n]) => `<button type="button" class="${a.tipo === t ? "sel" : ""}" data-tp="${a.k}:${t}">${n}</button>`).join("")}</div>
+        <button type="button" class="x" data-rm="${a.k}">×</button></div>`).join("")}</div>
+      <p class="dica" style="margin:6px 0 0">📄 Nota vai para a <b>contagem de estoque</b> (entrada da mercadoria). 🧾 Boleto vai para <b>contas a pagar</b>, um por parcela.</p>` : "";
+    const bs = boletos();
+    $("#nt-boletos").innerHTML = bs.length ? `<label>${bs.length > 1 ? `Boletos (${bs.length} parcelas)` : "Boleto"}</label>${bs.map((a, i) => `<div class="linha-form boleto-linha"><div><small class="mute">${bs.length > 1 ? `Parcela ${i + 1}` : "Valor"}</small><input data-bv="${a.k}:valor" inputmode="decimal" placeholder="R$ 0,00" value="${esc(a.valor || (a.info?.boleto?.valor ? nfmt(a.info.boleto.valor, 2) : ""))}" required></div>
+        <div><small class="mute">Vencimento</small><input type="date" data-bv="${a.k}:vencimento" value="${a.vencimento || (a.info?.boleto?.vencimento || "")}"></div></div>
+        <input data-bv="${a.k}:codigo" inputmode="numeric" placeholder="código de barras (opcional)" value="${esc(a.codigo || (a.info?.boleto?.codigo || ""))}" style="margin-bottom:8px">`).join("")}`
+      : `<div class="linha-form"><div><label>Valor da nota (R$)</label><input name="valor" inputmode="decimal" placeholder="0,00" value="${esc(W._ntValor || "")}"></div><div><label>Vencimento</label><input name="vencimento" type="date"></div></div><small class="mute">Sem boleto? Deixe o vencimento vazio se já foi pago na entrega.</small>`;
+    const nf = ARQ.find(a => a.info?.numero); const num = d.querySelector("[name=numero]"); if (nf && num && !num.value) num.value = nf.info.numero;
+    d.querySelectorAll("[data-tp]").forEach(b => b.onclick = () => { const [k, t] = b.dataset.tp.split(":"); ARQ.find(a => a.k == k).tipo = t; desenhar(); });
+    d.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { ARQ.splice(ARQ.findIndex(a => a.k == b.dataset.rm), 1); desenhar(); });
+  };
+  let seq = 0;
+  d.querySelectorAll("[data-add]").forEach(inp => inp.onchange = async () => {
+    const novos = [...inp.files].map(f => ({ k: ++seq, file: f, tipo: inp.dataset.add === "auto" ? (ARQ.length ? "boleto" : "nota") : inp.dataset.add, url: f.type.startsWith("image/") ? URL.createObjectURL(f) : null, lido: inp.dataset.add !== "auto" && !("BarcodeDetector" in window) }));
+    if (inp.dataset.add === "auto" && novos.length > 1) novos.forEach((a, i) => a.tipo = i === 0 ? "nota" : "boleto");
+    ARQ.push(...novos); inp.value = ""; desenhar();
+    for (const a of novos) { if (!a.lido) { await analisarArquivo(a); desenhar(); } }
+  });
+  desenhar();
   $("#nt-c").onclick = () => d.close();
   $("#f-nota").onsubmit = async e => {
-    e.preventDefault(); const f = new FormData(e.target), b = $("#nt-ok"); b.disabled = true; b.textContent = "Enviando…";
+    e.preventDefault(); guardarCampos(); const f = new FormData(e.target), b = $("#nt-ok"); b.disabled = true; b.textContent = "Enviando…";
     try {
-      const fn = f.get("foto_nota"), fb = f.get("foto_boleto");
-      if (!fn?.size && !fb?.size) throw new Error("Tire a foto da nota ou do boleto.");
-      const reg = { fornecedor: f.get("fornecedor").trim(), valor: numBR(f.get("valor")), vencimento: f.get("vencimento") || null, categoria,
-        numero: f.get("numero").trim() || null, codigo_barras: f.get("codigo_barras").replace(/\D/g, "") || null, observacao: f.get("observacao").trim() || null };
-      if (fn?.size) reg.foto_nota = await enviarFoto(fn, "nota");
-      if (fb?.size) reg.foto_boleto = await enviarFoto(fb, "boleto");
-      const { error } = await sb.from("notas").insert(reg); if (error) throw error;
+      if (!ARQ.length) throw new Error("Adicione a foto ou o PDF da nota e/ou do boleto.");
+      const notasArq = ARQ.filter(a => a.tipo === "nota" || a.tipo === "ambos"), bs = boletos();
+      if (bs.some(a => !numBR(a.valor || ""))) throw new Error("Preencha o valor de cada boleto.");
+      const caminho = new Map();
+      for (const a of ARQ) { b.textContent = `Enviando ${[...caminho.keys()].length + 1} de ${ARQ.length}…`; caminho.set(a.k, await enviarFoto(a.file, a.tipo === "boleto" ? "boleto" : "nota")); }
+      const fotosNota = notasArq.map(a => caminho.get(a.k)), grupo = crypto.randomUUID();
+      const base = { fornecedor: f.get("fornecedor").trim(), categoria, numero: f.get("numero").trim() || null, observacao: f.get("observacao").trim() || null, grupo,
+        fotos_nota: fotosNota, foto_nota: fotosNota[0] || null };
+      const linhas = bs.length ? bs.map((a, i) => ({ ...base, valor: numBR(a.valor), vencimento: a.vencimento || null, codigo_barras: (a.codigo || "").replace(/\D/g, "") || null,
+          fotos_boleto: [caminho.get(a.k)], foto_boleto: caminho.get(a.k), observacao: [bs.length > 1 ? `parcela ${i + 1}/${bs.length}` : "", base.observacao].filter(Boolean).join(" · ") || null,
+          ...(i > 0 ? { estoque_lancado: true } : {}) }))
+        : [{ ...base, valor: f.get("valor") ? numBR(f.get("valor")) : null, vencimento: f.get("vencimento") || null }];
+      const { error } = await sb.from("notas").insert(linhas); if (error) throw error;
       d.close(); aoSalvar && aoSalvar();
     } catch (err) { $("#nt-msg").innerHTML = `<div class="msg erro">${esc(err.message || err)}</div>`; b.disabled = false; b.textContent = "Enviar"; }
   };
 }
+const arqsDe = (n, k) => (n["fotos_" + k]?.length ? n["fotos_" + k] : n["foto_" + k] ? [n["foto_" + k]] : []);
 async function abaNotas() {
   const gest = gestor();
   const { data: notas, error } = await sb.from("notas").select("*").order("vencimento", { ascending: true, nullsFirst: false }).order("criado_em", { ascending: false }).limit(1000);
@@ -2154,7 +2251,7 @@ async function abaNotas() {
     <div class="rolagem" style="max-height:none"><table class="pag"><thead><tr><th>Vencimento</th><th>Fornecedor</th><th class="n">Valor</th><th>Categoria</th><th>Anexos</th><th>Situação</th>${gest ? "<th></th>" : ""}</tr></thead><tbody>
     ${lista.map(n => `<tr><td>${venc(n)}</td><td><b>${esc(n.fornecedor)}</b><small class="sub2">${n.numero ? "NF " + esc(n.numero) + " · " : ""}enviada ${new Date(n.criado_em).toLocaleDateString("pt-BR")}${n.observacao ? " · " + esc(n.observacao) : ""}</small></td>
       <td class="n"><b>${n.valor != null ? brl(n.valor) : "—"}</b></td><td>${n.categoria ? `<span class="tag">${esc(n.categoria)}</span>` : ""}</td>
-      <td style="white-space:nowrap">${n.foto_nota ? `<button class="btn sec peq" data-ver="${esc(n.foto_nota)}">Nota</button> ` : ""}${n.foto_boleto ? `<button class="btn sec peq" data-ver="${esc(n.foto_boleto)}">Boleto</button>` : ""}${n.codigo_barras ? ` <button class="btn sec peq" data-cod="${esc(n.codigo_barras)}">Cód. barras</button>` : ""}</td>
+      <td style="white-space:nowrap">${arqsDe(n, "nota").map((c, i, a) => `<button class="btn sec peq" data-ver="${esc(c)}">Nota${a.length > 1 ? " " + (i + 1) : ""}</button> `).join("")}${arqsDe(n, "boleto").map((c, i, a) => `<button class="btn sec peq" data-ver="${esc(c)}">Boleto${a.length > 1 ? " " + (i + 1) : ""}</button> `).join("")}${arqsDe(n, "nota").length ? `<small class="sub2">${n.estoque_lancado ? "📦 entrada no estoque ✓" : "📦 falta dar entrada no estoque"}</small>` : ""}${n.codigo_barras ? ` <button class="btn sec peq" data-cod="${esc(n.codigo_barras)}">Cód. barras</button>` : ""}</td>
       <td><span class="tag ${n.status === "pago" ? "bom" : n.status === "a pagar" ? "ok" : ""}">${n.status}${n.status === "pago" && n.pago_em ? " " + br(n.pago_em).slice(0, 5) : ""}</span></td>
       ${gest ? `<td style="white-space:nowrap">${n.status === "a conferir" ? `<button class="btn peq" data-conf="${n.id}">Conferir ✓</button> ` : ""}${n.status === "a pagar" ? `<button class="btn peq" data-pg="${n.id}">Marcar paga</button> ` : ""}${n.status === "pago" ? `<button class="btn sec peq" data-volta="${n.id}">Desfazer</button> ` : ""}<button class="x" data-del="${n.id}" title="Apagar">×</button></td>` : ""}</tr>`).join("") || `<tr><td colspan="7" class="vazio">Nada aqui</td></tr>`}
     </tbody><tfoot><tr><td colspan="2"><b>Total</b></td><td class="n"><b>${brl(soma(lista))}</b></td><td colspan="4"></td></tr></tfoot></table></div></div>`;
@@ -2177,7 +2274,8 @@ async function abaNotas() {
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
     const d = $("#dlg"); d.innerHTML = `<h3>Apagar esta nota?</h3><p style="color:var(--mute)">Não dá para desfazer.</p><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn sec" id="c-n">Cancelar</button><button class="btn perigo" id="c-s">Apagar</button></div>`;
     d.showModal(); $("#c-n").onclick = () => d.close();
-    $("#c-s").onclick = async () => { const n = notas.find(x => x.id == b.dataset.del); const arqs = [n.foto_nota, n.foto_boleto].filter(Boolean);
+    $("#c-s").onclick = async () => { const n = notas.find(x => x.id == b.dataset.del); const outros = notas.filter(x => x.id !== n.id).flatMap(x => [...arqsDe(x, "nota"), ...arqsDe(x, "boleto")]);
+      const arqs = [...arqsDe(n, "nota"), ...arqsDe(n, "boleto")].filter(c => !outros.includes(c));
       if (arqs.length) await sb.storage.from("notas").remove(arqs); await sb.from("notas").delete().eq("id", n.id); d.close(); ir(); };
   });
 }
